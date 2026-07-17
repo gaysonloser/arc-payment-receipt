@@ -1,0 +1,16 @@
+{
+  "name": "arc-payment-receipt",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Read-only Arc Testnet native-USDC payment receipt prototype and reconciliation viewer.",
+  "scripts": {
+    "start": "node tools/arc_payment_receipt_server.mjs",
+    "test": "node --test tools/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
+

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-17T05:52:26.177Z",
+  "network": {
+    "name": "Arc Testnet",
+    "chain_id": 5042002,
+    "rpc_url": "https://rpc.testnet.arc.network"
+  },
+  "contract": "0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df",
+  "range": {
+    "from": 52159957,
+    "to": 52223269,
+    "latest_at_start": 52223269
+  },
+  "event_count": 1,
+  "contract_balance_wei": "0",
+  "contract_balance_usdc": "0",
+  "checks": {
+    "unique_order_ids": true,
+    "all_transactions_succeeded": true,
+    "all_events_match_storage": true,
+    "contract_balance_zero": true
+  },
+  "events": [
+    {
+      "order_id": "0xf303bb994a26f19f83d892f9c3fe78e1d1a4577dd09c53f5000a50fd712b9c4e",
+      "payer": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "merchant": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "amount_wei": "10000000000000000",
+      "amount_usdc": "0.01",
+      "metadata_hash": "0xdca5d41a65d6239330a315b3d3fa5b6d969c3c750201c55fac3c7f6d5fa10c46",
+      "transaction_hash": "0x56b64a6a56209b2a82b170c6b1ea6ca5c8114d122488957f91b13cd40c00fdbf",
+      "block_number": 52210442,
+      "log_index": 16,
+      "timestamp": "2026-07-17T03:59:50.000Z",
+      "transaction_status": 1,
+      "gas_used": "120655",
+      "effective_gas_price_wei": "20288000000",
+      "gas_cost_usdc": "0.00244784864",
+      "stored_receipt": {
+        "payer": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+        "amount_wei": "10000000000000000",
+        "amount_usdc": "0.01",
+        "metadata_hash": "0xdca5d41a65d6239330a315b3d3fa5b6d969c3c750201c55fac3c7f6d5fa10c46",
+        "block_number": 52210442
+      },
+      "storage_matches_event": true
+    }
+  ]
+}

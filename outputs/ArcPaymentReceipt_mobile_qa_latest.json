@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-17T15:12:00+08:00",
+  "surface": "Codex in-app browser",
+  "css_viewport": {
+    "width": 390,
+    "height": 844,
+    "device_pixel_ratio": 0.8999999761581421
+  },
+  "screenshot_raster": {
+    "width": 433,
+    "height": 938,
+    "note": "The browser screenshot is emitted in backend raster pixels; layout assertions use the exact CSS viewport above."
+  },
+  "layout": {
+    "document_scroll_width": 390,
+    "horizontal_overflow": false,
+    "metric_card_width": 357,
+    "query_input_width": 358,
+    "button_width": 358,
+    "button_height": 44,
+    "content_left": 16,
+    "content_right": 374,
+    "settlement_flow": "vertical"
+  },
+  "state": {
+    "dual_source": "ALIGNED",
+    "rpc_overlap": 0,
+    "circle_overlap": 0,
+    "circle_monitor": "SUBSCRIBED",
+    "browser_warnings": 0,
+    "browser_errors": 0
+  },
+  "visual_checks": {
+    "summary_cards_single_column": true,
+    "dual_source_cards_single_column": true,
+    "query_controls_fit": true,
+    "flow_cards_fit": true,
+    "long_hashes_wrap": true,
+    "text_overlap_observed": false
+  },
+  "evidence": [
+    "outputs/ArcPaymentReceipt_dual_viewer_mobile_2026-07-17.png",
+    "outputs/ArcPaymentReceipt_dual_viewer_mobile_flow_2026-07-17.png",
+    "outputs/ArcPaymentReceipt_dual_viewer_mobile_lower_2026-07-17.png"
+  ],
+  "wallet_signature": false,
+  "onchain_write": false,
+  "gas": "0"
+}
+
