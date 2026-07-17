@@ -2,6 +2,10 @@
 
 ArcPaymentReceipt is a minimal Arc Testnet prototype for native-USDC merchant settlement with an onchain receipt index. A payment settles to an immutable merchant in the same transaction, stores an opaque order receipt, and emits a structured `PaymentReceived` event for reconciliation.
 
+**Live demo:** [arc-payment-receipt.onrender.com](https://arc-payment-receipt.onrender.com/)
+
+The demo runs as a free Render web service. It may take 50 seconds or more to wake after a period of inactivity.
+
 ## Why it exists
 
 Stablecoin settlement alone does not give an application a privacy-aware order reference, a durable receipt record, or a clean reconciliation surface. This prototype keeps custody out of the contract while making settlement evidence independently verifiable.
@@ -79,4 +83,3 @@ All other paths or write methods return explicit errors. The service has no sign
 ## License
 
 MIT. The local Solidity source declares SPDX `MIT`. Explorer license metadata is separate and is not represented here as corrected.
-
