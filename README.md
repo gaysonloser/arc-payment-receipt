@@ -1,5 +1,7 @@
 # Payment Receipt
 
+<img src="assets/payment-receipt-logo.png" width="120" alt="Payment Receipt logo">
+
 Payment Receipt is an independent DeFi prototype built on Arc Testnet. Its verified Solidity contract remains named `ArcPaymentReceipt`. A payment atomically settles native test USDC to an immutable merchant, stores an opaque order receipt, and emits a structured `PaymentReceived` event for reconciliation. Circle Contracts and Event Monitor are used for read-only contract and event operations.
 
 **Live demo:** [arc-payment-receipt.onrender.com](https://arc-payment-receipt.onrender.com/)

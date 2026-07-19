@@ -10,6 +10,8 @@ export const DEFAULT_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt
 export const DEFAULT_DUAL_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt_dual_source_monitor_latest.json");
 export const DEFAULT_CIRCLE_SNAPSHOT_PATH = resolve(HERE, "../outputs/ArcCircleContracts_event_history_latest.json");
 export const DEFAULT_VIEWER_PATH = resolve(HERE, "arc_payment_receipt_viewer.html");
+export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
+export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
 function json(response, status, body) {
   response.writeHead(status, {
@@ -26,6 +28,15 @@ function text(response, status, body, contentType = "text/plain; charset=utf-8")
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
+  });
+  response.end(body);
+}
+
+function binary(response, status, body, contentType) {
+  response.writeHead(status, {
+    "content-type": contentType,
+    "cache-control": "public, max-age=86400, immutable",
+    "x-content-type-options": "nosniff"
   });
   response.end(body);
 }
@@ -47,6 +58,8 @@ export function createReceiptServer(options = {}) {
   const loadDualReport = options.loadDualReport ?? (() => loadDualEvidence(options.dualEvidencePath));
   const loadCircleReport = options.loadCircleReport ?? (() => loadCircleSnapshot(options.circleSnapshotPath));
   const loadViewer = options.loadViewer ?? (() => readFile(options.viewerPath ?? DEFAULT_VIEWER_PATH, "utf8"));
+  const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
+  const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
 
   return createServer(async (request, response) => {
     try {
@@ -58,6 +71,16 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/" || url.pathname === "/arc-payment-receipt") {
         text(response, 200, await loadViewer(), "text/html; charset=utf-8");
+        return;
+      }
+
+      if (url.pathname === "/assets/payment-receipt-logo.png") {
+        binary(response, 200, await loadLogo(), "image/png");
+        return;
+      }
+
+      if (url.pathname === "/assets/favicon.png") {
+        binary(response, 200, await loadFavicon(), "image/png");
         return;
       }
 

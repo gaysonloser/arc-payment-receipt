@@ -30,7 +30,9 @@ before(async () => {
     loadReport: async () => report,
     loadDualReport: async () => dualReport,
     loadCircleReport: async () => circleReport,
-    loadViewer: async () => "<!doctype html><title>viewer</title>"
+    loadViewer: async () => "<!doctype html><title>viewer</title>",
+    loadLogo: async () => Buffer.from("logo"),
+    loadFavicon: async () => Buffer.from("favicon")
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
@@ -73,6 +75,19 @@ test("returns evidence and exact receipts", async () => {
   const circle = await fetch(`${origin}/api/circle-monitor`);
   assert.equal(circle.status, 200);
   assert.equal((await circle.json()).subscription_state, "Subscribed");
+});
+
+test("serves the app logo and favicon as immutable PNG assets", async () => {
+  const logo = await fetch(`${origin}/assets/payment-receipt-logo.png`);
+  assert.equal(logo.status, 200);
+  assert.equal(logo.headers.get("content-type"), "image/png");
+  assert.equal(logo.headers.get("cache-control"), "public, max-age=86400, immutable");
+  assert.equal(Buffer.from(await logo.arrayBuffer()).toString(), "logo");
+
+  const favicon = await fetch(`${origin}/assets/favicon.png`);
+  assert.equal(favicon.status, 200);
+  assert.equal(favicon.headers.get("content-type"), "image/png");
+  assert.equal(Buffer.from(await favicon.arrayBuffer()).toString(), "favicon");
 });
 
 test("returns explicit errors without accepting writes", async () => {
