@@ -1,6 +1,6 @@
-# ArcPaymentReceipt
+# Payment Receipt
 
-ArcPaymentReceipt is a minimal Arc Testnet prototype for native-USDC merchant settlement with an onchain receipt index. A payment settles to an immutable merchant in the same transaction, stores an opaque order receipt, and emits a structured `PaymentReceived` event for reconciliation.
+Payment Receipt is an independent DeFi prototype built on Arc Testnet. Its verified Solidity contract remains named `ArcPaymentReceipt`. A payment atomically settles native test USDC to an immutable merchant, stores an opaque order receipt, and emits a structured `PaymentReceived` event for reconciliation. Circle Contracts and Event Monitor are used for read-only contract and event operations.
 
 **Live demo:** [arc-payment-receipt.onrender.com](https://arc-payment-receipt.onrender.com/)
 

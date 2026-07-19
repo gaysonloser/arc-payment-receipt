@@ -1,6 +1,6 @@
 # Security and Privacy
 
-ArcPaymentReceipt is an unaudited Arc Testnet prototype. Do not use it with production funds.
+Payment Receipt is an independent, unaudited prototype built on Arc Testnet. The deployed Solidity contract remains named `ArcPaymentReceipt`. Do not use it with production funds.
 
 ## Public data
 
@@ -20,4 +20,3 @@ The included service is read-only. It exposes generated evidence and exact recei
 - The demonstration uses the same EOA as payer and merchant.
 - Circle monitoring started after the demonstrated payment, so historical backfill is not claimed.
 - Production use requires an independent audit, separate payer/merchant testing, operational monitoring, privacy review, and explicit refund/dispute design.
-

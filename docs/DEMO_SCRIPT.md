@@ -2,7 +2,7 @@
 
 ## 0:00-0:25 - Problem
 
-Arc uses USDC as its native value and gas token, but a merchant application still needs a durable order reference and a reconciliation trail. ArcPaymentReceipt provides that without retaining customer funds.
+Arc uses USDC as its native value and gas token, but a merchant application still needs a durable order reference and a reconciliation trail. Payment Receipt provides that without retaining customer funds; its deployed Solidity contract remains named `ArcPaymentReceipt`.
 
 ## 0:25-0:55 - Contract
 
@@ -23,4 +23,3 @@ Show that Circle imported the contract as verified and subscribed to `PaymentRec
 ## 2:40-3:00 - Boundaries
 
 State that no payment was repeated to manufacture a Circle log, no webhook or persistent API key remains, and no personal data belongs in order IDs or metadata hashes. Close with the production path: independent audit, real payer/merchant separation, refunds/disputes, and operational monitoring.
-
