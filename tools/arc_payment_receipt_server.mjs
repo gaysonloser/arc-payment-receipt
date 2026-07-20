@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -118,6 +119,124 @@ export function buildEnterpriseSettlementView(bundle) {
   };
 }
 
+export function canonicalizeJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalizeJson(value[key])])
+    );
+  }
+  return value;
+}
+
+export function buildSettlementEvidenceManifest(bundle) {
+  const enterprise = buildEnterpriseSettlementView(bundle);
+  const accounting = buildAccountingPreviewView(bundle);
+  const envelope = buildEnterpriseEnvelopeView(bundle);
+  const fact = bundle.fact;
+  const payload = {
+    manifest_version: "1.0",
+    mode: "read-only_unsigned_evidence_manifest",
+    scope: "single_settlement",
+    generated_at: bundle.generated_at,
+    network: {
+      name: fact.network,
+      chain_id: fact.chain_id,
+      contract: fact.contract
+    },
+    identity: {
+      event_id: enterprise.settlement.event_id,
+      order_id: enterprise.order_id,
+      transaction_hash: enterprise.settlement.transaction_hash,
+      log_index: fact.log_index,
+      block_number: fact.block_number,
+      source_fingerprint_sha256: envelope.identity.source_fingerprint
+    },
+    settlement: {
+      asset: enterprise.settlement.asset,
+      amount_display: enterprise.settlement.amount_display,
+      payer: enterprise.settlement.payer,
+      payee: enterprise.settlement.payee,
+      finality_status: enterprise.settlement.finality_status,
+      finality_basis: fact.protocol_finality?.basis ?? null,
+      transaction_succeeded: fact.source_integrity?.transaction_succeeded === true,
+      storage_matches_event: fact.source_integrity?.storage_matches_event === true,
+      contract_balance_zero: fact.source_integrity?.contract_balance_zero === true
+    },
+    source_assurance: enterprise.source_assurance,
+    enterprise_control: {
+      strategy_id: enterprise.strategy_id,
+      workflow_id: enterprise.workflow_id,
+      reconciliation_status: enterprise.reconciliation.status,
+      reason_code: enterprise.reconciliation.reason_code,
+      business_reference: enterprise.reconciliation.business_reference,
+      erp_candidate_status: enterprise.erp_candidate.status,
+      accounting_balanced: accounting.journal.balanced,
+      human_review_required: enterprise.reconciliation.human_review_required,
+      postable: enterprise.erp_candidate.postable,
+      unresolved_owner_fields: envelope.summary.unresolved_contract_fields
+    },
+    boundaries: {
+      synthetic_test_data: enterprise.boundaries.synthetic_test_data,
+      erp_api_calls_executed: enterprise.boundaries.erp_api_calls_executed,
+      wallet_actions: enterprise.boundaries.wallet_actions,
+      chain_writes: enterprise.boundaries.chain_writes,
+      accounting_recognition_claim: enterprise.boundaries.accounting_recognition_claim,
+      canonical_compliance_claim: envelope.canonical_compliance_claim
+    }
+  };
+  const canonical = JSON.stringify(canonicalizeJson(payload));
+  const digest = createHash("sha256").update(canonical).digest("hex");
+
+  return {
+    ...payload,
+    integrity: {
+      algorithm: "sha256",
+      canonicalization: "json-key-sort-v1",
+      digest,
+      signed: false,
+      semantic: "content_digest_not_signature"
+    }
+  };
+}
+
+export function verifySettlementEvidenceManifest(manifest) {
+  const { integrity, ...payload } = manifest ?? {};
+  const canonical = JSON.stringify(canonicalizeJson(payload));
+  const recomputedDigest = createHash("sha256").update(canonical).digest("hex");
+  const checks = {
+    manifest_version_supported: payload.manifest_version === "1.0",
+    mode_is_read_only_unsigned: payload.mode === "read-only_unsigned_evidence_manifest",
+    algorithm_is_sha256: integrity?.algorithm === "sha256",
+    canonicalization_supported: integrity?.canonicalization === "json-key-sort-v1",
+    digest_format_valid: /^[0-9a-f]{64}$/.test(integrity?.digest ?? ""),
+    digest_matches_content: integrity?.digest === recomputedDigest,
+    explicitly_unsigned: integrity?.signed === false,
+    semantic_is_content_digest_only: integrity?.semantic === "content_digest_not_signature"
+  };
+  const failedChecks = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+
+  return {
+    verification_version: "1.0",
+    status: failedChecks.length === 0 ? "valid" : "invalid",
+    scope: "content_integrity_only",
+    claimed_digest: integrity?.digest ?? null,
+    recomputed_digest: recomputedDigest,
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      verifies_source_truth: false,
+      verifies_signer_identity: false,
+      is_attestation: false,
+      is_accounting_record: false
+    }
+  };
+}
+
 function decimalToMinorUnits(value, decimals = 2) {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value));
   if (!match) throw new Error("Invalid accounting amount");
@@ -198,6 +317,80 @@ export function buildAccountingPreviewView(bundle) {
       erp_api_calls_executed: bundle.summary.erp_api_calls_executed,
       no_approval_or_period_close_call: drafts.controls.no_approval_or_period_close_call === true,
       synthetic_test_data: bundle.control_boundary.synthetic_data_only === true
+    }
+  };
+}
+
+const ENTERPRISE_ENVELOPE_GROUPS = {
+  event_identity: ["event_id", "event_type", "schema_version", "occurred_at"],
+  enterprise_context: ["entity_ref", "business_unit_ref", "source_system"],
+  business_reference: ["business_reference_hash", "source_document_type", "source_document_ref"],
+  evidence: ["evidence_mode", "evidence_id", "source_fingerprint", "privacy_classification"],
+  workflow: ["workflow_id", "workflow_status", "reason_code", "idempotency_key"],
+  accounting: ["accounting_status", "kingdee_object_type", "draft_id", "readback_status"],
+  control: ["policy_status", "human_review_required", "postable", "exception_status"]
+};
+
+function hasEnvelopeValue(value) {
+  return value !== null && value !== undefined && value !== "";
+}
+
+export function buildEnterpriseEnvelopeView(bundle) {
+  const candidate = bundle.settlement_event_candidate;
+  const sourceEnvelope = candidate.event_envelope_candidate ?? {};
+  const envelope = { ...sourceEnvelope, workflow_id: candidate.workflow_id };
+  const unresolved = candidate.unresolved_contract_fields
+    ?? bundle.unresolved_contract_fields
+    ?? [];
+  const groups = Object.entries(ENTERPRISE_ENVELOPE_GROUPS).map(([name, fields]) => {
+    const missingFields = fields.filter((field) => !hasEnvelopeValue(envelope[field]));
+    return {
+      name,
+      mapped_fields: fields.length - missingFields.length,
+      required_fields: fields.length,
+      missing_fields: missingFields,
+      status: missingFields.length === 0 ? "complete" : "review"
+    };
+  });
+  const mappedFields = groups.reduce((total, group) => total + group.mapped_fields, 0);
+  const requiredFields = groups.reduce((total, group) => total + group.required_fields, 0);
+  const completeGroups = groups.filter((group) => group.status === "complete").length;
+
+  return {
+    generated_at: bundle.generated_at,
+    mode: "read-only_enterprise_envelope_audit",
+    strategy_id: candidate.strategy_id,
+    workflow_id: candidate.workflow_id,
+    schema_version: candidate.schema_version ?? envelope.schema_version,
+    schema_status: candidate.schema_status ?? "candidate",
+    canonical_compliance_claim: candidate.canonical_compliance_claim === true,
+    summary: {
+      total_groups: groups.length,
+      complete_groups: completeGroups,
+      review_groups: groups.length - completeGroups,
+      mapped_fields: mappedFields,
+      required_fields: requiredFields,
+      unresolved_contract_fields: unresolved.length
+    },
+    identity: {
+      event_id: envelope.event_id ?? null,
+      event_type: envelope.event_type ?? null,
+      source_system: envelope.source_system ?? null,
+      source_fingerprint: envelope.source_fingerprint ?? null,
+      metadata_binding_status: envelope.metadata_binding?.binding_status ?? "not_declared"
+    },
+    ownership: {
+      arc_owned: ["native_usdc_settlement", "receipt", "circle_rpc_evidence", "finality"],
+      enterprise_owner_required: ["entity_and_business_unit", "business_document_binding", "kingdee_object_and_posting"]
+    },
+    groups,
+    unresolved_fields: unresolved.map(({ field, reason }) => ({ field, reason: reason ?? "Owner decision required" })),
+    controls: {
+      postable: envelope.postable === true,
+      human_review_required: envelope.human_review_required === true,
+      erp_api_calls_executed: bundle.summary.erp_api_calls_executed,
+      wallet_actions: bundle.summary.wallet_actions,
+      chain_writes: bundle.summary.chain_writes
     }
   };
 }
@@ -317,6 +510,8 @@ export function createReceiptServer(options = {}) {
         ]);
         const enterpriseView = buildEnterpriseSettlementView(enterprise);
         const accountingView = buildAccountingPreviewView(enterprise);
+        const envelopeView = buildEnterpriseEnvelopeView(enterprise);
+        const manifestView = buildSettlementEvidenceManifest(enterprise);
         json(response, 200, {
           status: "ok",
           mode: "read-only",
@@ -330,6 +525,10 @@ export function createReceiptServer(options = {}) {
           erp_postable: enterpriseView.erp_candidate.postable,
           accounting_balanced: accountingView.journal.balanced,
           accounting_unresolved_fields: accountingView.unresolved_fields.length,
+          enterprise_envelope_mapped_fields: envelopeView.summary.mapped_fields,
+          enterprise_envelope_required_fields: envelopeView.summary.required_fields,
+          enterprise_envelope_review_groups: envelopeView.summary.review_groups,
+          evidence_manifest_digest: manifestView.integrity.digest,
           generated_at: report.generated_at
         });
         return;
@@ -357,6 +556,16 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/accounting-preview") {
         json(response, 200, buildAccountingPreviewView(await loadEnterpriseReport()));
+        return;
+      }
+
+      if (url.pathname === "/api/enterprise-envelope") {
+        json(response, 200, buildEnterpriseEnvelopeView(await loadEnterpriseReport()));
+        return;
+      }
+
+      if (url.pathname === "/api/evidence-manifest") {
+        json(response, 200, buildSettlementEvidenceManifest(await loadEnterpriseReport()));
         return;
       }
 

@@ -1,0 +1,66 @@
+{
+  "manifest_version": "1.0",
+  "mode": "read-only_unsigned_evidence_manifest",
+  "scope": "single_settlement",
+  "generated_at": "2026-07-20T11:32:28.246Z",
+  "network": {
+    "name": "Arc Testnet",
+    "chain_id": 5042002,
+    "contract": "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df"
+  },
+  "identity": {
+    "event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+    "order_id": "0x0c5af61a58f0cf1e94160b8e2bfad6a68af550f2745afb4f3c9355b385b68fbf",
+    "transaction_hash": "0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6",
+    "log_index": 26,
+    "block_number": 52740216,
+    "source_fingerprint_sha256": "0b1da29fc0a20bc2663dfccd1632924bf6958d51bb086e5d239a29c0590729f1"
+  },
+  "settlement": {
+    "asset": "ARC_TESTNET_NATIVE_USDC",
+    "amount_display": "0.01",
+    "payer": "0x63cdbf1918133716c67b28390f5c5d9250b113da",
+    "payee": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+    "finality_status": "finalized",
+    "finality_basis": "included_in_committed_arc_block",
+    "transaction_succeeded": true,
+    "storage_matches_event": true,
+    "contract_balance_zero": true
+  },
+  "source_assurance": {
+    "status": "passed",
+    "passed_checks": 18,
+    "total_checks": 18,
+    "failed_checks": [],
+    "overlap_status": "aligned_in_overlap_window",
+    "rpc_events": 1,
+    "circle_events": 1
+  },
+  "enterprise_control": {
+    "strategy_id": "ONCHAIN_ENTERPRISE_FINANCE_STACK_V1",
+    "workflow_id": "PAYMENT_TO_LEDGER_V1",
+    "reconciliation_status": "matched",
+    "reason_code": "OK",
+    "business_reference": "ARC-ERP-P2-0001",
+    "erp_candidate_status": "draft_only",
+    "accounting_balanced": true,
+    "human_review_required": true,
+    "postable": false,
+    "unresolved_owner_fields": 6
+  },
+  "boundaries": {
+    "synthetic_test_data": true,
+    "erp_api_calls_executed": 0,
+    "wallet_actions": 0,
+    "chain_writes": 0,
+    "accounting_recognition_claim": false,
+    "canonical_compliance_claim": false
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "json-key-sort-v1",
+    "digest": "8768fc2e323dff085d3a5d0553993522c0a221cd133e2a654d4c8fde47f4ecfa",
+    "signed": false,
+    "semantic": "content_digest_not_signature"
+  }
+}

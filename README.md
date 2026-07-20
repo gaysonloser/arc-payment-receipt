@@ -26,6 +26,8 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A two-receipt settlement ledger that distinguishes P1 pre-monitor history from the P2 Circle/RPC overlap window.
 - A synthetic, non-posting ERP reconciliation candidate with fail-closed exception controls.
 - A read-only accounting preview with independently recomputed debit/credit balance and unresolved schema fields.
+- A grouped Enterprise Event Envelope audit for identity, business reference, evidence, workflow, accounting, and control ownership.
+- A deterministic, unsigned Settlement Evidence Manifest with offline content-integrity verification.
 
 ## Verified evidence
 
@@ -36,6 +38,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - Circle contract state: `COMPLETE / VERIFIED`
 - Circle monitor state: `PaymentReceived / Subscribed`
 - Current overlap state: `1 RPC / 1 Circle / aligned_in_overlap_window`
+- Settlement Evidence Manifest SHA-256: `8768fc2e323dff085d3a5d0553993522c0a221cd133e2a654d4c8fde47f4ecfa`
 
 ## Architecture
 
@@ -45,7 +48,9 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 4. `PaymentReceived` becomes the common reconciliation event for Arc RPC and Circle Contracts.
 5. The backend separates pre-monitor history from the common Circle/RPC coverage window.
 6. A synthetic ERP candidate maps the P2 event into a draft-only receipt and balanced journal preview.
-7. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
+7. The Enterprise Event Envelope makes unresolved enterprise-owner fields and control boundaries explicit.
+8. The Settlement Evidence Manifest canonicalizes a bounded evidence payload and computes a reproducible SHA-256 content digest.
+9. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
 
 See [Architecture](docs/ARCHITECTURE.md), [Security and privacy](SECURITY.md), and the [three-minute demo script](docs/DEMO_SCRIPT.md).
 
@@ -66,7 +71,14 @@ npm test
 forge test -vv
 ```
 
-The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, and accounting precision rejection. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
+Export or verify the unsigned evidence manifest offline:
+
+```bash
+node tools/arc_settlement_evidence_manifest.mjs
+node tools/arc_settlement_evidence_manifest.mjs --verify outputs/ArcPaymentReceipt_settlement_evidence_manifest_latest.json
+```
+
+The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, accounting precision rejection, and fail-closed manifest verification. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
 
 ## Read-only API
 
@@ -79,6 +91,8 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/enterprise-controls`
 - `GET /api/settlement-ledger`
 - `GET /api/accounting-preview`
+- `GET /api/enterprise-envelope`
+- `GET /api/evidence-manifest`
 - `GET /api/receipts/:orderId`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
@@ -90,6 +104,7 @@ All other paths or write methods return explicit errors. The service has no sign
 - P1 uses the merchant EOA as payer; P2 uses a separate self-controlled test payer. Neither proves independent customer adoption.
 - `orderId` and `metadataHash` are public forever and must not contain personal or reversible customer data.
 - ERP receipt and journal fields are synthetic dry-run candidates only. They are non-posting, require human review, and make no accounting-recognition claim.
+- The manifest digest verifies only the integrity of its canonicalized content. It is unsigned and does not prove source truth, signer identity, attestation, or an accounting record.
 - The contract does not implement refunds, disputes, tax documents, identity, access control, or upgradeability.
 - Circle history begins after the demonstrated P1 event; pre-monitor backfill is not claimed.
 - No persistent Circle API key, Entity Secret, Circle Wallet, webhook, or autonomous signer is used.

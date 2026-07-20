@@ -46,6 +46,12 @@
     .journal-direction { color: #16624a; font-weight: 800; }
     .unresolved-fields { margin: 12px 0 0; color: #5e6c78; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
     .unresolved-fields code { color: #27313b; }
+    .envelope-list { border-top: 1px solid #d8dee5; margin-top: 16px; }
+    .envelope-row { display: grid; grid-template-columns: minmax(170px, 1.1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(220px, 1.7fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid #d8dee5; align-items: center; }
+    .envelope-row.header { color: #64717d; font-size: 12px; font-weight: 700; }
+    .envelope-name, .envelope-missing { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    .envelope-state { color: #16624a; font-weight: 800; }
+    .envelope-state.review { color: #b54708; }
     .query-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: end; }
     label { display: block; color: #52606d; font-size: 13px; font-weight: 650; }
     input { width: 100%; height: 44px; margin-top: 7px; padding: 0 12px; border: 1px solid #aeb8c2; border-radius: 5px; background: #ffffff; color: #17202a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
@@ -104,6 +110,7 @@
       .ledger-row > :nth-child(4) { grid-column: 2 / 4; }
       .ledger-row > :nth-child(5) { grid-column: 1 / -1; }
       .journal-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .envelope-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     }
     @media (max-width: 560px) {
       .header-inner { align-items: flex-start; flex-direction: column; justify-content: center; padding: 18px 0; gap: 10px; }
@@ -123,6 +130,8 @@
       .row-action { width: 100%; }
       .journal-row { grid-template-columns: 1fr; gap: 5px; }
       .journal-row.header { display: none; }
+      .envelope-row { grid-template-columns: 1fr; gap: 5px; }
+      .envelope-row.header { display: none; }
     }
   </style>
 </head>
@@ -177,6 +186,41 @@
         <dt>Control boundary</dt><dd id="enterprise-boundary">...</dd>
       </dl>
       <p class="monitor-note" id="enterprise-note">Loading the Arc-to-ERP control state...</p>
+    </section>
+
+    <section aria-labelledby="envelope-title">
+      <h2 id="envelope-title">Enterprise Event Envelope</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Stack</div><div class="metric-value" id="envelope-strategy">...</div></div>
+        <div class="metric"><div class="metric-label">Workflow</div><div class="metric-value" id="envelope-workflow">...</div></div>
+        <div class="metric"><div class="metric-label">Field coverage</div><div class="metric-value good" id="envelope-coverage">...</div></div>
+        <div class="metric"><div class="metric-label">Canonical status</div><div class="metric-value blocked" id="envelope-status">...</div></div>
+      </div>
+      <dl class="details enterprise-details">
+        <dt>Event identity</dt><dd id="envelope-event-id">...</dd>
+        <dt>Source fingerprint</dt><dd id="envelope-fingerprint">...</dd>
+        <dt>Metadata binding</dt><dd id="envelope-binding">...</dd>
+        <dt>Owner boundary</dt><dd id="envelope-owner">...</dd>
+      </dl>
+      <div class="envelope-list" id="envelope-list" aria-label="Enterprise envelope field coverage"></div>
+      <p class="monitor-note" id="envelope-note">Loading the enterprise field ownership audit...</p>
+    </section>
+
+    <section aria-labelledby="manifest-title">
+      <h2 id="manifest-title">Settlement Evidence Manifest</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Integrity</div><div class="metric-value good" id="manifest-integrity">...</div></div>
+        <div class="metric"><div class="metric-label">Finality</div><div class="metric-value good" id="manifest-finality">...</div></div>
+        <div class="metric"><div class="metric-label">Sources</div><div class="metric-value good" id="manifest-sources">...</div></div>
+        <div class="metric"><div class="metric-label">ERP posting</div><div class="metric-value blocked" id="manifest-posting">...</div></div>
+      </div>
+      <dl class="details enterprise-details">
+        <dt>Manifest digest</dt><dd id="manifest-digest">...</dd>
+        <dt>Event identity</dt><dd id="manifest-event-id">...</dd>
+        <dt>Settlement</dt><dd id="manifest-settlement">...</dd>
+        <dt>Evidence semantics</dt><dd id="manifest-semantics">...</dd>
+      </dl>
+      <p class="monitor-note" id="manifest-note">Loading the reproducible settlement evidence manifest...</p>
     </section>
 
     <section aria-labelledby="accounting-title">
@@ -312,6 +356,13 @@
     const ACCOUNTING_PREVIEW_URLS = [
       "/api/accounting-preview"
     ];
+    const ENTERPRISE_ENVELOPE_URLS = [
+      "/api/enterprise-envelope",
+      "../outputs/ArcPaymentReceipt_enterprise_k0_latest.json"
+    ];
+    const EVIDENCE_MANIFEST_URLS = [
+      "/api/evidence-manifest"
+    ];
     const SETTLEMENT_LEDGER_URLS = [
       "/api/settlement-ledger"
     ];
@@ -322,6 +373,8 @@
     let enterpriseControls;
     let settlementLedger;
     let accountingPreview;
+    let enterpriseEnvelope;
+    let evidenceManifest;
 
     const byId = (id) => document.getElementById(id);
     const shortAddress = (value) => `${value.slice(0, 8)}...${value.slice(-6)}`;
@@ -455,6 +508,121 @@
         return index === 0 ? [code] : [document.createTextNode(", "), code];
       }));
       byId("accounting-note").textContent = `${accountingPreview.receipt_candidate.execution_mode}; posting ${controls.postable ? "enabled" : "blocked"}; human review ${controls.human_review_required ? "required" : "not required"}; ERP API calls ${controls.erp_api_calls_executed}.`;
+    }
+
+    function normalizeEnterpriseEnvelope(payload) {
+      if (payload.summary?.required_fields !== undefined && Array.isArray(payload.groups)) return payload;
+      const candidate = payload.settlement_event_candidate;
+      const envelope = { ...(candidate.event_envelope_candidate || {}), workflow_id: candidate.workflow_id };
+      const definitions = {
+        event_identity: ["event_id", "event_type", "schema_version", "occurred_at"],
+        enterprise_context: ["entity_ref", "business_unit_ref", "source_system"],
+        business_reference: ["business_reference_hash", "source_document_type", "source_document_ref"],
+        evidence: ["evidence_mode", "evidence_id", "source_fingerprint", "privacy_classification"],
+        workflow: ["workflow_id", "workflow_status", "reason_code", "idempotency_key"],
+        accounting: ["accounting_status", "kingdee_object_type", "draft_id", "readback_status"],
+        control: ["policy_status", "human_review_required", "postable", "exception_status"]
+      };
+      const hasValue = (value) => value !== null && value !== undefined && value !== "";
+      const groups = Object.entries(definitions).map(([name, fields]) => {
+        const missingFields = fields.filter((field) => !hasValue(envelope[field]));
+        return {
+          name,
+          mapped_fields: fields.length - missingFields.length,
+          required_fields: fields.length,
+          missing_fields: missingFields,
+          status: missingFields.length === 0 ? "complete" : "review"
+        };
+      });
+      const unresolved = candidate.unresolved_contract_fields || payload.unresolved_contract_fields || [];
+      const completeGroups = groups.filter((group) => group.status === "complete").length;
+      return {
+        strategy_id: candidate.strategy_id,
+        workflow_id: candidate.workflow_id,
+        schema_status: candidate.schema_status || "candidate",
+        canonical_compliance_claim: candidate.canonical_compliance_claim === true,
+        summary: {
+          total_groups: groups.length,
+          complete_groups: completeGroups,
+          review_groups: groups.length - completeGroups,
+          mapped_fields: groups.reduce((total, group) => total + group.mapped_fields, 0),
+          required_fields: groups.reduce((total, group) => total + group.required_fields, 0),
+          unresolved_contract_fields: unresolved.length
+        },
+        identity: {
+          event_id: envelope.event_id,
+          source_fingerprint: envelope.source_fingerprint,
+          metadata_binding_status: envelope.metadata_binding?.binding_status || "not_declared"
+        },
+        ownership: {
+          arc_owned: ["native_usdc_settlement", "receipt", "circle_rpc_evidence", "finality"],
+          enterprise_owner_required: ["entity_and_business_unit", "business_document_binding", "kingdee_object_and_posting"]
+        },
+        groups,
+        controls: {
+          postable: envelope.postable === true,
+          human_review_required: envelope.human_review_required === true,
+          erp_api_calls_executed: payload.summary.erp_api_calls_executed
+        }
+      };
+    }
+
+    function renderEnterpriseEnvelope() {
+      const summary = enterpriseEnvelope.summary;
+      byId("envelope-strategy").textContent = enterpriseEnvelope.strategy_id === "ONCHAIN_ENTERPRISE_FINANCE_STACK_V1" ? "STACK V1" : enterpriseEnvelope.strategy_id;
+      byId("envelope-workflow").textContent = enterpriseEnvelope.workflow_id === "PAYMENT_TO_LEDGER_V1" ? "PAYMENT TO LEDGER" : enterpriseEnvelope.workflow_id;
+      byId("envelope-coverage").textContent = `${summary.mapped_fields}/${summary.required_fields}`;
+      byId("envelope-status").textContent = enterpriseEnvelope.canonical_compliance_claim ? "CANONICAL" : "CANDIDATE";
+      byId("envelope-status").classList.toggle("good", enterpriseEnvelope.canonical_compliance_claim);
+      byId("envelope-status").classList.toggle("blocked", !enterpriseEnvelope.canonical_compliance_claim);
+      byId("envelope-event-id").textContent = enterpriseEnvelope.identity.event_id || "Not mapped";
+      byId("envelope-fingerprint").textContent = enterpriseEnvelope.identity.source_fingerprint || "Not mapped";
+      byId("envelope-binding").textContent = enterpriseEnvelope.identity.metadata_binding_status.toUpperCase();
+      byId("envelope-owner").textContent = "Arc: settlement / receipt / evidence / finality; enterprise owner: entity / document / Kingdee posting";
+
+      const header = document.createElement("div");
+      header.className = "envelope-row header";
+      ["Field group", "Coverage", "Status", "Missing owner fields"].forEach((label) => {
+        const cell = document.createElement("div");
+        cell.textContent = label;
+        header.append(cell);
+      });
+      const rows = enterpriseEnvelope.groups.map((group) => {
+        const row = document.createElement("div");
+        row.className = "envelope-row";
+        const name = document.createElement("div");
+        name.className = "envelope-name";
+        name.textContent = group.name;
+        const coverage = document.createElement("div");
+        coverage.textContent = `${group.mapped_fields}/${group.required_fields}`;
+        const status = document.createElement("div");
+        status.className = `envelope-state ${group.status === "review" ? "review" : ""}`;
+        status.textContent = group.status.toUpperCase();
+        const missing = document.createElement("div");
+        missing.className = "envelope-missing";
+        missing.textContent = group.missing_fields.length ? group.missing_fields.join(", ") : "-";
+        row.append(name, coverage, status, missing);
+        return row;
+      });
+      byId("envelope-list").replaceChildren(header, ...rows);
+      byId("envelope-note").textContent = `${summary.complete_groups}/${summary.total_groups} groups complete; ${summary.unresolved_contract_fields} owner decisions remain. Posting ${enterpriseEnvelope.controls.postable ? "enabled" : "blocked"}; human review required; ERP API calls ${enterpriseEnvelope.controls.erp_api_calls_executed}.`;
+    }
+
+    function renderEvidenceManifest() {
+      const source = evidenceManifest.source_assurance;
+      const control = evidenceManifest.enterprise_control;
+      const integrity = evidenceManifest.integrity;
+      byId("manifest-integrity").textContent = integrity.algorithm.toUpperCase();
+      byId("manifest-finality").textContent = evidenceManifest.settlement.finality_status.toUpperCase();
+      byId("manifest-sources").textContent = `${source.passed_checks}/${source.total_checks}`;
+      byId("manifest-posting").textContent = control.postable ? "READY" : "BLOCKED";
+      byId("manifest-posting").classList.toggle("good", control.postable);
+      byId("manifest-posting").classList.toggle("blocked", !control.postable);
+      byId("manifest-digest").textContent = integrity.digest;
+      byId("manifest-event-id").textContent = evidenceManifest.identity.event_id;
+      byId("manifest-settlement").textContent = `${evidenceManifest.settlement.amount_display} ${evidenceManifest.settlement.asset} / ${control.reconciliation_status.toUpperCase()}`;
+      byId("manifest-semantics").textContent = "Deterministic content digest; unsigned; not an attestation or accounting record";
+      byId("manifest-note").textContent = `${evidenceManifest.network.name} ${evidenceManifest.network.chain_id}; ${source.overlap_status}; human review required; ${control.unresolved_owner_fields} owner fields unresolved; ERP API calls ${evidenceManifest.boundaries.erp_api_calls_executed}.`;
     }
 
     function normalizeEnterpriseControls(payload) {
@@ -652,13 +820,15 @@
       byId("refresh").disabled = true;
       setStatus("Loading local evidence...");
       try {
-        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview] = await Promise.all([
+        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview, enterpriseEnvelope, evidenceManifest] = await Promise.all([
           loadFirst(EVIDENCE_URLS),
           loadFirst(DUAL_EVIDENCE_URLS),
           loadFirst(ENTERPRISE_EVIDENCE_URLS).then(normalizeEnterprise),
           loadFirst(ENTERPRISE_CONTROL_URLS).then(normalizeEnterpriseControls),
           loadFirst(SETTLEMENT_LEDGER_URLS),
-          loadFirst(ACCOUNTING_PREVIEW_URLS)
+          loadFirst(ACCOUNTING_PREVIEW_URLS),
+          loadFirst(ENTERPRISE_ENVELOPE_URLS).then(normalizeEnterpriseEnvelope),
+          loadFirst(EVIDENCE_MANIFEST_URLS)
         ]);
         renderSummary();
         renderDualSummary();
@@ -666,6 +836,8 @@
         renderEnterpriseControls();
         renderSettlementLedger();
         renderAccountingPreview();
+        renderEnterpriseEnvelope();
+        renderEvidenceManifest();
         queryReceipt();
       } catch (error) {
         setStatus(error.message || "Evidence could not be loaded.", "error");

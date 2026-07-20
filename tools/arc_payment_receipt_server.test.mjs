@@ -4,9 +4,12 @@ import { after, before, test } from "node:test";
 import {
   buildAccountingPreviewView,
   buildEnterpriseControlView,
+  buildEnterpriseEnvelopeView,
   buildEnterpriseSettlementView,
+  buildSettlementEvidenceManifest,
   buildSettlementLedgerView,
-  createReceiptServer
+  createReceiptServer,
+  verifySettlementEvidenceManifest
 } from "./arc_payment_receipt_server.mjs";
 
 const orderId = `0x${"12".repeat(32)}`;
@@ -54,10 +57,26 @@ const circleReport = {
 };
 const enterpriseReport = {
   generated_at: "2026-07-20T11:32:28.246Z",
-  fact: { amount_display: "0.01" },
+  fact: {
+    network: "Arc Testnet",
+    chain_id: 5042002,
+    contract: "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df",
+    log_index: 26,
+    block_number: 52740216,
+    amount_display: "0.01",
+    protocol_finality: { basis: "included_in_committed_arc_block" },
+    source_integrity: {
+      transaction_succeeded: true,
+      storage_matches_event: true,
+      contract_balance_zero: true
+    }
+  },
   settlement_event_candidate: {
     strategy_id: "ONCHAIN_ENTERPRISE_FINANCE_STACK_V1",
     workflow_id: "PAYMENT_TO_LEDGER_V1",
+    schema_version: "0.1-candidate",
+    schema_status: "candidate_blocked_pending_owner_contract",
+    canonical_compliance_claim: false,
     settlement_event: {
       integration_event_id: `arc:5042002:0x${"34".repeat(32)}:26`,
       tx_hash: `0x${"34".repeat(32)}`,
@@ -67,7 +86,34 @@ const enterpriseReport = {
       payee: "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
       receipt_id: orderId
     },
-    event_envelope_candidate: {},
+    event_envelope_candidate: {
+      event_id: `arc:5042002:0x${"34".repeat(32)}:26`,
+      event_type: "settlement.observed",
+      schema_version: "0.1-candidate",
+      occurred_at: "2026-07-20T07:19:50.000Z",
+      entity_ref: null,
+      business_unit_ref: null,
+      source_system: "ArcPaymentReceipt",
+      business_reference_hash: null,
+      source_document_type: null,
+      source_document_ref: null,
+      metadata_binding: { binding_status: "unbound_opaque_hash" },
+      evidence_mode: "circle_event_monitor_plus_arc_rpc_and_storage",
+      evidence_id: `5042002:0x${"34".repeat(32)}:26`,
+      source_fingerprint: "0b1da29fc0a20bc2663dfccd1632924bf6958d51bb086e5d239a29c0590729f1",
+      privacy_classification: "synthetic_test_data",
+      workflow_status: "matched_candidate",
+      reason_code: "OK",
+      idempotency_key: orderId,
+      accounting_status: "proposal_created_local_dry_run",
+      kingdee_object_type: null,
+      draft_id: null,
+      readback_status: "not_executed",
+      policy_status: "test_only_non_posting",
+      human_review_required: true,
+      postable: false,
+      exception_status: "none"
+    },
     controls: {
       source_controls_pass: true,
       source_assurance_checks: { rpc_payload_verified: true, circle_event_payload_matches: true },
@@ -211,6 +257,10 @@ test("serves a read-only health response", async () => {
     erp_postable: false,
     accounting_balanced: true,
     accounting_unresolved_fields: 6,
+    enterprise_envelope_mapped_fields: 19,
+    enterprise_envelope_required_fields: 26,
+    enterprise_envelope_review_groups: 3,
+    evidence_manifest_digest: buildSettlementEvidenceManifest(enterpriseReport).integrity.digest,
     generated_at: report.generated_at
   });
 });
@@ -266,6 +316,86 @@ test("returns a balanced non-posting accounting preview without raw ERP payloads
   assert.equal(preview.unresolved_fields.length, 6);
   assert.equal("payload" in preview.receipt_candidate, false);
   assert.equal("payload" in preview.journal, false);
+});
+
+test("audits the enterprise envelope without inventing owner fields", async () => {
+  const response = await fetch(`${origin}/api/enterprise-envelope`);
+  assert.equal(response.status, 200);
+  const envelope = await response.json();
+  assert.equal(envelope.mode, "read-only_enterprise_envelope_audit");
+  assert.equal(envelope.strategy_id, "ONCHAIN_ENTERPRISE_FINANCE_STACK_V1");
+  assert.equal(envelope.workflow_id, "PAYMENT_TO_LEDGER_V1");
+  assert.equal(envelope.canonical_compliance_claim, false);
+  assert.deepEqual(envelope.summary, {
+    total_groups: 7,
+    complete_groups: 4,
+    review_groups: 3,
+    mapped_fields: 19,
+    required_fields: 26,
+    unresolved_contract_fields: 6
+  });
+  assert.deepEqual(
+    envelope.groups.find((group) => group.name === "enterprise_context").missing_fields,
+    ["entity_ref", "business_unit_ref"]
+  );
+  assert.equal(envelope.identity.metadata_binding_status, "unbound_opaque_hash");
+  assert.equal(envelope.controls.postable, false);
+  assert.equal(envelope.controls.erp_api_calls_executed, 0);
+  assert.equal("erp_drafts" in envelope, false);
+});
+
+test("keeps false control values mapped in envelope coverage", () => {
+  const envelope = buildEnterpriseEnvelopeView(enterpriseReport);
+  const control = envelope.groups.find((group) => group.name === "control");
+  assert.equal(control.status, "complete");
+  assert.deepEqual(control.missing_fields, []);
+});
+
+test("returns a deterministic unsigned settlement evidence manifest", async () => {
+  const response = await fetch(`${origin}/api/evidence-manifest`);
+  assert.equal(response.status, 200);
+  const manifest = await response.json();
+  assert.equal(manifest.mode, "read-only_unsigned_evidence_manifest");
+  assert.equal(manifest.network.chain_id, 5042002);
+  assert.equal(manifest.identity.order_id, orderId);
+  assert.equal(manifest.settlement.finality_status, "finalized");
+  assert.equal(manifest.enterprise_control.accounting_balanced, true);
+  assert.equal(manifest.enterprise_control.postable, false);
+  assert.equal(manifest.boundaries.erp_api_calls_executed, 0);
+  assert.equal(manifest.integrity.algorithm, "sha256");
+  assert.match(manifest.integrity.digest, /^[0-9a-f]{64}$/);
+  assert.equal(manifest.integrity.signed, false);
+  assert.equal(manifest.integrity.semantic, "content_digest_not_signature");
+  assert.equal("erp_drafts" in manifest, false);
+});
+
+test("changes the evidence digest when an immutable settlement fact drifts", () => {
+  const original = buildSettlementEvidenceManifest(enterpriseReport);
+  const drifted = structuredClone(enterpriseReport);
+  drifted.fact.amount_display = "0.02";
+  const changed = buildSettlementEvidenceManifest(drifted);
+  assert.notEqual(changed.integrity.digest, original.integrity.digest);
+});
+
+test("independently verifies an exported manifest as content integrity only", () => {
+  const manifest = buildSettlementEvidenceManifest(enterpriseReport);
+  const verification = verifySettlementEvidenceManifest(manifest);
+  assert.equal(verification.status, "valid");
+  assert.deepEqual(verification.failed_checks, []);
+  assert.equal(verification.claimed_digest, verification.recomputed_digest);
+  assert.equal(verification.boundaries.verifies_source_truth, false);
+  assert.equal(verification.boundaries.verifies_signer_identity, false);
+  assert.equal(verification.boundaries.is_attestation, false);
+  assert.equal(verification.boundaries.is_accounting_record, false);
+});
+
+test("fails closed when exported manifest content is tampered", () => {
+  const tampered = buildSettlementEvidenceManifest(enterpriseReport);
+  tampered.settlement.amount_display = "0.02";
+  const verification = verifySettlementEvidenceManifest(tampered);
+  assert.equal(verification.status, "invalid");
+  assert.deepEqual(verification.failed_checks, ["digest_matches_content"]);
+  assert.notEqual(verification.claimed_digest, verification.recomputed_digest);
 });
 
 test("independently detects an unbalanced accounting candidate", () => {
