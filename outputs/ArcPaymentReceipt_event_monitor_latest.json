@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-17T05:52:26.177Z",
+  "generated_at": "2026-07-20T08:27:25Z",
   "network": {
     "name": "Arc Testnet",
     "chain_id": 5042002,
@@ -9,17 +9,28 @@
   "contract": "0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df",
   "range": {
     "from": 52159957,
-    "to": 52223269,
-    "latest_at_start": 52223269
+    "to": 52741645,
+    "latest_at_start": 52741645
   },
-  "event_count": 1,
+  "coverage": {
+    "event_discovery": "Arcscan API v2 complete contract log list",
+    "event_discovery_observed_at": "2026-07-20T08:27:25Z",
+    "arcscan_item_count": 2,
+    "arcscan_next_page_params": null,
+    "verification": "Arc official RPC transaction receipts, receipt storage and balances",
+    "rpc_eth_getLogs_full_refresh": "rate_limited_http_429",
+    "note": "Arcscan returned every log currently indexed for the verified contract with no pagination. Both PaymentReceived logs were independently verified through Arc RPC."
+  },
+  "event_count": 2,
   "contract_balance_wei": "0",
   "contract_balance_usdc": "0",
   "checks": {
     "unique_order_ids": true,
     "all_transactions_succeeded": true,
     "all_events_match_storage": true,
-    "contract_balance_zero": true
+    "contract_balance_zero": true,
+    "arcscan_complete_without_pagination": true,
+    "all_event_payloads_rpc_verified": true
   },
   "events": [
     {
@@ -43,6 +54,33 @@
         "amount_usdc": "0.01",
         "metadata_hash": "0xdca5d41a65d6239330a315b3d3fa5b6d969c3c750201c55fac3c7f6d5fa10c46",
         "block_number": 52210442
+      },
+      "storage_matches_event": true
+    },
+    {
+      "order_id": "0x0c5af61a58f0cf1e94160b8e2bfad6a68af550f2745afb4f3c9355b385b68fbf",
+      "payer": "0x63cdbf1918133716c67b28390f5c5d9250b113da",
+      "merchant": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "amount_wei": "10000000000000000",
+      "amount_usdc": "0.01",
+      "metadata_hash": "0x00b97e64b57458b297a53812423dcb3cc091c3221c42b00efa9a90cb00c91832",
+      "transaction_hash": "0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6",
+      "block_number": 52740216,
+      "log_index": 26,
+      "timestamp": "2026-07-20T07:19:50.000Z",
+      "transaction_status": 1,
+      "transaction_type": 0,
+      "transaction_nonce": 0,
+      "gas_limit": "150000",
+      "gas_used": "123143",
+      "effective_gas_price_wei": "21154149704",
+      "gas_cost_usdc": "0.002604985456999672",
+      "stored_receipt": {
+        "payer": "0x63cdbf1918133716c67b28390f5c5d9250b113da",
+        "amount_wei": "10000000000000000",
+        "amount_usdc": "0.01",
+        "metadata_hash": "0x00b97e64b57458b297a53812423dcb3cc091c3221c42b00efa9a90cb00c91832",
+        "block_number": 52740216
       },
       "storage_matches_event": true
     }

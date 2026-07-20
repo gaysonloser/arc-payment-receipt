@@ -1,0 +1,498 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-07-20T11:32:28.246Z",
+  "mode": "real_chain_event_synthetic_erp_dry_run",
+  "source": {
+    "report_path": "ArcPaymentReceipt_event_monitor_latest.json",
+    "report_sha256": "b98eeb5ab12105d54b9a570eeb61bcd55a4c9a6ae19ce95a924b0fff59299621",
+    "dual_source_path": "ArcPaymentReceipt_dual_source_monitor_latest.json",
+    "dual_source_sha256": "db4757db0c8bd0ebfccbaf9dc6842a2b2c1be4ca26c41cc5c1d10f52e002d676",
+    "circle_history_path": "ArcCircleContracts_event_history_latest.json",
+    "circle_history_sha256": "ca043e97316cd77f7498ce39262d53faa72d01a74db1dda90d8265c6dd6ef001"
+  },
+  "policy": {
+    "required_confirmations": 1,
+    "allowed_assets": [
+      "ARC_TESTNET_NATIVE_USDC"
+    ],
+    "accounting_minor_decimals": 2,
+    "amount_tolerance_minor": 0,
+    "erp_write_mode": "draft_only",
+    "human_review_required": true,
+    "accounting_policy": {
+      "mode": "test_only_non_posting",
+      "settlement_asset": "ARC_TESTNET_NATIVE_USDC",
+      "ledger_currency": "USD",
+      "conversion_method": "unit_parity_schema_preview",
+      "economic_assertion": false
+    }
+  },
+  "control_boundary": {
+    "synthetic_data_only": true,
+    "no_customer_pii": true,
+    "no_wallet_action": true,
+    "no_chain_write": true,
+    "no_erp_api_call": true,
+    "prohibited_actions": [
+      "approve receipt",
+      "post voucher",
+      "reverse voucher",
+      "close period",
+      "write production tenant",
+      "make tax or accounting-policy decisions"
+    ]
+  },
+  "summary": {
+    "rpc_events_observed": 2,
+    "canonical_events_consumed": 1,
+    "matched_events": 1,
+    "exception_scenarios": 8,
+    "erp_api_calls_executed": 0,
+    "wallet_actions": 0,
+    "chain_writes": 0,
+    "human_review_required": true
+  },
+  "source_assurance": {
+    "evidence_model": "circle_event_monitor_plus_arc_rpc_and_storage",
+    "selected_event_in_rpc_report": true,
+    "arcscan_complete_without_pagination": true,
+    "rpc_payload_verified": true,
+    "receipt_storage_matches_event": true,
+    "circle_contract_verified": true,
+    "circle_monitor_subscribed": true,
+    "circle_event_payload_matches": true,
+    "overlap_status": "aligned_in_overlap_window",
+    "overlap_rpc_events": 1,
+    "overlap_circle_events": 1,
+    "overlap_events_match": true,
+    "unmatched_rpc_events": 0,
+    "unmatched_circle_events": 0,
+    "webhook_active": false,
+    "coverage_note": "P1 predates Circle monitor creation; P2 is the single matched event in the common coverage window."
+  },
+  "settlement_event_candidate": {
+    "schema_version": "0.1-candidate",
+    "schema_status": "candidate_pending_enterprise_schema_owner",
+    "canonical_compliance_claim": false,
+    "strategy_id": "ONCHAIN_ENTERPRISE_FINANCE_STACK_V1",
+    "workflow_id": "PAYMENT_TO_LEDGER_V1",
+    "settlement_event": {
+      "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+      "rail": "Arc",
+      "chain_id": 5042002,
+      "tx_hash": "0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6",
+      "log_index_or_payment_id": 26,
+      "payer": "0x63cdbf1918133716c67b28390f5c5d9250b113da",
+      "payee": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "asset": "ARC_TESTNET_NATIVE_USDC",
+      "amount_minor": null,
+      "amount_minor_candidates": {
+        "accounting_minor_2dp": 1,
+        "chain_atomic_units": "10000000000000000"
+      },
+      "asset_decimals": 18,
+      "fees_minor": null,
+      "fees_minor_candidates": {
+        "chain_atomic_units": "2604985456999672",
+        "display": "0.002604985456999672"
+      },
+      "minor_unit_resolution_candidate": {
+        "semantic": "asset_atomic_units",
+        "serialization": "base10_decimal_string",
+        "amount_minor_decimal_string": "10000000000000000",
+        "fees_minor_decimal_string": "2604985456999672",
+        "internal_decimals": 18,
+        "display_decimals": 6,
+        "amount_exceeds_json_safe_integer": true,
+        "fee_exceeds_json_safe_integer": false,
+        "owner_evidence": [
+          "A legacy USDC fixture uses 1,250,000 minor units for 1.25 USDC",
+          "Enterprise schema guidance preserves raw amount plus asset decimals",
+          "Arc official documentation defines native USDC as 18 internal decimals and 6 display decimals"
+        ],
+        "adoption_status": "candidate_blocked_pending_enterprise_schema_type_approval"
+      },
+      "confirmations": 1430,
+      "finality_status": "finalized",
+      "finality_evidence": {
+        "basis": "included_in_committed_arc_block",
+        "model": "deterministic_bft",
+        "consensus": "Malachite BFT",
+        "final_on": "committed_block",
+        "required_confirmations": 1,
+        "additional_confirmation_wait_required": false,
+        "source_urls": [
+          "https://docs.arc.io/arc/concepts/deterministic-finality",
+          "https://docs.arc.io/integrate/wallets/transaction-lifecycle",
+          "https://docs.arc.io/integrate/exchanges/deposits"
+        ]
+      },
+      "removed": false,
+      "receipt_id": "0x0c5af61a58f0cf1e94160b8e2bfad6a68af550f2745afb4f3c9355b385b68fbf"
+    },
+    "event_envelope_candidate": {
+      "event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+      "event_type": "settlement.observed",
+      "schema_version": "0.1-candidate",
+      "occurred_at": "2026-07-20T07:19:50.000Z",
+      "entity_ref": null,
+      "business_unit_ref": null,
+      "source_system": "ArcPaymentReceipt",
+      "business_reference_hash": null,
+      "source_document_type": null,
+      "source_document_ref": null,
+      "onchain_metadata_hash": "0x00b97e64b57458b297a53812423dcb3cc091c3221c42b00efa9a90cb00c91832",
+      "business_reference_hash_candidate": null,
+      "metadata_binding": {
+        "onchain_metadata_hash": "0x00b97e64b57458b297a53812423dcb3cc091c3221c42b00efa9a90cb00c91832",
+        "binding_status": "unbound_opaque_hash",
+        "preimage_available": false,
+        "hash_algorithm": null,
+        "canonicalization_profile": null,
+        "business_reference_binding_approved": false
+      },
+      "source_document_type_candidate": "sales_order_demo",
+      "source_document_ref_candidate": "SO-ARC-P2-0001",
+      "evidence_mode": "circle_event_monitor_plus_arc_rpc_and_storage",
+      "evidence_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+      "source_fingerprint": "0b1da29fc0a20bc2663dfccd1632924bf6958d51bb086e5d239a29c0590729f1",
+      "privacy_classification": "synthetic_test_data",
+      "workflow_status": "matched_candidate",
+      "reason_code": "OK",
+      "idempotency_key": "0x0c5af61a58f0cf1e94160b8e2bfad6a68af550f2745afb4f3c9355b385b68fbf",
+      "accounting_status": "proposal_created_local_dry_run",
+      "erp_draft_allowed": true,
+      "kingdee_object_type": null,
+      "draft_id": null,
+      "readback_status": "not_executed",
+      "policy_status": "test_only_non_posting",
+      "human_review_required": true,
+      "postable": false,
+      "exception_status": "none"
+    },
+    "unresolved_contract_fields": [
+      {
+        "field": "amount_minor",
+        "reason": "Asset atomic units are evidence-backed, but Arc amount exceeds the JSON safe-integer range and decimal-string serialization is not yet approved"
+      },
+      {
+        "field": "fees_minor",
+        "reason": "Fee atomic units are available, but amount and fee must share an approved BigInt-safe serialization contract"
+      },
+      {
+        "field": "business_reference_hash",
+        "reason": "P2 metadataHash has no reproducible preimage, declared hash algorithm, canonicalization profile or approved ERP binding"
+      },
+      {
+        "field": "entity_ref_and_business_unit_ref",
+        "reason": "Enterprise entity and business-unit identifiers are not Arc chain facts and remain unbound"
+      },
+      {
+        "field": "source_document_type_and_ref",
+        "reason": "Synthetic fixture values are candidates only; the authoritative ERP document remains unbound"
+      },
+      {
+        "field": "kingdee_object_type",
+        "reason": "The target Kingdee object is selected by the enterprise workflow and is not a chain fact"
+      }
+    ],
+    "controls": {
+      "source_controls_pass": true,
+      "source_assurance_checks": {
+        "transaction_succeeded": true,
+        "storage_matches_event": true,
+        "amount_native_matches_display": true,
+        "fee_native_matches_display": true,
+        "arc_commit_finality_consistent": true,
+        "contract_balance_zero": true,
+        "arcscan_complete_without_pagination": true,
+        "rpc_payload_verified": true,
+        "receipt_storage_matches_event": true,
+        "circle_contract_verified": true,
+        "circle_monitor_subscribed": true,
+        "circle_event_payload_matches": true,
+        "overlap_status_aligned": true,
+        "overlap_contains_evidence": true,
+        "overlap_counts_equal": true,
+        "overlap_events_match": true,
+        "unmatched_rpc_events_zero": true,
+        "unmatched_circle_events_zero": true
+      },
+      "source_assurance_failed_checks": [],
+      "reconciliation_matched": true,
+      "controlled_test_wallets_only": true,
+      "independent_customer_claim": false,
+      "accounting_recognition_claim": false,
+      "opaque_metadata_not_promoted_to_business_reference": true,
+      "arc_atomic_units_preserved_as_decimal_strings": true,
+      "erp_api_calls_executed": 0,
+      "wallet_actions": 0,
+      "chain_writes": 0
+    }
+  },
+  "fact": {
+    "schema_version": 1,
+    "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+    "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+    "source_fingerprint_sha256": "0b1da29fc0a20bc2663dfccd1632924bf6958d51bb086e5d239a29c0590729f1",
+    "network": "Arc Testnet",
+    "chain_id": 5042002,
+    "contract": "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df",
+    "transaction_hash": "0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6",
+    "log_index": 26,
+    "block_number": 52740216,
+    "block_timestamp": "2026-07-20T07:19:50.000Z",
+    "confirmations": 1430,
+    "removed": false,
+    "protocol_finality": {
+      "status": "finalized",
+      "basis": "included_in_committed_arc_block"
+    },
+    "transaction_status": 1,
+    "asset": "ARC_TESTNET_NATIVE_USDC",
+    "amount_native_units": "10000000000000000",
+    "amount_display": "0.01",
+    "accounting_amount_minor": 1,
+    "accounting_precision_ok": true,
+    "gas_used": "123143",
+    "effective_gas_price_wei": "21154149704",
+    "fee_native_units": "2604985456999672",
+    "fee_display": "0.002604985456999672",
+    "payer": "0x63cdbf1918133716c67b28390f5c5d9250b113da",
+    "merchant": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+    "order_id": "0x0c5af61a58f0cf1e94160b8e2bfad6a68af550f2745afb4f3c9355b385b68fbf",
+    "metadata_hash": "0x00b97e64b57458b297a53812423dcb3cc091c3221c42b00efa9a90cb00c91832",
+    "source_integrity": {
+      "transaction_succeeded": true,
+      "storage_matches_event": true,
+      "amount_native_matches_display": true,
+      "fee_native_matches_display": true,
+      "arc_commit_finality_consistent": true,
+      "contract_balance_zero": true,
+      "circle_event_payload_matches": true,
+      "circle_monitor_subscribed": true,
+      "dual_source_overlap_aligned": true,
+      "source_assurance_pass": true
+    }
+  },
+  "reconciliation": {
+    "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+    "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+    "status": "matched",
+    "reason_code": "OK",
+    "business_reference": "ARC-ERP-P2-0001",
+    "difference_minor": 0,
+    "human_review_required": true,
+    "erp_draft_allowed": true,
+    "accounting_policy_mode": "test_only_non_posting",
+    "accounting_policy_scope": "schema_preview_only"
+  },
+  "erp_drafts": {
+    "status": "draft_only",
+    "postable": false,
+    "human_review_required": true,
+    "economic_status": "segregated_test_payer_non_postable",
+    "accounting_policy": {
+      "mode": "test_only_non_posting",
+      "settlement_asset": "ARC_TESTNET_NATIVE_USDC",
+      "ledger_currency": "USD",
+      "conversion_method": "unit_parity_schema_preview",
+      "economic_assertion": false,
+      "scope": "schema_preview_only"
+    },
+    "source_fingerprint_sha256": "0b1da29fc0a20bc2663dfccd1632924bf6958d51bb086e5d239a29c0590729f1",
+    "receipt": {
+      "method": "POST",
+      "path": "/jdyscm/receipt/add",
+      "execution_mode": "dry_run",
+      "schema_status": "candidate_unvalidated_until_jingdouyun_sandbox",
+      "payload": {
+        "originNo": "ARC-5042002-18379c57f249-26",
+        "entries": [
+          {
+            "billNo": "SO-ARC-P2-0001",
+            "billType": "sales_order_demo",
+            "nowCheck": "0.01"
+          }
+        ],
+        "accounts": [
+          {
+            "accNumber": "ARC-USDC-DEMO",
+            "wayName": "Arc Testnet native USDC demo",
+            "payment": "0.01",
+            "settlement": "0x18379c57f2499a18"
+          }
+        ]
+      }
+    },
+    "voucher": {
+      "method": "POST",
+      "path": "/jdyaccouting/voucher",
+      "execution_mode": "dry_run",
+      "schema_status": "candidate_unvalidated_until_jingdouyun_sandbox",
+      "payload": {
+        "linkId": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "date": "2026-07-20",
+        "currency": "USD",
+        "summary": "Arc testnet settlement ARC-ERP-P2-0001",
+        "lines": [
+          {
+            "accountCode": "1002",
+            "direction": "debit",
+            "amount": "0.01",
+            "customerCode": null
+          },
+          {
+            "accountCode": "1122",
+            "direction": "credit",
+            "amount": "0.01",
+            "customerCode": "TEST-PAYER-63CD"
+          }
+        ]
+      }
+    },
+    "controls": {
+      "receipt_origin_no_is_deterministic": true,
+      "voucher_link_id_equals_full_event_id": true,
+      "source_fingerprint_matches_event": true,
+      "reconciliation_binding_checks": {
+        "source_fingerprint_matches_fact": true,
+        "result_event_id_matches_fact": true,
+        "result_integration_event_id_matches_fact": true,
+        "order_id_matches_fact": true,
+        "business_reference_matches_order": true,
+        "difference_matches_fact_and_order": true,
+        "difference_within_policy_tolerance": true,
+        "accounting_policy_mode_matches_result": true,
+        "settlement_asset_matches_order": true,
+        "human_review_required": true
+      },
+      "reconciliation_binding_pass": true,
+      "settlement_asset_matches_order": true,
+      "accounting_policy_is_non_posting": true,
+      "debit_credit_balanced": true,
+      "no_approval_or_period_close_call": true
+    }
+  },
+  "scenarios": [
+    {
+      "name": "matched",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "matched",
+        "reason_code": "OK",
+        "business_reference": "ARC-ERP-P2-0001",
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": true,
+        "accounting_policy_mode": "test_only_non_posting",
+        "accounting_policy_scope": "schema_preview_only"
+      }
+    },
+    {
+      "name": "duplicate_event",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "DUPLICATE_EVENT",
+        "business_reference": null,
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "amount_mismatch",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "AMOUNT_MISMATCH",
+        "business_reference": "ARC-ERP-P2-0001",
+        "difference_minor": -1,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "order_not_found",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "ORDER_NOT_FOUND",
+        "business_reference": null,
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "event_removed",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "EVENT_REMOVED",
+        "business_reference": null,
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "insufficient_confirmations",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "INSUFFICIENT_CONFIRMATIONS",
+        "business_reference": null,
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "source_integrity_failed",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "SOURCE_INTEGRITY_FAILED",
+        "business_reference": null,
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "non_accounting_precision",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "NON_ACCOUNTING_PRECISION",
+        "business_reference": null,
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    },
+    {
+      "name": "accounting_policy_unapproved",
+      "result": {
+        "event_id": "5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "integration_event_id": "arc:5042002:0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6:26",
+        "status": "exception",
+        "reason_code": "ACCOUNTING_POLICY_UNAPPROVED",
+        "business_reference": "ARC-ERP-P2-0001",
+        "difference_minor": 0,
+        "human_review_required": true,
+        "erp_draft_allowed": false
+      }
+    }
+  ]
+}

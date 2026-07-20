@@ -23,15 +23,19 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - Read-only frontend and backend receipt query.
 - Circle Contracts import of the verified Arc contract.
 - Circle `PaymentReceived` Event Monitor and overlap-window comparison with Arc RPC.
+- A two-receipt settlement ledger that distinguishes P1 pre-monitor history from the P2 Circle/RPC overlap window.
+- A synthetic, non-posting ERP reconciliation candidate with fail-closed exception controls.
+- A read-only accounting preview with independently recomputed debit/credit balance and unresolved schema fields.
 
 ## Verified evidence
 
 - Contract: [`0x05fd...E1Df`](https://testnet.arcscan.app/address/0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df)
 - Deployment: [`0xa880...fab1`](https://testnet.arcscan.app/tx/0xa8800b86a2d476aabc23d79cd2e7fa6b4a89ef425a594d072341304fa8c5fab1)
-- Test payment: [`0x56b6...0fdbf`](https://testnet.arcscan.app/tx/0x56b64a6a56209b2a82b170c6b1ea6ca5c8114d122488957f91b13cd40c00fdbf)
+- P1 test payment: [`0x56b6...0fdbf`](https://testnet.arcscan.app/tx/0x56b64a6a56209b2a82b170c6b1ea6ca5c8114d122488957f91b13cd40c00fdbf)
+- P2 segregated-payer payment: [`0x1837...8fe6`](https://testnet.arcscan.app/tx/0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6)
 - Circle contract state: `COMPLETE / VERIFIED`
 - Circle monitor state: `PaymentReceived / Subscribed`
-- Current overlap state: `aligned_in_overlap_window`
+- Current overlap state: `1 RPC / 1 Circle / aligned_in_overlap_window`
 
 ## Architecture
 
@@ -39,7 +43,9 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 2. The contract records payer, amount, metadata hash, and block number.
 3. The same transaction forwards the full payment value to the merchant.
 4. `PaymentReceived` becomes the common reconciliation event for Arc RPC and Circle Contracts.
-5. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
+5. The backend separates pre-monitor history from the common Circle/RPC coverage window.
+6. A synthetic ERP candidate maps the P2 event into a draft-only receipt and balanced journal preview.
+7. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
 
 See [Architecture](docs/ARCHITECTURE.md), [Security and privacy](SECURITY.md), and the [three-minute demo script](docs/DEMO_SCRIPT.md).
 
@@ -60,7 +66,7 @@ npm test
 forge test -vv
 ```
 
-The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, and the read-only API. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
+The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, and accounting precision rejection. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
 
 ## Read-only API
 
@@ -68,6 +74,11 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/evidence`
 - `GET /api/dual-source`
 - `GET /api/circle-monitor`
+- `GET /api/enterprise-settlement`
+- `GET /api/enterprise-settlements/:orderId`
+- `GET /api/enterprise-controls`
+- `GET /api/settlement-ledger`
+- `GET /api/accounting-preview`
 - `GET /api/receipts/:orderId`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
@@ -76,8 +87,9 @@ All other paths or write methods return explicit errors. The service has no sign
 
 - Testnet prototype, not independently audited and not for production funds.
 - `verified` does not mean `audited`.
-- The demonstrated payer and merchant are the same EOA; this proves settlement mechanics, not a multi-user checkout flow.
+- P1 uses the merchant EOA as payer; P2 uses a separate self-controlled test payer. Neither proves independent customer adoption.
 - `orderId` and `metadataHash` are public forever and must not contain personal or reversible customer data.
+- ERP receipt and journal fields are synthetic dry-run candidates only. They are non-posting, require human review, and make no accounting-recognition claim.
 - The contract does not implement refunds, disputes, tax documents, identity, access control, or upgradeability.
 - Circle history begins after the demonstrated P1 event; pre-monitor backfill is not claimed.
 - No persistent Circle API key, Entity Secret, Circle Wallet, webhook, or autonomous signer is used.

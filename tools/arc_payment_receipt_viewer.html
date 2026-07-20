@@ -35,8 +35,17 @@
     .metric-label { color: #64717d; font-size: 12px; line-height: 1.3; }
     .metric-value { margin-top: 8px; font-size: 20px; font-weight: 750; line-height: 1.2; overflow-wrap: anywhere; }
     .metric-value.good { color: #16624a; }
+    .metric-value.blocked { color: #b54708; }
     .monitor-summary { display: grid; grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr)); gap: 1px; background: #d8dee5; border: 1px solid #d8dee5; border-radius: 6px; overflow: hidden; }
     .monitor-note { margin: 12px 0 0; color: #5e6c78; font-size: 13px; line-height: 1.5; }
+    .enterprise-details { margin-top: 16px; }
+    .journal-list { border-top: 1px solid #d8dee5; margin-top: 16px; }
+    .journal-row { display: grid; grid-template-columns: minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(170px, 1.4fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid #d8dee5; align-items: center; }
+    .journal-row.header { color: #64717d; font-size: 12px; font-weight: 700; }
+    .journal-code, .journal-amount { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    .journal-direction { color: #16624a; font-weight: 800; }
+    .unresolved-fields { margin: 12px 0 0; color: #5e6c78; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+    .unresolved-fields code { color: #27313b; }
     .query-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: end; }
     label { display: block; color: #52606d; font-size: 13px; font-weight: 650; }
     input { width: 100%; height: 44px; margin-top: 7px; padding: 0 12px; border: 1px solid #aeb8c2; border-radius: 5px; background: #ffffff; color: #17202a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
@@ -63,6 +72,21 @@
     .check { min-height: 74px; padding: 13px; border: 1px solid #c8d0d8; border-radius: 6px; background: #ffffff; }
     .check-state { color: #16624a; font-weight: 800; }
     .check-label { margin-top: 6px; color: #5e6c78; font-size: 12px; line-height: 1.35; }
+    .control-list { border-top: 1px solid #d8dee5; }
+    .control-row { display: grid; grid-template-columns: minmax(170px, 1.4fr) minmax(190px, 1.7fr) minmax(110px, 0.8fr) minmax(90px, 0.7fr); gap: 16px; padding: 13px 0; border-bottom: 1px solid #d8dee5; align-items: center; }
+    .control-row.header { color: #64717d; font-size: 12px; font-weight: 700; }
+    .control-name, .control-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    .control-state { color: #16624a; font-weight: 800; }
+    .control-state.blocked { color: #b54708; }
+    .control-detail { color: #5e6c78; font-size: 13px; }
+    .ledger-list { border-top: 1px solid #d8dee5; }
+    .ledger-row { display: grid; grid-template-columns: 70px minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(150px, 1fr) auto; gap: 16px; padding: 14px 0; border-bottom: 1px solid #d8dee5; align-items: center; }
+    .ledger-sequence { font-size: 18px; font-weight: 800; }
+    .ledger-primary { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+    .ledger-label { color: #64717d; font-size: 11px; margin-bottom: 4px; }
+    .ledger-state { color: #16624a; font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
+    .ledger-state.history { color: #52606d; }
+    .row-action { min-width: 82px; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .button-link { background: #ffffff; color: #155eef; border-color: #9bb7ee; }
     .empty { padding: 28px 0; color: #64717d; }
@@ -74,6 +98,12 @@
       .flow { grid-template-columns: 1fr; gap: 8px; }
       .flow-arrow { min-height: 30px; }
       .flow-arrow span { transform: rotate(90deg); }
+      .control-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+      .control-row > :nth-child(3), .control-row > :nth-child(4) { text-align: left; }
+      .ledger-row { grid-template-columns: 60px minmax(0, 1fr) minmax(0, 1fr); }
+      .ledger-row > :nth-child(4) { grid-column: 2 / 4; }
+      .ledger-row > :nth-child(5) { grid-column: 1 / -1; }
+      .journal-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 560px) {
       .header-inner { align-items: flex-start; flex-direction: column; justify-content: center; padding: 18px 0; gap: 10px; }
@@ -86,6 +116,13 @@
       .details { grid-template-columns: 1fr; }
       .details dt { padding-bottom: 4px; border-bottom: 0; }
       .details dd { padding-top: 0; }
+      .control-row { grid-template-columns: 1fr; gap: 5px; }
+      .control-row.header { display: none; }
+      .ledger-row { grid-template-columns: 1fr; gap: 8px; }
+      .ledger-row > :nth-child(4), .ledger-row > :nth-child(5) { grid-column: auto; }
+      .row-action { width: 100%; }
+      .journal-row { grid-template-columns: 1fr; gap: 5px; }
+      .journal-row.header { display: none; }
     }
   </style>
 </head>
@@ -125,16 +162,76 @@
       <p class="monitor-note" id="monitor-note">Loading Circle and RPC coverage...</p>
     </section>
 
+    <section aria-labelledby="enterprise-title">
+      <h2 id="enterprise-title">Enterprise Settlement</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Source assurance</div><div class="metric-value good" id="source-assurance">...</div></div>
+        <div class="metric"><div class="metric-label">Reconciliation</div><div class="metric-value good" id="reconciliation-state">...</div></div>
+        <div class="metric"><div class="metric-label">ERP candidate</div><div class="metric-value" id="erp-candidate">...</div></div>
+        <div class="metric"><div class="metric-label">Accounting posting</div><div class="metric-value blocked" id="posting-state">...</div></div>
+      </div>
+      <dl class="details enterprise-details">
+        <dt>Business reference</dt><dd id="business-reference">...</dd>
+        <dt>Receipt origin</dt><dd id="receipt-origin">...</dd>
+        <dt>Voucher binding</dt><dd id="voucher-link">...</dd>
+        <dt>Control boundary</dt><dd id="enterprise-boundary">...</dd>
+      </dl>
+      <p class="monitor-note" id="enterprise-note">Loading the Arc-to-ERP control state...</p>
+    </section>
+
+    <section aria-labelledby="accounting-title">
+      <h2 id="accounting-title">Accounting Preview</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Ledger currency</div><div class="metric-value" id="ledger-currency">...</div></div>
+        <div class="metric"><div class="metric-label">Debit</div><div class="metric-value" id="debit-total">...</div></div>
+        <div class="metric"><div class="metric-label">Credit</div><div class="metric-value" id="credit-total">...</div></div>
+        <div class="metric"><div class="metric-label">Journal balance</div><div class="metric-value good" id="journal-balance">...</div></div>
+      </div>
+      <dl class="details enterprise-details">
+        <dt>Business reference</dt><dd id="accounting-reference">...</dd>
+        <dt>Receipt origin</dt><dd id="accounting-origin">...</dd>
+        <dt>Source bill</dt><dd id="accounting-bill">...</dd>
+        <dt>Policy</dt><dd id="accounting-policy">...</dd>
+      </dl>
+      <div class="journal-list" id="journal-list" aria-label="Accounting journal preview"></div>
+      <p class="unresolved-fields"><strong>Unresolved schema fields:</strong> <span id="unresolved-fields">...</span></p>
+      <p class="monitor-note" id="accounting-note">Loading the non-posting journal candidate...</p>
+    </section>
+
     <section aria-labelledby="query-title">
       <h2 id="query-title">Receipt Query</h2>
       <div class="query-row">
         <label class="query-field">Order ID
-          <input id="order-id" spellcheck="false" autocomplete="off" value="0xf303bb994a26f19f83d892f9c3fe78e1d1a4577dd09c53f5000a50fd712b9c4e">
+          <input id="order-id" spellcheck="false" autocomplete="off" value="0x0c5af61a58f0cf1e94160b8e2bfad6a68af550f2745afb4f3c9355b385b68fbf">
         </label>
         <button id="query" type="button">Query receipt</button>
         <button id="refresh" type="button" class="secondary">Refresh evidence</button>
       </div>
       <div id="query-status" role="status" aria-live="polite">Loading local evidence...</div>
+    </section>
+
+    <section aria-labelledby="controls-title">
+      <h2 id="controls-title">Exception Controls</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Scenario coverage</div><div class="metric-value" id="scenario-coverage">...</div></div>
+        <div class="metric"><div class="metric-label">Matched path</div><div class="metric-value good" id="matched-paths">...</div></div>
+        <div class="metric"><div class="metric-label">Blocked exceptions</div><div class="metric-value good" id="blocked-paths">...</div></div>
+        <div class="metric"><div class="metric-label">Draft leakage</div><div class="metric-value good" id="draft-leakage">...</div></div>
+      </div>
+      <p class="monitor-note" id="controls-note">Loading fail-closed scenarios...</p>
+      <div class="control-list" id="control-list" aria-label="Enterprise exception scenarios"></div>
+    </section>
+
+    <section aria-labelledby="ledger-title">
+      <h2 id="ledger-title">Settlement Ledger</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Receipts</div><div class="metric-value" id="ledger-total">...</div></div>
+        <div class="metric"><div class="metric-label">Pre-monitor history</div><div class="metric-value" id="ledger-history">...</div></div>
+        <div class="metric"><div class="metric-label">Circle/RPC matched</div><div class="metric-value good" id="ledger-matched">...</div></div>
+        <div class="metric"><div class="metric-label">ERP evaluated</div><div class="metric-value good" id="ledger-enterprise">...</div></div>
+      </div>
+      <p class="monitor-note" id="ledger-note">Loading receipt coverage history...</p>
+      <div class="ledger-list" id="ledger-list" aria-label="Settlement receipt ledger"></div>
     </section>
 
     <div id="receipt" hidden>
@@ -204,9 +301,27 @@
       "/api/dual-source",
       "../outputs/ArcPaymentReceipt_dual_source_monitor_latest.json"
     ];
+    const ENTERPRISE_EVIDENCE_URLS = [
+      "/api/enterprise-settlement",
+      "../outputs/ArcPaymentReceipt_enterprise_k0_latest.json"
+    ];
+    const ENTERPRISE_CONTROL_URLS = [
+      "/api/enterprise-controls",
+      "../outputs/ArcPaymentReceipt_enterprise_k0_latest.json"
+    ];
+    const ACCOUNTING_PREVIEW_URLS = [
+      "/api/accounting-preview"
+    ];
+    const SETTLEMENT_LEDGER_URLS = [
+      "/api/settlement-ledger"
+    ];
     const EXPLORER_TX = "https://testnet.arcscan.app/tx/";
     let report;
     let dualReport;
+    let enterpriseReport;
+    let enterpriseControls;
+    let settlementLedger;
+    let accountingPreview;
 
     const byId = (id) => document.getElementById(id);
     const shortAddress = (value) => `${value.slice(0, 8)}...${value.slice(-6)}`;
@@ -237,6 +352,222 @@
       byId("circle-state").textContent = dualReport.checks.circle_subscription_active ? "SUBSCRIBED" : "INACTIVE";
       const mode = dualReport.notification_boundary.webhook_active ? "Webhook notifications active." : "Manual history only; no webhook.";
       byId("monitor-note").textContent = `${dualReport.counts.rpc_before_circle_monitor} RPC event occurred before Circle monitoring. ${mode}`;
+    }
+
+    function normalizeEnterprise(payload) {
+      if (payload.order_id && payload.source_assurance && payload.erp_candidate) return payload;
+      const candidate = payload.settlement_event_candidate;
+      const sourceChecks = candidate.controls.source_assurance_checks || {};
+      const bindingChecks = payload.erp_drafts?.controls?.reconciliation_binding_checks || {};
+      return {
+        order_id: candidate.settlement_event.receipt_id,
+        settlement: {
+          finality_status: candidate.settlement_event.finality_status
+        },
+        source_assurance: {
+          status: candidate.controls.source_controls_pass ? "passed" : "review",
+          passed_checks: Object.values(sourceChecks).filter(Boolean).length,
+          total_checks: Object.keys(sourceChecks).length,
+          overlap_status: payload.source_assurance.overlap_status
+        },
+        reconciliation: payload.reconciliation,
+        erp_candidate: {
+          status: payload.erp_drafts?.status || "blocked",
+          postable: payload.erp_drafts?.postable === true,
+          receipt_origin_no: payload.erp_drafts?.receipt?.payload?.originNo || null,
+          voucher_link_id: payload.erp_drafts?.voucher?.payload?.linkId || null,
+          binding_status: payload.erp_drafts?.controls?.reconciliation_binding_pass ? "passed" : "blocked",
+          passed_binding_checks: Object.values(bindingChecks).filter(Boolean).length,
+          total_binding_checks: Object.keys(bindingChecks).length
+        },
+        boundaries: {
+          erp_api_calls_executed: payload.summary.erp_api_calls_executed,
+          wallet_actions: payload.summary.wallet_actions,
+          chain_writes: payload.summary.chain_writes,
+          accounting_recognition_claim: candidate.controls.accounting_recognition_claim
+        }
+      };
+    }
+
+    function renderEnterpriseSummary() {
+      const source = enterpriseReport.source_assurance;
+      const erp = enterpriseReport.erp_candidate;
+      const reconciliation = enterpriseReport.reconciliation;
+      byId("source-assurance").textContent = `${source.passed_checks}/${source.total_checks}`;
+      byId("source-assurance").classList.toggle("good", source.status === "passed");
+      byId("reconciliation-state").textContent = reconciliation.status.toUpperCase();
+      byId("reconciliation-state").classList.toggle("good", reconciliation.status === "matched");
+      byId("erp-candidate").textContent = erp.status === "draft_only" ? "DRAFT ONLY" : erp.status.toUpperCase();
+      byId("posting-state").textContent = erp.postable ? "READY" : "BLOCKED";
+      byId("posting-state").classList.toggle("good", erp.postable);
+      byId("posting-state").classList.toggle("blocked", !erp.postable);
+      byId("business-reference").textContent = reconciliation.business_reference || "Not bound";
+      byId("receipt-origin").textContent = erp.receipt_origin_no || "Not created";
+      byId("voucher-link").textContent = erp.voucher_link_id || "Not created";
+      const boundary = enterpriseReport.boundaries;
+      byId("enterprise-boundary").textContent = `ERP API ${boundary.erp_api_calls_executed}; wallet ${boundary.wallet_actions}; chain writes ${boundary.chain_writes}`;
+      byId("enterprise-note").textContent = `Arc finality ${enterpriseReport.settlement.finality_status}; ${source.overlap_status}; ERP binding ${erp.passed_binding_checks}/${erp.total_binding_checks}; human review required. No accounting recognition is claimed.`;
+    }
+
+    function renderAccountingPreview() {
+      const journal = accountingPreview.journal;
+      const controls = accountingPreview.controls;
+      byId("ledger-currency").textContent = accountingPreview.policy.ledger_currency;
+      byId("debit-total").textContent = journal.debit_total;
+      byId("credit-total").textContent = journal.credit_total;
+      byId("journal-balance").textContent = journal.balanced ? "BALANCED" : "REVIEW";
+      byId("journal-balance").classList.toggle("good", journal.balanced);
+      byId("journal-balance").classList.toggle("blocked", !journal.balanced);
+      byId("accounting-reference").textContent = accountingPreview.business_reference;
+      byId("accounting-origin").textContent = accountingPreview.receipt_candidate.origin_no;
+      byId("accounting-bill").textContent = `${accountingPreview.receipt_candidate.bill_type} / ${accountingPreview.receipt_candidate.bill_no}`;
+      byId("accounting-policy").textContent = `${accountingPreview.policy.mode.toUpperCase()} / ${accountingPreview.policy.scope.toUpperCase()}`;
+
+      const header = document.createElement("div");
+      header.className = "journal-row header";
+      ["Account", "Direction", "Amount", "Customer"].forEach((label) => {
+        const cell = document.createElement("div");
+        cell.textContent = label;
+        header.append(cell);
+      });
+      const rows = journal.lines.map((line) => {
+        const row = document.createElement("div");
+        row.className = "journal-row";
+        const account = document.createElement("div");
+        account.className = "journal-code";
+        account.textContent = line.account_code;
+        const direction = document.createElement("div");
+        direction.className = "journal-direction";
+        direction.textContent = line.direction.toUpperCase();
+        const amount = document.createElement("div");
+        amount.className = "journal-amount";
+        amount.textContent = `${line.amount} ${journal.currency}`;
+        const customer = document.createElement("div");
+        customer.className = "journal-code";
+        customer.textContent = line.customer_code || "-";
+        row.append(account, direction, amount, customer);
+        return row;
+      });
+      byId("journal-list").replaceChildren(header, ...rows);
+      byId("unresolved-fields").replaceChildren(...accountingPreview.unresolved_fields.flatMap((field, index) => {
+        const code = document.createElement("code");
+        code.textContent = field;
+        return index === 0 ? [code] : [document.createTextNode(", "), code];
+      }));
+      byId("accounting-note").textContent = `${accountingPreview.receipt_candidate.execution_mode}; posting ${controls.postable ? "enabled" : "blocked"}; human review ${controls.human_review_required ? "required" : "not required"}; ERP API calls ${controls.erp_api_calls_executed}.`;
+    }
+
+    function normalizeEnterpriseControls(payload) {
+      if (payload.summary?.total_scenarios !== undefined && Array.isArray(payload.scenarios)) return payload;
+      const scenarios = (payload.scenarios || []).map(({ name, result }) => ({
+        name,
+        status: result.status,
+        reason_code: result.reason_code,
+        business_reference: result.business_reference,
+        difference_minor: result.difference_minor,
+        human_review_required: result.human_review_required === true,
+        erp_draft_allowed: result.erp_draft_allowed === true
+      }));
+      const exceptions = scenarios.filter((scenario) => scenario.status === "exception");
+      const leakage = exceptions.filter((scenario) => scenario.erp_draft_allowed).length;
+      return {
+        summary: {
+          total_scenarios: scenarios.length,
+          matched_paths: scenarios.filter((scenario) => scenario.status === "matched").length,
+          blocked_exception_paths: exceptions.length,
+          human_review_paths: scenarios.filter((scenario) => scenario.human_review_required).length,
+          exception_draft_leakage: leakage,
+          fail_closed: exceptions.length > 0 && leakage === 0
+        },
+        scenarios
+      };
+    }
+
+    function renderEnterpriseControls() {
+      const summary = enterpriseControls.summary;
+      byId("scenario-coverage").textContent = `${summary.total_scenarios}/${summary.total_scenarios}`;
+      byId("matched-paths").textContent = summary.matched_paths;
+      byId("blocked-paths").textContent = summary.blocked_exception_paths;
+      byId("draft-leakage").textContent = summary.exception_draft_leakage;
+      byId("draft-leakage").classList.toggle("blocked", summary.exception_draft_leakage > 0);
+      byId("controls-note").textContent = summary.fail_closed
+        ? `${summary.blocked_exception_paths} exception paths fail closed; every scenario requires human review.`
+        : "Control review required: at least one exception can create an ERP draft.";
+
+      const header = document.createElement("div");
+      header.className = "control-row header";
+      ["Scenario", "Reason code", "ERP draft", "Review"].forEach((label) => {
+        const cell = document.createElement("div");
+        cell.textContent = label;
+        header.append(cell);
+      });
+      const rows = enterpriseControls.scenarios.map((scenario) => {
+        const row = document.createElement("div");
+        row.className = "control-row";
+        const name = document.createElement("div");
+        name.className = "control-name";
+        name.textContent = scenario.name;
+        const code = document.createElement("div");
+        code.className = "control-code";
+        code.textContent = scenario.reason_code;
+        const draft = document.createElement("div");
+        draft.className = `control-state ${scenario.erp_draft_allowed ? "" : "blocked"}`;
+        draft.textContent = scenario.erp_draft_allowed ? "ALLOWED" : "BLOCKED";
+        const review = document.createElement("div");
+        review.className = "control-detail";
+        review.textContent = scenario.human_review_required ? "Required" : "Not required";
+        row.append(name, code, draft, review);
+        return row;
+      });
+      byId("control-list").replaceChildren(header, ...rows);
+    }
+
+    function renderSettlementLedger() {
+      const summary = settlementLedger.summary;
+      byId("ledger-total").textContent = summary.total_receipts;
+      byId("ledger-history").textContent = summary.pre_monitor_receipts;
+      byId("ledger-matched").textContent = summary.circle_rpc_matched_receipts;
+      byId("ledger-enterprise").textContent = summary.enterprise_evaluated_receipts;
+      byId("ledger-note").textContent = `${summary.pre_monitor_receipts} receipt predates Circle monitoring; ${summary.circle_rpc_matched_receipts} receipt is matched in the common Circle/RPC window.`;
+      const rows = settlementLedger.receipts.map((receipt) => {
+        const row = document.createElement("div");
+        row.className = "ledger-row";
+        const sequence = document.createElement("div");
+        sequence.className = "ledger-sequence";
+        sequence.textContent = receipt.sequence;
+        const receiptCell = document.createElement("div");
+        const receiptLabel = document.createElement("div");
+        receiptLabel.className = "ledger-label";
+        receiptLabel.textContent = new Date(receipt.timestamp).toLocaleString();
+        const receiptValue = document.createElement("div");
+        receiptValue.className = "ledger-primary";
+        receiptValue.textContent = `${receipt.amount_usdc} USDC / block ${formatBlock(receipt.block_number)}`;
+        receiptCell.append(receiptLabel, receiptValue);
+        const sourceCell = document.createElement("div");
+        const sourceLabel = document.createElement("div");
+        sourceLabel.className = "ledger-label";
+        sourceLabel.textContent = "Source coverage";
+        const sourceValue = document.createElement("div");
+        sourceValue.className = `ledger-state ${receipt.coverage_window === "rpc_pre_monitor" ? "history" : ""}`;
+        sourceValue.textContent = receipt.coverage_window === "rpc_pre_monitor" ? "RPC / PRE-MONITOR" : "CIRCLE + RPC / MATCHED";
+        sourceCell.append(sourceLabel, sourceValue);
+        const enterpriseCell = document.createElement("div");
+        const enterpriseLabel = document.createElement("div");
+        enterpriseLabel.className = "ledger-label";
+        enterpriseLabel.textContent = "Enterprise control";
+        const enterpriseValue = document.createElement("div");
+        enterpriseValue.className = `ledger-state ${receipt.enterprise_status === "not_evaluated" ? "history" : ""}`;
+        enterpriseValue.textContent = receipt.enterprise_status === "not_evaluated" ? "NOT EVALUATED" : `${receipt.enterprise_status.toUpperCase()} / ${receipt.erp_candidate_status.toUpperCase()}`;
+        enterpriseCell.append(enterpriseLabel, enterpriseValue);
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "secondary row-action";
+        action.textContent = "View receipt";
+        action.dataset.orderId = receipt.order_id;
+        row.append(sequence, receiptCell, sourceCell, enterpriseCell, action);
+        return row;
+      });
+      byId("ledger-list").replaceChildren(...rows);
     }
 
     async function loadFirst(urls) {
@@ -321,12 +652,20 @@
       byId("refresh").disabled = true;
       setStatus("Loading local evidence...");
       try {
-        [report, dualReport] = await Promise.all([
+        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview] = await Promise.all([
           loadFirst(EVIDENCE_URLS),
-          loadFirst(DUAL_EVIDENCE_URLS)
+          loadFirst(DUAL_EVIDENCE_URLS),
+          loadFirst(ENTERPRISE_EVIDENCE_URLS).then(normalizeEnterprise),
+          loadFirst(ENTERPRISE_CONTROL_URLS).then(normalizeEnterpriseControls),
+          loadFirst(SETTLEMENT_LEDGER_URLS),
+          loadFirst(ACCOUNTING_PREVIEW_URLS)
         ]);
         renderSummary();
         renderDualSummary();
+        renderEnterpriseSummary();
+        renderEnterpriseControls();
+        renderSettlementLedger();
+        renderAccountingPreview();
         queryReceipt();
       } catch (error) {
         setStatus(error.message || "Evidence could not be loaded.", "error");
@@ -340,6 +679,13 @@
     byId("refresh").addEventListener("click", loadEvidence);
     byId("order-id").addEventListener("keydown", (event) => {
       if (event.key === "Enter") queryReceipt();
+    });
+    byId("ledger-list").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-order-id]");
+      if (!button) return;
+      byId("order-id").value = button.dataset.orderId;
+      queryReceipt();
+      byId("query-title").scrollIntoView({ behavior: "smooth", block: "start" });
     });
     loadEvidence();
   </script>
