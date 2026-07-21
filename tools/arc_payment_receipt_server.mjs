@@ -59,6 +59,154 @@ export async function loadEnterpriseEvidence(path = DEFAULT_ENTERPRISE_EVIDENCE_
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
+const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
+const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
+
+export function classifyEvidenceFreshness(generatedAt, now = Date.now()) {
+  const timestamp = Date.parse(generatedAt);
+  if (!Number.isFinite(timestamp)) {
+    return {
+      status: "invalid",
+      age_seconds: null,
+      generated_at: generatedAt ?? null,
+      reason: "invalid_timestamp"
+    };
+  }
+
+  const rawAgeMs = Number(now) - timestamp;
+  if (rawAgeMs < -FUTURE_SKEW_TOLERANCE_MS) {
+    return {
+      status: "invalid",
+      age_seconds: null,
+      generated_at: new Date(timestamp).toISOString(),
+      reason: "future_timestamp_beyond_clock_skew_tolerance"
+    };
+  }
+  const ageMs = Math.max(0, rawAgeMs);
+  const status = ageMs <= FRESH_AFTER_MS ? "fresh" : ageMs <= STALE_AFTER_MS ? "aging" : "stale";
+  return {
+    status,
+    age_seconds: Math.floor(ageMs / 1000),
+    generated_at: new Date(timestamp).toISOString()
+  };
+}
+
+export function buildEvidenceFreshnessView(report, dual, circle, enterprise, now = Date.now()) {
+  const sources = {
+    rpc: classifyEvidenceFreshness(report.generated_at, now),
+    dual_source: classifyEvidenceFreshness(dual.generated_at, now),
+    circle: classifyEvidenceFreshness(circle.generated_at, now),
+    enterprise: classifyEvidenceFreshness(enterprise.generated_at, now)
+  };
+  const severity = { fresh: 0, aging: 1, stale: 2, invalid: 3 };
+  const status = Object.values(sources).reduce(
+    (worst, source) => severity[source.status] > severity[worst] ? source.status : worst,
+    "fresh"
+  );
+
+  return {
+    mode: "read-only_evidence_freshness",
+    as_of: new Date(Number(now)).toISOString(),
+    status,
+    review_required: status !== "fresh",
+    thresholds_hours: {
+      fresh_max: FRESH_AFTER_MS / 3_600_000,
+      aging_max: STALE_AFTER_MS / 3_600_000
+    },
+    sources,
+    boundaries: {
+      verifies_source_truth: false,
+      authorizes_erp_posting: false
+    }
+  };
+}
+
+export function buildSettlementReadinessView(report, dual, circle, bundle, now = Date.now()) {
+  const freshness = buildEvidenceFreshnessView(report, dual, circle, bundle, now);
+  const enterprise = buildEnterpriseSettlementView(bundle);
+  const accounting = buildAccountingPreviewView(bundle);
+  const envelope = buildEnterpriseEnvelopeView(bundle);
+  const controls = buildEnterpriseControlView(bundle);
+  const checks = {
+    finality_finalized: enterprise.settlement.finality_status === "finalized",
+    source_assurance_passed: enterprise.source_assurance.status === "passed",
+    reconciliation_matched: enterprise.reconciliation.status === "matched",
+    accounting_balanced: accounting.journal.balanced === true,
+    exceptions_fail_closed: controls.summary.fail_closed === true,
+    evidence_fresh: freshness.status === "fresh",
+    enterprise_owner_contract_complete:
+      envelope.summary.review_groups === 0 && envelope.summary.unresolved_contract_fields === 0,
+    test_only_non_posting_policy: accounting.policy.mode === "test_only_non_posting"
+  };
+  const settlementControlKeys = [
+    "finality_finalized",
+    "source_assurance_passed",
+    "reconciliation_matched",
+    "accounting_balanced",
+    "exceptions_fail_closed"
+  ];
+  const settlementControlsPass = settlementControlKeys.every((key) => checks[key]);
+  const failedChecks = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  const blockingReasons = [];
+  if (!settlementControlsPass) blockingReasons.push("SETTLEMENT_CONTROL_FAILURE");
+  if (!checks.evidence_fresh) blockingReasons.push(`EVIDENCE_${freshness.status.toUpperCase()}`);
+  if (!checks.enterprise_owner_contract_complete) blockingReasons.push("ENTERPRISE_OWNER_CONTRACT_INCOMPLETE");
+  blockingReasons.push("TESTNET_NON_POSTING_POLICY");
+
+  let status = "ready_for_non_posting_review";
+  if (!settlementControlsPass) status = "blocked_control_failure";
+  else if (!checks.evidence_fresh) status = "blocked_evidence_refresh";
+  else if (!checks.enterprise_owner_contract_complete) status = "blocked_owner_contract";
+
+  const requiredActions = [];
+  if (!settlementControlsPass) requiredActions.push("Resolve failed settlement controls before downstream review");
+  if (!checks.evidence_fresh) requiredActions.push("Refresh and reconcile all four evidence sources");
+  if (!checks.enterprise_owner_contract_complete) {
+    requiredActions.push("Obtain enterprise data-owner approval for unresolved ERP fields");
+  }
+  requiredActions.push("Complete human accounting review; production posting remains out of scope");
+
+  return {
+    mode: "read-only_settlement_readiness_gate",
+    as_of: freshness.as_of,
+    status,
+    strategy_id: enterprise.strategy_id,
+    workflow_id: enterprise.workflow_id,
+    order_id: enterprise.order_id,
+    decision: {
+      settlement_controls_pass: settlementControlsPass,
+      erp_preview_available: enterprise.erp_candidate.status === "draft_only",
+      erp_draft_handoff_allowed:
+        status === "ready_for_non_posting_review" && checks.test_only_non_posting_policy,
+      erp_posting_authorized: false,
+      human_review_required: true
+    },
+    checks,
+    failed_checks: failedChecks,
+    blocking_reasons: blockingReasons,
+    evidence: {
+      status: freshness.status,
+      review_required: freshness.review_required,
+      source_count: Object.keys(freshness.sources).length
+    },
+    owner_contract: {
+      review_groups: envelope.summary.review_groups,
+      unresolved_fields: envelope.summary.unresolved_contract_fields
+    },
+    required_actions: requiredActions,
+    boundaries: {
+      synthetic_test_data: enterprise.boundaries.synthetic_test_data,
+      accounting_recognition_claim: false,
+      erp_api_calls_executed: enterprise.boundaries.erp_api_calls_executed,
+      wallet_actions: enterprise.boundaries.wallet_actions,
+      chain_writes: enterprise.boundaries.chain_writes
+    }
+  };
+}
+
 export function buildEnterpriseSettlementView(bundle) {
   const candidate = bundle.settlement_event_candidate;
   const settlement = candidate.settlement_event;
@@ -477,6 +625,7 @@ export function createReceiptServer(options = {}) {
   const loadViewer = options.loadViewer ?? (() => readFile(options.viewerPath ?? DEFAULT_VIEWER_PATH, "utf8"));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
+  const now = options.now ?? (() => Date.now());
 
   return createServer(async (request, response) => {
     try {
@@ -512,6 +661,8 @@ export function createReceiptServer(options = {}) {
         const accountingView = buildAccountingPreviewView(enterprise);
         const envelopeView = buildEnterpriseEnvelopeView(enterprise);
         const manifestView = buildSettlementEvidenceManifest(enterprise);
+        const freshnessView = buildEvidenceFreshnessView(report, dual, circle, enterprise, now());
+        const readinessView = buildSettlementReadinessView(report, dual, circle, enterprise, now());
         json(response, 200, {
           status: "ok",
           mode: "read-only",
@@ -529,6 +680,9 @@ export function createReceiptServer(options = {}) {
           enterprise_envelope_required_fields: envelopeView.summary.required_fields,
           enterprise_envelope_review_groups: envelopeView.summary.review_groups,
           evidence_manifest_digest: manifestView.integrity.digest,
+          evidence_freshness: freshnessView,
+          settlement_readiness_status: readinessView.status,
+          erp_draft_handoff_allowed: readinessView.decision.erp_draft_handoff_allowed,
           generated_at: report.generated_at
         });
         return;
@@ -566,6 +720,28 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/evidence-manifest") {
         json(response, 200, buildSettlementEvidenceManifest(await loadEnterpriseReport()));
+        return;
+      }
+
+      if (url.pathname === "/api/evidence-freshness") {
+        const [report, dual, circle, enterprise] = await Promise.all([
+          loadReport(),
+          loadDualReport(),
+          loadCircleReport(),
+          loadEnterpriseReport()
+        ]);
+        json(response, 200, buildEvidenceFreshnessView(report, dual, circle, enterprise, now()));
+        return;
+      }
+
+      if (url.pathname === "/api/settlement-readiness") {
+        const [report, dual, circle, enterprise] = await Promise.all([
+          loadReport(),
+          loadDualReport(),
+          loadCircleReport(),
+          loadEnterpriseReport()
+        ]);
+        json(response, 200, buildSettlementReadinessView(report, dual, circle, enterprise, now()));
         return;
       }
 

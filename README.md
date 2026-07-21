@@ -28,6 +28,8 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A read-only accounting preview with independently recomputed debit/credit balance and unresolved schema fields.
 - A grouped Enterprise Event Envelope audit for identity, business reference, evidence, workflow, accounting, and control ownership.
 - A deterministic, unsigned Settlement Evidence Manifest with offline content-integrity verification.
+- A four-source freshness control for Arc RPC, Circle, dual-source, and enterprise snapshots.
+- A fail-closed Settlement Readiness Gate that separates technical settlement evidence from ERP draft handoff and accounting posting authority.
 
 ## Verified evidence
 
@@ -50,7 +52,9 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 6. A synthetic ERP candidate maps the P2 event into a draft-only receipt and balanced journal preview.
 7. The Enterprise Event Envelope makes unresolved enterprise-owner fields and control boundaries explicit.
 8. The Settlement Evidence Manifest canonicalizes a bounded evidence payload and computes a reproducible SHA-256 content digest.
-9. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
+9. The freshness control classifies each evidence source as fresh, aging, stale, or invalid; timestamps beyond the clock-skew tolerance fail closed.
+10. The Settlement Readiness Gate requires finalized settlement, source assurance, reconciliation, balanced accounting, fail-closed exceptions, fresh evidence, and a complete enterprise owner contract before allowing non-posting review.
+11. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
 
 See [Architecture](docs/ARCHITECTURE.md), [Security and privacy](SECURITY.md), and the [three-minute demo script](docs/DEMO_SCRIPT.md).
 
@@ -93,6 +97,8 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/accounting-preview`
 - `GET /api/enterprise-envelope`
 - `GET /api/evidence-manifest`
+- `GET /api/evidence-freshness`
+- `GET /api/settlement-readiness`
 - `GET /api/receipts/:orderId`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
@@ -105,6 +111,8 @@ All other paths or write methods return explicit errors. The service has no sign
 - `orderId` and `metadataHash` are public forever and must not contain personal or reversible customer data.
 - ERP receipt and journal fields are synthetic dry-run candidates only. They are non-posting, require human review, and make no accounting-recognition claim.
 - The manifest digest verifies only the integrity of its canonicalized content. It is unsigned and does not prove source truth, signer identity, attestation, or an accounting record.
+- Evidence freshness measures snapshot age only. It does not verify source truth, authorize ERP handoff, or establish accounting recognition.
+- Even a fully passing Settlement Readiness Gate can allow only human-reviewed, non-posting draft handoff. It never authorizes ERP API execution or accounting posting.
 - The contract does not implement refunds, disputes, tax documents, identity, access control, or upgradeability.
 - Circle history begins after the demonstrated P1 event; pre-monitor backfill is not claimed.
 - No persistent Circle API key, Entity Secret, Circle Wallet, webhook, or autonomous signer is used.

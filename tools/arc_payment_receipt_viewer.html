@@ -35,6 +35,8 @@
     .metric-label { color: #64717d; font-size: 12px; line-height: 1.3; }
     .metric-value { margin-top: 8px; font-size: 20px; font-weight: 750; line-height: 1.2; overflow-wrap: anywhere; }
     .metric-value.good { color: #16624a; }
+    .metric-value.warn { color: #b54708; }
+    .metric-value.bad { color: #b42318; }
     .metric-value.blocked { color: #b54708; }
     .monitor-summary { display: grid; grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr)); gap: 1px; background: #d8dee5; border: 1px solid #d8dee5; border-radius: 6px; overflow: hidden; }
     .monitor-note { margin: 12px 0 0; color: #5e6c78; font-size: 13px; line-height: 1.5; }
@@ -169,6 +171,34 @@
         <div class="metric"><div class="metric-label">Circle monitor</div><div class="metric-value good" id="circle-state">...</div></div>
       </div>
       <p class="monitor-note" id="monitor-note">Loading Circle and RPC coverage...</p>
+    </section>
+
+    <section aria-labelledby="freshness-title">
+      <h2 id="freshness-title">Evidence Freshness</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Arc RPC</div><div class="metric-value" id="freshness-rpc">...</div></div>
+        <div class="metric"><div class="metric-label">Circle monitor</div><div class="metric-value" id="freshness-circle">...</div></div>
+        <div class="metric"><div class="metric-label">Dual-source report</div><div class="metric-value" id="freshness-dual">...</div></div>
+        <div class="metric"><div class="metric-label">Enterprise candidate</div><div class="metric-value" id="freshness-enterprise">...</div></div>
+      </div>
+      <p class="monitor-note" id="freshness-note">Loading evidence age controls...</p>
+    </section>
+
+    <section aria-labelledby="readiness-title">
+      <h2 id="readiness-title">Settlement Readiness Gate</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Gate status</div><div class="metric-value" id="readiness-status">...</div></div>
+        <div class="metric"><div class="metric-label">Settlement controls</div><div class="metric-value" id="readiness-controls">...</div></div>
+        <div class="metric"><div class="metric-label">ERP draft handoff</div><div class="metric-value" id="readiness-handoff">...</div></div>
+        <div class="metric"><div class="metric-label">Accounting posting</div><div class="metric-value blocked" id="readiness-posting">...</div></div>
+      </div>
+      <dl class="details enterprise-details">
+        <dt>Blocking reasons</dt><dd id="readiness-reasons">...</dd>
+        <dt>Owner contract</dt><dd id="readiness-owner">...</dd>
+        <dt>Evidence gate</dt><dd id="readiness-evidence">...</dd>
+        <dt>Required action</dt><dd id="readiness-action">...</dd>
+      </dl>
+      <p class="monitor-note" id="readiness-note">Loading the enterprise settlement decision gate...</p>
     </section>
 
     <section aria-labelledby="enterprise-title">
@@ -363,6 +393,12 @@
     const EVIDENCE_MANIFEST_URLS = [
       "/api/evidence-manifest"
     ];
+    const EVIDENCE_FRESHNESS_URLS = [
+      "/api/evidence-freshness"
+    ];
+    const SETTLEMENT_READINESS_URLS = [
+      "/api/settlement-readiness"
+    ];
     const SETTLEMENT_LEDGER_URLS = [
       "/api/settlement-ledger"
     ];
@@ -375,6 +411,8 @@
     let accountingPreview;
     let enterpriseEnvelope;
     let evidenceManifest;
+    let evidenceFreshness;
+    let settlementReadiness;
 
     const byId = (id) => document.getElementById(id);
     const shortAddress = (value) => `${value.slice(0, 8)}...${value.slice(-6)}`;
@@ -405,6 +443,55 @@
       byId("circle-state").textContent = dualReport.checks.circle_subscription_active ? "SUBSCRIBED" : "INACTIVE";
       const mode = dualReport.notification_boundary.webhook_active ? "Webhook notifications active." : "Manual history only; no webhook.";
       byId("monitor-note").textContent = `${dualReport.counts.rpc_before_circle_monitor} RPC event occurred before Circle monitoring. ${mode}`;
+    }
+
+    function formatAge(seconds) {
+      if (!Number.isFinite(seconds)) return "UNKNOWN";
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+      return `${(seconds / 3600).toFixed(seconds < 36_000 ? 1 : 0)}h`;
+    }
+
+    function renderEvidenceFreshness() {
+      const sourceTargets = {
+        rpc: "freshness-rpc",
+        circle: "freshness-circle",
+        dual_source: "freshness-dual",
+        enterprise: "freshness-enterprise"
+      };
+      Object.entries(sourceTargets).forEach(([source, target]) => {
+        const item = evidenceFreshness.sources[source];
+        const element = byId(target);
+        element.textContent = `${item.status.toUpperCase()} / ${formatAge(item.age_seconds)}`;
+        element.classList.toggle("good", item.status === "fresh");
+        element.classList.toggle("warn", item.status === "aging");
+        element.classList.toggle("bad", item.status === "stale" || item.status === "invalid");
+      });
+      const threshold = evidenceFreshness.thresholds_hours.aging_max;
+      byId("freshness-note").textContent = evidenceFreshness.review_required
+        ? `Overall ${evidenceFreshness.status.toUpperCase()}; human refresh review required. Freshness does not verify source truth or authorize ERP posting.`
+        : `All four evidence sources are within the current window; stale after ${threshold}h. Freshness does not verify source truth or authorize ERP posting.`;
+    }
+
+    function renderSettlementReadiness() {
+      const decision = settlementReadiness.decision;
+      const status = settlementReadiness.status;
+      const statusElement = byId("readiness-status");
+      statusElement.textContent = status === "ready_for_non_posting_review" ? "REVIEW READY" : "BLOCKED";
+      statusElement.classList.toggle("good", status === "ready_for_non_posting_review");
+      statusElement.classList.toggle("warn", status === "blocked_evidence_refresh" || status === "blocked_owner_contract");
+      statusElement.classList.toggle("bad", status === "blocked_control_failure");
+      byId("readiness-controls").textContent = decision.settlement_controls_pass ? "PASS" : "FAIL";
+      byId("readiness-controls").classList.toggle("good", decision.settlement_controls_pass);
+      byId("readiness-controls").classList.toggle("bad", !decision.settlement_controls_pass);
+      byId("readiness-handoff").textContent = decision.erp_draft_handoff_allowed ? "ALLOWED" : "BLOCKED";
+      byId("readiness-handoff").classList.toggle("good", decision.erp_draft_handoff_allowed);
+      byId("readiness-handoff").classList.toggle("warn", !decision.erp_draft_handoff_allowed);
+      byId("readiness-posting").textContent = decision.erp_posting_authorized ? "AUTHORIZED" : "BLOCKED";
+      byId("readiness-reasons").textContent = settlementReadiness.blocking_reasons.join(", ");
+      byId("readiness-owner").textContent = `${settlementReadiness.owner_contract.unresolved_fields} unresolved fields / ${settlementReadiness.owner_contract.review_groups} review groups`;
+      byId("readiness-evidence").textContent = `${settlementReadiness.evidence.status.toUpperCase()} / ${settlementReadiness.evidence.source_count} sources`;
+      byId("readiness-action").textContent = settlementReadiness.required_actions[0];
+      byId("readiness-note").textContent = `Read-only ${settlementReadiness.workflow_id}; human review required. This gate cannot call ERP APIs, authorize accounting recognition, or perform wallet and chain writes.`;
     }
 
     function normalizeEnterprise(payload) {
@@ -820,7 +907,7 @@
       byId("refresh").disabled = true;
       setStatus("Loading local evidence...");
       try {
-        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview, enterpriseEnvelope, evidenceManifest] = await Promise.all([
+        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview, enterpriseEnvelope, evidenceManifest, evidenceFreshness, settlementReadiness] = await Promise.all([
           loadFirst(EVIDENCE_URLS),
           loadFirst(DUAL_EVIDENCE_URLS),
           loadFirst(ENTERPRISE_EVIDENCE_URLS).then(normalizeEnterprise),
@@ -828,10 +915,14 @@
           loadFirst(SETTLEMENT_LEDGER_URLS),
           loadFirst(ACCOUNTING_PREVIEW_URLS),
           loadFirst(ENTERPRISE_ENVELOPE_URLS).then(normalizeEnterpriseEnvelope),
-          loadFirst(EVIDENCE_MANIFEST_URLS)
+          loadFirst(EVIDENCE_MANIFEST_URLS),
+          loadFirst(EVIDENCE_FRESHNESS_URLS),
+          loadFirst(SETTLEMENT_READINESS_URLS)
         ]);
         renderSummary();
         renderDualSummary();
+        renderEvidenceFreshness();
+        renderSettlementReadiness();
         renderEnterpriseSummary();
         renderEnterpriseControls();
         renderSettlementLedger();

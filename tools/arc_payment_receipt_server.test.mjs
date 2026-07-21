@@ -6,15 +6,18 @@ import {
   buildEnterpriseControlView,
   buildEnterpriseEnvelopeView,
   buildEnterpriseSettlementView,
+  buildEvidenceFreshnessView,
+  buildSettlementReadinessView,
   buildSettlementEvidenceManifest,
   buildSettlementLedgerView,
+  classifyEvidenceFreshness,
   createReceiptServer,
   verifySettlementEvidenceManifest
 } from "./arc_payment_receipt_server.mjs";
 
 const orderId = `0x${"12".repeat(32)}`;
 const report = {
-  generated_at: "2026-07-17T04:00:00.000Z",
+  generated_at: "2026-07-20T11:32:28.246Z",
   contract: "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df",
   range: { to: 52212852 },
   event_count: 2,
@@ -45,18 +48,20 @@ const report = {
   ]
 };
 const dualReport = {
+  generated_at: "2026-07-20T11:42:28.246Z",
   status: "aligned_in_overlap_window",
   coverage: { circle_monitor_created_at: "2026-07-17T05:32:25.461447Z" },
   counts: { rpc_in_overlap_window: 1, circle_in_overlap_window: 1 },
   unmatched: { rpc: [], circle: [] }
 };
 const circleReport = {
+  generated_at: "2026-07-20T11:52:28.246Z",
   subscription_state: "Subscribed",
   webhook_active: false,
   event_history_state: "No emitted events yet"
 };
 const enterpriseReport = {
-  generated_at: "2026-07-20T11:32:28.246Z",
+  generated_at: "2026-07-20T12:02:28.246Z",
   fact: {
     network: "Arc Testnet",
     chain_id: 5042002,
@@ -228,6 +233,7 @@ before(async () => {
     loadDualReport: async () => dualReport,
     loadCircleReport: async () => circleReport,
     loadEnterpriseReport: async () => enterpriseReport,
+    now: () => Date.parse("2026-07-20T13:02:28.246Z"),
     loadViewer: async () => "<!doctype html><title>viewer</title>",
     loadLogo: async () => Buffer.from("logo"),
     loadFavicon: async () => Buffer.from("favicon")
@@ -261,8 +267,148 @@ test("serves a read-only health response", async () => {
     enterprise_envelope_required_fields: 26,
     enterprise_envelope_review_groups: 3,
     evidence_manifest_digest: buildSettlementEvidenceManifest(enterpriseReport).integrity.digest,
+    evidence_freshness: {
+      mode: "read-only_evidence_freshness",
+      as_of: "2026-07-20T13:02:28.246Z",
+      status: "fresh",
+      review_required: false,
+      thresholds_hours: { fresh_max: 6, aging_max: 24 },
+      sources: {
+        rpc: { status: "fresh", age_seconds: 5400, generated_at: report.generated_at },
+        dual_source: { status: "fresh", age_seconds: 4800, generated_at: dualReport.generated_at },
+        circle: { status: "fresh", age_seconds: 4200, generated_at: circleReport.generated_at },
+        enterprise: { status: "fresh", age_seconds: 3600, generated_at: enterpriseReport.generated_at }
+      },
+      boundaries: {
+        verifies_source_truth: false,
+        authorizes_erp_posting: false
+      }
+    },
+    settlement_readiness_status: "blocked_owner_contract",
+    erp_draft_handoff_allowed: false,
     generated_at: report.generated_at
   });
+});
+
+test("classifies fresh, aging, stale, and invalid evidence", () => {
+  const now = Date.parse("2026-07-20T13:02:28.246Z");
+  assert.equal(classifyEvidenceFreshness("2026-07-20T12:02:28.246Z", now).status, "fresh");
+  assert.equal(classifyEvidenceFreshness("2026-07-20T05:02:28.246Z", now).status, "aging");
+  assert.equal(classifyEvidenceFreshness("2026-07-19T13:02:27.246Z", now).status, "stale");
+  assert.equal(classifyEvidenceFreshness("not-a-timestamp", now).status, "invalid");
+});
+
+test("fails closed on future evidence outside the clock-skew tolerance", () => {
+  const now = Date.parse("2026-07-20T13:02:28.246Z");
+  const tolerated = classifyEvidenceFreshness("2026-07-20T13:06:28.246Z", now);
+  const invalid = classifyEvidenceFreshness("2026-07-20T13:08:28.246Z", now);
+  assert.equal(tolerated.status, "fresh");
+  assert.equal(tolerated.age_seconds, 0);
+  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.age_seconds, null);
+  assert.equal(invalid.reason, "future_timestamp_beyond_clock_skew_tolerance");
+});
+
+test("returns a four-source freshness gate that cannot authorize posting", async () => {
+  const response = await fetch(`${origin}/api/evidence-freshness`);
+  assert.equal(response.status, 200);
+  const freshness = await response.json();
+  assert.equal(freshness.status, "fresh");
+  assert.equal(freshness.review_required, false);
+  assert.deepEqual(Object.keys(freshness.sources), ["rpc", "dual_source", "circle", "enterprise"]);
+  assert.equal(freshness.sources.enterprise.age_seconds, 3600);
+  assert.equal(freshness.boundaries.verifies_source_truth, false);
+  assert.equal(freshness.boundaries.authorizes_erp_posting, false);
+
+  const stale = buildEvidenceFreshnessView(
+    report,
+    dualReport,
+    circleReport,
+    enterpriseReport,
+    Date.parse("2026-07-22T13:02:28.246Z")
+  );
+  assert.equal(stale.status, "stale");
+  assert.equal(stale.review_required, true);
+});
+
+test("returns a fail-closed settlement readiness gate", async () => {
+  const response = await fetch(`${origin}/api/settlement-readiness`);
+  assert.equal(response.status, 200);
+  const readiness = await response.json();
+  assert.equal(readiness.mode, "read-only_settlement_readiness_gate");
+  assert.equal(readiness.status, "blocked_owner_contract");
+  assert.equal(readiness.decision.settlement_controls_pass, true);
+  assert.equal(readiness.decision.erp_preview_available, true);
+  assert.equal(readiness.decision.erp_draft_handoff_allowed, false);
+  assert.equal(readiness.decision.erp_posting_authorized, false);
+  assert.equal(readiness.owner_contract.unresolved_fields, 6);
+  assert.deepEqual(readiness.failed_checks, ["enterprise_owner_contract_complete"]);
+  assert.deepEqual(readiness.blocking_reasons, [
+    "ENTERPRISE_OWNER_CONTRACT_INCOMPLETE",
+    "TESTNET_NON_POSTING_POLICY"
+  ]);
+  assert.equal(readiness.boundaries.erp_api_calls_executed, 0);
+});
+
+test("blocks stale evidence before owner-contract review", () => {
+  const readiness = buildSettlementReadinessView(
+    report,
+    dualReport,
+    circleReport,
+    enterpriseReport,
+    Date.parse("2026-07-22T13:02:28.246Z")
+  );
+  assert.equal(readiness.status, "blocked_evidence_refresh");
+  assert.equal(readiness.checks.evidence_fresh, false);
+  assert.equal(readiness.decision.erp_draft_handoff_allowed, false);
+  assert.deepEqual(readiness.blocking_reasons, [
+    "EVIDENCE_STALE",
+    "ENTERPRISE_OWNER_CONTRACT_INCOMPLETE",
+    "TESTNET_NON_POSTING_POLICY"
+  ]);
+});
+
+test("blocks source-control failures even when evidence is fresh", () => {
+  const unsafe = structuredClone(enterpriseReport);
+  unsafe.settlement_event_candidate.controls.source_controls_pass = false;
+  unsafe.settlement_event_candidate.controls.source_assurance_failed_checks = ["circle_event_payload_matches"];
+  const readiness = buildSettlementReadinessView(
+    report,
+    dualReport,
+    circleReport,
+    unsafe,
+    Date.parse("2026-07-20T13:02:28.246Z")
+  );
+  assert.equal(readiness.status, "blocked_control_failure");
+  assert.equal(readiness.checks.source_assurance_passed, false);
+  assert.equal(readiness.decision.settlement_controls_pass, false);
+  assert.equal(readiness.blocking_reasons[0], "SETTLEMENT_CONTROL_FAILURE");
+});
+
+test("allows only non-posting handoff after every technical and owner check passes", () => {
+  const complete = structuredClone(enterpriseReport);
+  const envelope = complete.settlement_event_candidate.event_envelope_candidate;
+  envelope.entity_ref = "TEST-ENTITY";
+  envelope.business_unit_ref = "TEST-BU";
+  envelope.business_reference_hash = `0x${"ab".repeat(32)}`;
+  envelope.source_document_type = "sales_order_demo";
+  envelope.source_document_ref = "SO-ARC-P2-0001";
+  envelope.kingdee_object_type = "receipt_candidate";
+  envelope.draft_id = "LOCAL-DRY-RUN";
+  complete.unresolved_contract_fields = [];
+  complete.settlement_event_candidate.unresolved_contract_fields = [];
+  const readiness = buildSettlementReadinessView(
+    report,
+    dualReport,
+    circleReport,
+    complete,
+    Date.parse("2026-07-20T13:02:28.246Z")
+  );
+  assert.equal(readiness.status, "ready_for_non_posting_review");
+  assert.equal(readiness.failed_checks.length, 0);
+  assert.equal(readiness.decision.erp_draft_handoff_allowed, true);
+  assert.equal(readiness.decision.erp_posting_authorized, false);
+  assert.deepEqual(readiness.blocking_reasons, ["TESTNET_NON_POSTING_POLICY"]);
 });
 
 test("returns a curated enterprise settlement without exposing raw ERP payloads", async () => {
