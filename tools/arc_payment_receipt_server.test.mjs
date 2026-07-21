@@ -8,6 +8,8 @@ import {
   buildEnterpriseSettlementView,
   buildEvidenceFreshnessView,
   buildSettlementReadinessView,
+  buildSettlementReviewPacket,
+  buildSettlementEventContractView,
   buildSettlementEvidenceManifest,
   buildSettlementLedgerView,
   classifyEvidenceFreshness,
@@ -82,11 +84,28 @@ const enterpriseReport = {
     schema_version: "0.1-candidate",
     schema_status: "candidate_blocked_pending_owner_contract",
     canonical_compliance_claim: false,
+    owner_boundary: {
+      chain_fact_owner: "payment_receipt",
+      canonical_schema_owner: "enterprise_finance_schema_owner",
+      erp_accounting_owner: "enterprise_finance_schema_owner"
+    },
     settlement_event: {
       integration_event_id: `arc:5042002:0x${"34".repeat(32)}:26`,
+      rail: "Arc",
+      chain_id: 5042002,
       tx_hash: `0x${"34".repeat(32)}`,
+      log_index_or_payment_id: 26,
       finality_status: "finalized",
       asset: "ARC_TESTNET_NATIVE_USDC",
+      amount_minor: null,
+      asset_decimals: 18,
+      fees_minor: null,
+      minor_unit_resolution_candidate: {
+        amount_minor_decimal_string: "10000000000000000",
+        fees_minor_decimal_string: "2604985456999672"
+      },
+      confirmations: 1430,
+      removed: false,
       payer: "0x63cdbf1918133716c67b28390f5c5d9250b113da",
       payee: "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
       receipt_id: orderId
@@ -123,6 +142,9 @@ const enterpriseReport = {
       source_controls_pass: true,
       source_assurance_checks: { rpc_payload_verified: true, circle_event_payload_matches: true },
       source_assurance_failed_checks: [],
+      controlled_test_wallets_only: true,
+      independent_customer_claim: false,
+      opaque_metadata_not_promoted_to_business_reference: true,
       accounting_recognition_claim: false
     }
   },
@@ -286,6 +308,9 @@ test("serves a read-only health response", async () => {
     },
     settlement_readiness_status: "blocked_owner_contract",
     erp_draft_handoff_allowed: false,
+    settlement_review_packet_status: "blocked",
+    settlement_event_chain_fact_status: "valid",
+    settlement_event_handoff_status: "blocked_owner_contract",
     generated_at: report.generated_at
   });
 });
@@ -350,6 +375,50 @@ test("returns a fail-closed settlement readiness gate", async () => {
   assert.equal(readiness.boundaries.erp_api_calls_executed, 0);
 });
 
+test("validates Arc chain facts while preserving owner-blocked canonical fields", async () => {
+  const response = await fetch(`${origin}/api/settlement-event-contract`);
+  assert.equal(response.status, 200);
+  const contract = await response.json();
+  assert.equal(contract.mode, "read-only_settlement_event_handoff_contract");
+  assert.equal(contract.contract.canonical_schema_owner, "enterprise_finance_schema_owner");
+  assert.equal(contract.chain_fact_contract.status, "valid");
+  assert.deepEqual(contract.chain_fact_contract.failed_checks, []);
+  assert.equal(contract.canonical_handoff.status, "blocked_owner_contract");
+  assert.equal(contract.canonical_handoff.ready, false);
+  assert.deepEqual(contract.canonical_handoff.missing_required_fields, ["amount_minor", "fees_minor"]);
+  assert.equal(contract.canonical_handoff.owner_decisions_required.length, 6);
+  assert.equal(contract.preserved_candidates.amount_minor_decimal_string, "10000000000000000");
+  assert.equal(contract.preserved_candidates.promoted_to_canonical_fields, false);
+  assert.equal(contract.hard_gates.status, "pass");
+  assert.equal(contract.boundaries.contains_raw_erp_payload, false);
+  assert.equal(JSON.stringify(contract).includes("erp_drafts"), false);
+});
+
+test("fails the handoff contract on malformed chain identity", () => {
+  const malformed = structuredClone(enterpriseReport);
+  malformed.settlement_event_candidate.settlement_event.tx_hash = "0x1234";
+  malformed.settlement_event_candidate.settlement_event.payer = "not-an-address";
+  const contract = buildSettlementEventContractView(malformed);
+  assert.equal(contract.chain_fact_contract.status, "invalid");
+  assert.equal(contract.canonical_handoff.status, "blocked_chain_fact_contract");
+  assert.equal(contract.chain_fact_contract.failed_checks.includes("tx_hash_valid"), true);
+  assert.equal(contract.chain_fact_contract.failed_checks.includes("payer_valid"), true);
+  assert.equal(contract.canonical_handoff.ready, false);
+});
+
+test("fails the handoff contract on strategy or workflow drift", () => {
+  const drifted = structuredClone(enterpriseReport);
+  drifted.settlement_event_candidate.strategy_id = "PAYMENT_TO_LEDGER_V1";
+  drifted.settlement_event_candidate.workflow_id = "UNREVIEWED_WORKFLOW";
+  const contract = buildSettlementEventContractView(drifted);
+  assert.equal(contract.chain_fact_contract.status, "invalid");
+  assert.deepEqual(contract.chain_fact_contract.failed_checks.slice(0, 2), [
+    "strategy_id_matches",
+    "workflow_id_matches"
+  ]);
+  assert.equal(contract.canonical_handoff.status, "blocked_chain_fact_contract");
+});
+
 test("blocks stale evidence before owner-contract review", () => {
   const readiness = buildSettlementReadinessView(
     report,
@@ -409,6 +478,82 @@ test("allows only non-posting handoff after every technical and owner check pass
   assert.equal(readiness.decision.erp_draft_handoff_allowed, true);
   assert.equal(readiness.decision.erp_posting_authorized, false);
   assert.deepEqual(readiness.blocking_reasons, ["TESTNET_NON_POSTING_POLICY"]);
+});
+
+test("returns a bounded settlement review packet without raw ERP payloads", async () => {
+  const response = await fetch(`${origin}/api/settlement-review-packet`);
+  assert.equal(response.status, 200);
+  const packet = await response.json();
+  assert.equal(packet.packet_version, "1.0");
+  assert.equal(packet.mode, "read-only_non-posting_review_packet");
+  assert.equal(packet.scope, "single_settlement_review");
+  assert.equal(packet.identity.order_id, orderId);
+  assert.equal(
+    packet.identity.evidence_manifest_digest,
+    buildSettlementEvidenceManifest(enterpriseReport).integrity.digest
+  );
+  assert.equal(packet.decision.review_status, "blocked");
+  assert.equal(packet.decision.settlement_controls_pass, true);
+  assert.equal(packet.decision.erp_draft_handoff_allowed, false);
+  assert.equal(packet.decision.erp_posting_authorized, false);
+  assert.equal(packet.evidence.manifest_verification_status, "valid");
+  assert.equal(packet.owner_review.unresolved_fields.length, 6);
+  assert.equal(packet.checklist.length, 7);
+  assert.equal(packet.settlement_event_contract.chain_fact_status, "valid");
+  assert.equal(packet.settlement_event_contract.canonical_handoff_status, "blocked_owner_contract");
+  assert.deepEqual(packet.settlement_event_contract.missing_required_fields, ["amount_minor", "fees_minor"]);
+  assert.equal(packet.boundaries.contains_raw_erp_payload, false);
+  assert.equal(packet.boundaries.erp_api_calls_executed, 0);
+  assert.equal(packet.boundaries.wallet_actions, 0);
+  assert.equal(packet.boundaries.chain_writes, 0);
+  assert.equal(JSON.stringify(packet).includes("erp_drafts"), false);
+  assert.equal(JSON.stringify(packet).includes("receipt_candidate"), false);
+  assert.equal(JSON.stringify(packet).includes("voucher"), false);
+});
+
+test("review packet remains blocked when evidence ages", () => {
+  const packet = buildSettlementReviewPacket(
+    report,
+    dualReport,
+    circleReport,
+    enterpriseReport,
+    Date.parse("2026-07-22T13:02:28.246Z")
+  );
+  assert.equal(packet.decision.review_status, "blocked");
+  assert.equal(packet.decision.erp_draft_handoff_allowed, false);
+  assert.equal(packet.evidence.freshness_status, "stale");
+  assert.equal(packet.checklist.find((item) => item.id === "evidence_freshness").status, "review");
+  assert.equal(packet.blocking_reasons.includes("EVIDENCE_STALE"), true);
+});
+
+test("review packet can become review-ready but never posting-authorized", () => {
+  const complete = structuredClone(enterpriseReport);
+  const envelope = complete.settlement_event_candidate.event_envelope_candidate;
+  envelope.entity_ref = "TEST-ENTITY";
+  envelope.business_unit_ref = "TEST-BU";
+  envelope.business_reference_hash = `0x${"ab".repeat(32)}`;
+  envelope.source_document_type = "sales_order_demo";
+  envelope.source_document_ref = "SO-ARC-P2-0001";
+  envelope.kingdee_object_type = "receipt_candidate";
+  envelope.draft_id = "LOCAL-DRY-RUN";
+  complete.settlement_event_candidate.settlement_event.amount_minor = "10000000000000000";
+  complete.settlement_event_candidate.settlement_event.fees_minor = "2604985456999672";
+  complete.unresolved_contract_fields = [];
+  complete.settlement_event_candidate.unresolved_contract_fields = [];
+  const packet = buildSettlementReviewPacket(
+    report,
+    dualReport,
+    circleReport,
+    complete,
+    Date.parse("2026-07-20T13:02:28.246Z")
+  );
+  assert.equal(packet.decision.review_status, "ready_for_non_posting_review");
+  assert.equal(packet.decision.erp_draft_handoff_allowed, true);
+  assert.equal(packet.decision.erp_posting_authorized, false);
+  assert.equal(packet.settlement_event_contract.canonical_ready, true);
+  assert.equal(packet.accounting.postable, false);
+  assert.deepEqual(packet.blocking_reasons, ["TESTNET_NON_POSTING_POLICY"]);
+  assert.equal(packet.checklist.find((item) => item.id === "production_posting_authority").status, "blocked");
 });
 
 test("returns a curated enterprise settlement without exposing raw ERP payloads", async () => {

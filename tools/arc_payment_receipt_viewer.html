@@ -201,6 +201,26 @@
       <p class="monitor-note" id="readiness-note">Loading the enterprise settlement decision gate...</p>
     </section>
 
+    <section aria-labelledby="review-packet-title">
+      <h2 id="review-packet-title">Settlement Review Packet</h2>
+      <div class="summary">
+        <div class="metric"><div class="metric-label">Review status</div><div class="metric-value" id="review-packet-status">...</div></div>
+        <div class="metric"><div class="metric-label">Manifest integrity</div><div class="metric-value" id="review-packet-integrity">...</div></div>
+        <div class="metric"><div class="metric-label">Owner decisions</div><div class="metric-value" id="review-packet-owner">...</div></div>
+        <div class="metric"><div class="metric-label">Production posting</div><div class="metric-value blocked" id="review-packet-posting">...</div></div>
+      </div>
+      <dl class="details enterprise-details">
+        <dt>Order ID</dt><dd id="review-packet-order">...</dd>
+        <dt>Manifest digest</dt><dd id="review-packet-digest">...</dd>
+        <dt>Blocking reasons</dt><dd id="review-packet-reasons">...</dd>
+        <dt>Review boundary</dt><dd id="review-packet-boundary">...</dd>
+      </dl>
+      <div class="actions">
+        <a class="button-link" href="/api/settlement-review-packet" target="_blank" rel="noopener">Open review packet JSON</a>
+      </div>
+      <p class="monitor-note" id="review-packet-note">Loading the bounded reviewer handoff...</p>
+    </section>
+
     <section aria-labelledby="enterprise-title">
       <h2 id="enterprise-title">Enterprise Settlement</h2>
       <div class="summary">
@@ -399,6 +419,9 @@
     const SETTLEMENT_READINESS_URLS = [
       "/api/settlement-readiness"
     ];
+    const SETTLEMENT_REVIEW_PACKET_URLS = [
+      "/api/settlement-review-packet"
+    ];
     const SETTLEMENT_LEDGER_URLS = [
       "/api/settlement-ledger"
     ];
@@ -413,6 +436,7 @@
     let evidenceManifest;
     let evidenceFreshness;
     let settlementReadiness;
+    let settlementReviewPacket;
 
     const byId = (id) => document.getElementById(id);
     const shortAddress = (value) => `${value.slice(0, 8)}...${value.slice(-6)}`;
@@ -492,6 +516,27 @@
       byId("readiness-evidence").textContent = `${settlementReadiness.evidence.status.toUpperCase()} / ${settlementReadiness.evidence.source_count} sources`;
       byId("readiness-action").textContent = settlementReadiness.required_actions[0];
       byId("readiness-note").textContent = `Read-only ${settlementReadiness.workflow_id}; human review required. This gate cannot call ERP APIs, authorize accounting recognition, or perform wallet and chain writes.`;
+    }
+
+    function renderSettlementReviewPacket() {
+      const decision = settlementReviewPacket.decision;
+      const ready = decision.review_status === "ready_for_non_posting_review";
+      const status = byId("review-packet-status");
+      status.textContent = ready ? "REVIEW READY" : "BLOCKED";
+      status.classList.toggle("good", ready);
+      status.classList.toggle("warn", !ready);
+      const integrity = byId("review-packet-integrity");
+      integrity.textContent = settlementReviewPacket.evidence.manifest_verification_status.toUpperCase();
+      integrity.classList.toggle("good", settlementReviewPacket.evidence.manifest_verification_status === "valid");
+      integrity.classList.toggle("bad", settlementReviewPacket.evidence.manifest_verification_status !== "valid");
+      byId("review-packet-owner").textContent = settlementReviewPacket.owner_review.unresolved_fields.length;
+      byId("review-packet-owner").classList.toggle("warn", settlementReviewPacket.owner_review.unresolved_fields.length > 0);
+      byId("review-packet-posting").textContent = decision.erp_posting_authorized ? "AUTHORIZED" : "BLOCKED";
+      byId("review-packet-order").textContent = settlementReviewPacket.identity.order_id;
+      byId("review-packet-digest").textContent = settlementReviewPacket.identity.evidence_manifest_digest;
+      byId("review-packet-reasons").textContent = settlementReviewPacket.blocking_reasons.join(", ");
+      byId("review-packet-boundary").textContent = "Non-posting human review only; no source-truth claim, attestation, accounting record, ERP call, wallet action, or chain write.";
+      byId("review-packet-note").textContent = `${settlementReviewPacket.checklist.length} reviewer checks; ${settlementReviewPacket.owner_review.review_groups} owner groups require review.`;
     }
 
     function normalizeEnterprise(payload) {
@@ -907,7 +952,7 @@
       byId("refresh").disabled = true;
       setStatus("Loading local evidence...");
       try {
-        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview, enterpriseEnvelope, evidenceManifest, evidenceFreshness, settlementReadiness] = await Promise.all([
+        [report, dualReport, enterpriseReport, enterpriseControls, settlementLedger, accountingPreview, enterpriseEnvelope, evidenceManifest, evidenceFreshness, settlementReadiness, settlementReviewPacket] = await Promise.all([
           loadFirst(EVIDENCE_URLS),
           loadFirst(DUAL_EVIDENCE_URLS),
           loadFirst(ENTERPRISE_EVIDENCE_URLS).then(normalizeEnterprise),
@@ -917,12 +962,14 @@
           loadFirst(ENTERPRISE_ENVELOPE_URLS).then(normalizeEnterpriseEnvelope),
           loadFirst(EVIDENCE_MANIFEST_URLS),
           loadFirst(EVIDENCE_FRESHNESS_URLS),
-          loadFirst(SETTLEMENT_READINESS_URLS)
+          loadFirst(SETTLEMENT_READINESS_URLS),
+          loadFirst(SETTLEMENT_REVIEW_PACKET_URLS)
         ]);
         renderSummary();
         renderDualSummary();
         renderEvidenceFreshness();
         renderSettlementReadiness();
+        renderSettlementReviewPacket();
         renderEnterpriseSummary();
         renderEnterpriseControls();
         renderSettlementLedger();

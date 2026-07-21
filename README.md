@@ -30,6 +30,8 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A deterministic, unsigned Settlement Evidence Manifest with offline content-integrity verification.
 - A four-source freshness control for Arc RPC, Circle, dual-source, and enterprise snapshots.
 - A fail-closed Settlement Readiness Gate that separates technical settlement evidence from ERP draft handoff and accounting posting authority.
+- A bounded Settlement Review Packet that combines evidence integrity, freshness, accounting totals, unresolved owner decisions, and a reviewer checklist without exposing raw ERP payloads.
+- A SettlementEvent handoff-contract validator that verifies Arc identity, amount/fee candidate preservation, finality, non-posting controls, and schema-owner gaps.
 
 ## Verified evidence
 
@@ -54,7 +56,9 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 8. The Settlement Evidence Manifest canonicalizes a bounded evidence payload and computes a reproducible SHA-256 content digest.
 9. The freshness control classifies each evidence source as fresh, aging, stale, or invalid; timestamps beyond the clock-skew tolerance fail closed.
 10. The Settlement Readiness Gate requires finalized settlement, source assurance, reconciliation, balanced accounting, fail-closed exceptions, fresh evidence, and a complete enterprise owner contract before allowing non-posting review.
-11. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
+11. The SettlementEvent validator checks the chain-owned handoff fields while keeping unresolved enterprise fields under the external schema owner's authority.
+12. The Review Packet fails closed unless the Manifest, Readiness Gate, and handoff contract all permit non-posting human review.
+13. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
 
 See [Architecture](docs/ARCHITECTURE.md), [Security and privacy](SECURITY.md), and the [three-minute demo script](docs/DEMO_SCRIPT.md).
 
@@ -82,7 +86,7 @@ node tools/arc_settlement_evidence_manifest.mjs
 node tools/arc_settlement_evidence_manifest.mjs --verify outputs/ArcPaymentReceipt_settlement_evidence_manifest_latest.json
 ```
 
-The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, accounting precision rejection, and fail-closed manifest verification. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
+The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, accounting precision rejection, manifest verification, SettlementEvent contract validation, and the bounded Review Packet. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
 
 ## Read-only API
 
@@ -99,6 +103,8 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/evidence-manifest`
 - `GET /api/evidence-freshness`
 - `GET /api/settlement-readiness`
+- `GET /api/settlement-review-packet`
+- `GET /api/settlement-event-contract`
 - `GET /api/receipts/:orderId`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
@@ -113,6 +119,8 @@ All other paths or write methods return explicit errors. The service has no sign
 - The manifest digest verifies only the integrity of its canonicalized content. It is unsigned and does not prove source truth, signer identity, attestation, or an accounting record.
 - Evidence freshness measures snapshot age only. It does not verify source truth, authorize ERP handoff, or establish accounting recognition.
 - Even a fully passing Settlement Readiness Gate can allow only human-reviewed, non-posting draft handoff. It never authorizes ERP API execution or accounting posting.
+- The SettlementEvent validator is a read-only contract snapshot, not the canonical enterprise schema owner. Atomic amount and fee candidates remain unpromoted until the external owner resolves the serialization contract.
+- The Review Packet is neither an attestation nor an accounting record and contains no raw ERP payload.
 - The contract does not implement refunds, disputes, tax documents, identity, access control, or upgradeability.
 - Circle history begins after the demonstrated P1 event; pre-monitor backfill is not claimed.
 - No persistent Circle API key, Entity Secret, Circle Wallet, webhook, or autonomous signer is used.

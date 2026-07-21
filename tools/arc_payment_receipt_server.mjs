@@ -122,6 +122,163 @@ export function buildEvidenceFreshnessView(report, dual, circle, enterprise, now
   };
 }
 
+const SETTLEMENT_EVENT_CONTRACT = {
+  contract_version: "1.0-read-only-snapshot",
+  contract_source: "read-only_owner_strategy_snapshot",
+  canonical_schema_owner: "enterprise_finance_schema_owner",
+  strategy_id: "ONCHAIN_ENTERPRISE_FINANCE_STACK_V1",
+  workflow_id: "PAYMENT_TO_LEDGER_V1",
+  rail: "Arc",
+  chain_id: 5042002,
+  asset: "ARC_TESTNET_NATIVE_USDC",
+  asset_decimals: 18,
+  required_fields: [
+    "integration_event_id",
+    "rail",
+    "chain_id",
+    "tx_hash",
+    "log_index_or_payment_id",
+    "payer",
+    "payee",
+    "asset",
+    "amount_minor",
+    "asset_decimals",
+    "fees_minor",
+    "confirmations",
+    "finality_status",
+    "removed",
+    "receipt_id"
+  ]
+};
+
+const ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+const HASH_PATTERN = /^0x[0-9a-fA-F]{64}$/;
+const DECIMAL_INTEGER_PATTERN = /^(0|[1-9][0-9]*)$/;
+
+function isDecimalInteger(value) {
+  return DECIMAL_INTEGER_PATTERN.test(String(value ?? ""));
+}
+
+export function buildSettlementEventContractView(bundle) {
+  const candidate = bundle.settlement_event_candidate ?? {};
+  const settlement = candidate.settlement_event ?? {};
+  const envelope = candidate.event_envelope_candidate ?? {};
+  const controls = candidate.controls ?? {};
+  const unresolved = candidate.unresolved_contract_fields
+    ?? bundle.unresolved_contract_fields
+    ?? [];
+  const unresolvedFields = unresolved.map((item) => item.field);
+  const missingRequiredFields = SETTLEMENT_EVENT_CONTRACT.required_fields
+    .filter((field) => !hasEnvelopeValue(settlement[field]));
+  const logIndex = settlement.log_index_or_payment_id;
+  const expectedEventId = Number.isInteger(logIndex)
+    && HASH_PATTERN.test(settlement.tx_hash ?? "")
+    ? `arc:${settlement.chain_id}:${settlement.tx_hash.toLowerCase()}:${logIndex}`
+    : null;
+  const amountCandidate = settlement.minor_unit_resolution_candidate?.amount_minor_decimal_string;
+  const feeCandidate = settlement.minor_unit_resolution_candidate?.fees_minor_decimal_string;
+  const chainChecks = {
+    strategy_id_matches: candidate.strategy_id === SETTLEMENT_EVENT_CONTRACT.strategy_id,
+    workflow_id_matches: candidate.workflow_id === SETTLEMENT_EVENT_CONTRACT.workflow_id,
+    rail_matches: settlement.rail === SETTLEMENT_EVENT_CONTRACT.rail,
+    chain_id_matches: settlement.chain_id === SETTLEMENT_EVENT_CONTRACT.chain_id,
+    integration_event_id_matches: expectedEventId !== null
+      && String(settlement.integration_event_id).toLowerCase() === expectedEventId,
+    tx_hash_valid: HASH_PATTERN.test(settlement.tx_hash ?? ""),
+    log_index_valid: Number.isInteger(logIndex) && logIndex >= 0,
+    payer_valid: ADDRESS_PATTERN.test(settlement.payer ?? ""),
+    payee_valid: ADDRESS_PATTERN.test(settlement.payee ?? ""),
+    asset_matches: settlement.asset === SETTLEMENT_EVENT_CONTRACT.asset,
+    asset_decimals_match: settlement.asset_decimals === SETTLEMENT_EVENT_CONTRACT.asset_decimals,
+    amount_atomic_candidate_preserved: isDecimalInteger(amountCandidate),
+    fee_atomic_candidate_preserved: isDecimalInteger(feeCandidate),
+    confirmations_sufficient: Number.isInteger(settlement.confirmations) && settlement.confirmations >= 1,
+    finality_finalized: settlement.finality_status === "finalized",
+    event_not_removed: settlement.removed === false,
+    receipt_id_valid: HASH_PATTERN.test(settlement.receipt_id ?? ""),
+    source_controls_pass: controls.source_controls_pass === true
+  };
+  const failedChainChecks = Object.entries(chainChecks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  const hardGates = {
+    no_accounting_recognition_claim: controls.accounting_recognition_claim === false,
+    no_independent_customer_claim: controls.independent_customer_claim === false,
+    opaque_metadata_not_promoted: controls.opaque_metadata_not_promoted_to_business_reference === true,
+    controlled_test_data_only:
+      bundle.control_boundary?.synthetic_data_only === true
+      && controls.controlled_test_wallets_only === true,
+    human_review_required: envelope.human_review_required === true,
+    non_posting: envelope.postable === false,
+    zero_erp_wallet_chain_writes:
+      bundle.summary?.erp_api_calls_executed === 0
+      && bundle.summary?.wallet_actions === 0
+      && bundle.summary?.chain_writes === 0
+  };
+  const failedHardGates = Object.entries(hardGates)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  const chainFactValid = failedChainChecks.length === 0 && failedHardGates.length === 0;
+  const envelopeAudit = buildEnterpriseEnvelopeView(bundle);
+  const canonicalReady = chainFactValid
+    && missingRequiredFields.length === 0
+    && unresolvedFields.length === 0
+    && envelopeAudit.summary.review_groups === 0
+    && envelopeAudit.summary.unresolved_contract_fields === 0;
+  const canonicalStatus = !chainFactValid
+    ? "blocked_chain_fact_contract"
+    : canonicalReady
+      ? "ready_for_non_posting_review"
+      : "blocked_owner_contract";
+
+  return {
+    mode: "read-only_settlement_event_handoff_contract",
+    contract: {
+      ...SETTLEMENT_EVENT_CONTRACT,
+      authority_note: "This validator consumes an owner-approved schema snapshot; it does not own or amend the canonical enterprise contract."
+    },
+    identity: {
+      strategy_id: candidate.strategy_id ?? null,
+      workflow_id: candidate.workflow_id ?? null,
+      integration_event_id: settlement.integration_event_id ?? null,
+      receipt_id: settlement.receipt_id ?? null
+    },
+    chain_fact_contract: {
+      status: chainFactValid ? "valid" : "invalid",
+      checks: chainChecks,
+      failed_checks: failedChainChecks
+    },
+    canonical_handoff: {
+      status: canonicalStatus,
+      ready: canonicalReady,
+      missing_required_fields: missingRequiredFields,
+      owner_decisions_required: unresolved.map(({ field, reason }) => ({
+        field,
+        reason: reason ?? "Enterprise schema-owner decision required"
+      })),
+      envelope_review_groups: envelopeAudit.summary.review_groups
+    },
+    preserved_candidates: {
+      amount_minor_decimal_string: amountCandidate ?? null,
+      fees_minor_decimal_string: feeCandidate ?? null,
+      promoted_to_canonical_fields: false
+    },
+    hard_gates: {
+      status: failedHardGates.length === 0 ? "pass" : "blocked",
+      checks: hardGates,
+      failed_checks: failedHardGates
+    },
+    boundaries: {
+      contains_raw_erp_payload: false,
+      canonical_compliance_claim: candidate.canonical_compliance_claim === true,
+      accounting_recognition_claim: false,
+      erp_api_calls_executed: bundle.summary?.erp_api_calls_executed ?? null,
+      wallet_actions: bundle.summary?.wallet_actions ?? null,
+      chain_writes: bundle.summary?.chain_writes ?? null
+    }
+  };
+}
+
 export function buildSettlementReadinessView(report, dual, circle, bundle, now = Date.now()) {
   const freshness = buildEvidenceFreshnessView(report, dual, circle, bundle, now);
   const enterprise = buildEnterpriseSettlementView(bundle);
@@ -203,6 +360,120 @@ export function buildSettlementReadinessView(report, dual, circle, bundle, now =
       erp_api_calls_executed: enterprise.boundaries.erp_api_calls_executed,
       wallet_actions: enterprise.boundaries.wallet_actions,
       chain_writes: enterprise.boundaries.chain_writes
+    }
+  };
+}
+
+export function buildSettlementReviewPacket(report, dual, circle, bundle, now = Date.now()) {
+  const readiness = buildSettlementReadinessView(report, dual, circle, bundle, now);
+  const enterprise = buildEnterpriseSettlementView(bundle);
+  const accounting = buildAccountingPreviewView(bundle);
+  const envelope = buildEnterpriseEnvelopeView(bundle);
+  const manifest = buildSettlementEvidenceManifest(bundle);
+  const manifestVerification = verifySettlementEvidenceManifest(manifest);
+  const settlementContract = buildSettlementEventContractView(bundle);
+  const checklist = [
+    {
+      id: "manifest_content_integrity",
+      status: manifestVerification.status === "valid" ? "pass" : "blocked",
+      evidence: manifest.integrity.digest
+    },
+    {
+      id: "settlement_controls",
+      status: readiness.decision.settlement_controls_pass ? "pass" : "blocked",
+      evidence: readiness.failed_checks.filter((check) => check !== "evidence_fresh" && check !== "enterprise_owner_contract_complete")
+    },
+    {
+      id: "evidence_freshness",
+      status: readiness.checks.evidence_fresh ? "pass" : "review",
+      evidence: readiness.evidence.status
+    },
+    {
+      id: "enterprise_owner_contract",
+      status: readiness.checks.enterprise_owner_contract_complete ? "pass" : "review",
+      evidence: `${readiness.owner_contract.unresolved_fields} unresolved fields`
+    },
+    {
+      id: "settlement_event_handoff_contract",
+      status: settlementContract.chain_fact_contract.status === "invalid"
+        ? "blocked"
+        : settlementContract.canonical_handoff.ready ? "pass" : "review",
+      evidence: settlementContract.canonical_handoff.status
+    },
+    {
+      id: "accounting_preview",
+      status: accounting.journal.balanced ? "pass" : "blocked",
+      evidence: `${accounting.journal.debit_total} debit / ${accounting.journal.credit_total} credit`
+    },
+    {
+      id: "production_posting_authority",
+      status: "blocked",
+      evidence: "testnet_non_posting_policy"
+    }
+  ];
+  const reviewReady = readiness.status === "ready_for_non_posting_review"
+    && manifestVerification.status === "valid"
+    && settlementContract.canonical_handoff.ready;
+
+  return {
+    packet_version: "1.0",
+    mode: "read-only_non-posting_review_packet",
+    scope: "single_settlement_review",
+    as_of: readiness.as_of,
+    identity: {
+      strategy_id: readiness.strategy_id,
+      workflow_id: readiness.workflow_id,
+      order_id: readiness.order_id,
+      event_id: enterprise.settlement.event_id,
+      transaction_hash: enterprise.settlement.transaction_hash,
+      evidence_manifest_digest: manifest.integrity.digest
+    },
+    decision: {
+      review_status: reviewReady ? "ready_for_non_posting_review" : "blocked",
+      settlement_controls_pass: readiness.decision.settlement_controls_pass,
+      erp_preview_available: readiness.decision.erp_preview_available,
+      erp_draft_handoff_allowed: reviewReady && readiness.decision.erp_draft_handoff_allowed,
+      erp_posting_authorized: false,
+      human_review_required: true
+    },
+    evidence: {
+      manifest_verification_status: manifestVerification.status,
+      freshness_status: readiness.evidence.status,
+      source_count: readiness.evidence.source_count,
+      finality_status: enterprise.settlement.finality_status,
+      source_assurance_status: enterprise.source_assurance.status
+    },
+    accounting: {
+      currency: accounting.journal.currency,
+      debit_total: accounting.journal.debit_total,
+      credit_total: accounting.journal.credit_total,
+      balanced: accounting.journal.balanced,
+      postable: false,
+      accounting_recognition_claim: false
+    },
+    owner_review: {
+      review_groups: envelope.summary.review_groups,
+      unresolved_fields: envelope.unresolved_fields
+    },
+    settlement_event_contract: {
+      chain_fact_status: settlementContract.chain_fact_contract.status,
+      canonical_handoff_status: settlementContract.canonical_handoff.status,
+      canonical_ready: settlementContract.canonical_handoff.ready,
+      missing_required_fields: settlementContract.canonical_handoff.missing_required_fields,
+      owner_decisions_required: settlementContract.canonical_handoff.owner_decisions_required,
+      hard_gates_status: settlementContract.hard_gates.status
+    },
+    checklist,
+    blocking_reasons: readiness.blocking_reasons,
+    required_actions: readiness.required_actions,
+    boundaries: {
+      contains_raw_erp_payload: false,
+      verifies_source_truth: false,
+      is_attestation: false,
+      is_accounting_record: false,
+      erp_api_calls_executed: readiness.boundaries.erp_api_calls_executed,
+      wallet_actions: readiness.boundaries.wallet_actions,
+      chain_writes: readiness.boundaries.chain_writes
     }
   };
 }
@@ -661,8 +932,10 @@ export function createReceiptServer(options = {}) {
         const accountingView = buildAccountingPreviewView(enterprise);
         const envelopeView = buildEnterpriseEnvelopeView(enterprise);
         const manifestView = buildSettlementEvidenceManifest(enterprise);
+        const settlementContractView = buildSettlementEventContractView(enterprise);
         const freshnessView = buildEvidenceFreshnessView(report, dual, circle, enterprise, now());
         const readinessView = buildSettlementReadinessView(report, dual, circle, enterprise, now());
+        const reviewPacket = buildSettlementReviewPacket(report, dual, circle, enterprise, now());
         json(response, 200, {
           status: "ok",
           mode: "read-only",
@@ -683,6 +956,9 @@ export function createReceiptServer(options = {}) {
           evidence_freshness: freshnessView,
           settlement_readiness_status: readinessView.status,
           erp_draft_handoff_allowed: readinessView.decision.erp_draft_handoff_allowed,
+          settlement_review_packet_status: reviewPacket.decision.review_status,
+          settlement_event_chain_fact_status: settlementContractView.chain_fact_contract.status,
+          settlement_event_handoff_status: settlementContractView.canonical_handoff.status,
           generated_at: report.generated_at
         });
         return;
@@ -742,6 +1018,22 @@ export function createReceiptServer(options = {}) {
           loadEnterpriseReport()
         ]);
         json(response, 200, buildSettlementReadinessView(report, dual, circle, enterprise, now()));
+        return;
+      }
+
+      if (url.pathname === "/api/settlement-review-packet") {
+        const [report, dual, circle, enterprise] = await Promise.all([
+          loadReport(),
+          loadDualReport(),
+          loadCircleReport(),
+          loadEnterpriseReport()
+        ]);
+        json(response, 200, buildSettlementReviewPacket(report, dual, circle, enterprise, now()));
+        return;
+      }
+
+      if (url.pathname === "/api/settlement-event-contract") {
+        json(response, 200, buildSettlementEventContractView(await loadEnterpriseReport()));
         return;
       }
 
