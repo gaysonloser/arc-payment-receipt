@@ -10,6 +10,7 @@ const baseEvent = {
 };
 
 const rpc = {
+  generated_at: "2026-07-17T05:50:00Z",
   contract: "0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df",
   range: { from: 1, to: 2 },
   checks: { unique: true, storage: true },
@@ -32,7 +33,15 @@ test("aligns an empty overlap window while preserving the pre-monitor event", ()
   assert.equal(report.counts.rpc_total, 1);
   assert.equal(report.counts.rpc_before_circle_monitor, 1);
   assert.equal(report.counts.rpc_in_overlap_window, 0);
+  assert.equal(report.evidence_at, "2026-07-17T05:50:00.000Z");
   assert.equal(report.notification_boundary.mode, "manual_history_read_only");
+});
+
+test("fails closed when either source snapshot timestamp is invalid", () => {
+  const report = buildDualSourceReport({ ...rpc, generated_at: null }, circle);
+  assert.equal(report.status, "review_required");
+  assert.equal(report.evidence_at, null);
+  assert.equal(report.checks.source_snapshot_timestamps_valid, false);
 });
 
 test("flags a new RPC event missing from Circle history", () => {

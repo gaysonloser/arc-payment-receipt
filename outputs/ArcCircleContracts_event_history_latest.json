@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-20T08:27:25Z",
-  "source": "Circle Console Testnet (sanitized snapshot)",
+  "generated_at": "2026-07-21T05:46:07Z",
+  "source": "Circle Console Testnet",
   "network": "ARC-TESTNET",
   "contract_address": "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df",
   "contract_verification": "VERIFIED",
@@ -29,7 +29,7 @@
     }
   ],
   "webhook_active": false,
-  "subscription_observed_at": "2026-07-20T08:27:25Z",
+  "subscription_observed_at": "2026-07-21T05:46:07Z",
   "wallet_signature": false,
   "onchain_write": false
 }

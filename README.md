@@ -41,8 +41,9 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - P2 segregated-payer payment: [`0x1837...8fe6`](https://testnet.arcscan.app/tx/0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6)
 - Circle contract state: `COMPLETE / VERIFIED`
 - Circle monitor state: `PaymentReceived / Subscribed`
+- Arc RPC coverage: deployment block `52,159,957` through observed block `52,895,762`
 - Current overlap state: `1 RPC / 1 Circle / aligned_in_overlap_window`
-- Settlement Evidence Manifest SHA-256: `8768fc2e323dff085d3a5d0553993522c0a221cd133e2a654d4c8fde47f4ecfa`
+- Settlement Evidence Manifest SHA-256: `ca93a6e741a0ca55ea85cffda9e12b8e6f06f90c506a79f312c0171204c470e9`
 
 ## Architecture
 
@@ -50,11 +51,11 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 2. The contract records payer, amount, metadata hash, and block number.
 3. The same transaction forwards the full payment value to the merchant.
 4. `PaymentReceived` becomes the common reconciliation event for Arc RPC and Circle Contracts.
-5. The backend separates pre-monitor history from the common Circle/RPC coverage window.
+5. The backend scans the full configured Arc RPC range, then separates pre-monitor history from the common Circle/RPC coverage window.
 6. A synthetic ERP candidate maps the P2 event into a draft-only receipt and balanced journal preview.
 7. The Enterprise Event Envelope makes unresolved enterprise-owner fields and control boundaries explicit.
 8. The Settlement Evidence Manifest canonicalizes a bounded evidence payload and computes a reproducible SHA-256 content digest.
-9. The freshness control classifies each evidence source as fresh, aging, stale, or invalid; timestamps beyond the clock-skew tolerance fail closed.
+9. The freshness control classifies each evidence source as fresh, aging, stale, or invalid; dual-source age uses the older source snapshot, and timestamps beyond the clock-skew tolerance fail closed.
 10. The Settlement Readiness Gate requires finalized settlement, source assurance, reconciliation, balanced accounting, fail-closed exceptions, fresh evidence, and a complete enterprise owner contract before allowing non-posting review.
 11. The SettlementEvent validator checks the chain-owned handoff fields while keeping unresolved enterprise fields under the external schema owner's authority.
 12. The Review Packet fails closed unless the Manifest, Readiness Gate, and handoff contract all permit non-posting human review.

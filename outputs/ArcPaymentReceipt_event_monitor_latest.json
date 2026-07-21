@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-20T08:27:25Z",
+  "generated_at": "2026-07-21T05:26:26.445Z",
   "network": {
     "name": "Arc Testnet",
     "chain_id": 5042002,
@@ -9,17 +9,15 @@
   "contract": "0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df",
   "range": {
     "from": 52159957,
-    "to": 52741645,
-    "latest_at_start": 52741645
+    "to": 52895762,
+    "latest_at_start": 52895762
   },
   "coverage": {
-    "event_discovery": "Arcscan API v2 complete contract log list",
-    "event_discovery_observed_at": "2026-07-20T08:27:25Z",
-    "arcscan_item_count": 2,
-    "arcscan_next_page_params": null,
-    "verification": "Arc official RPC transaction receipts, receipt storage and balances",
-    "rpc_eth_getLogs_full_refresh": "rate_limited_http_429",
-    "note": "Arcscan returned every log currently indexed for the verified contract with no pagination. Both PaymentReceived logs were independently verified through Arc RPC."
+    "event_discovery": "Arc official RPC eth_getLogs full contract range scan",
+    "event_discovery_observed_at": "2026-07-21T05:26:26.445Z",
+    "verification": "Arc official RPC transaction objects, transaction receipts, receipt storage and balances",
+    "rpc_eth_getLogs_full_refresh": "complete",
+    "note": "Every PaymentReceived log from the configured deployment block through the captured latest block was discovered and independently verified through Arc RPC."
   },
   "event_count": 2,
   "contract_balance_wei": "0",
@@ -29,7 +27,7 @@
     "all_transactions_succeeded": true,
     "all_events_match_storage": true,
     "contract_balance_zero": true,
-    "arcscan_complete_without_pagination": true,
+    "rpc_full_range_scanned": true,
     "all_event_payloads_rpc_verified": true
   },
   "events": [
@@ -45,6 +43,9 @@
       "log_index": 16,
       "timestamp": "2026-07-17T03:59:50.000Z",
       "transaction_status": 1,
+      "transaction_type": 0,
+      "transaction_nonce": 2,
+      "gas_limit": "150000",
       "gas_used": "120655",
       "effective_gas_price_wei": "20288000000",
       "gas_cost_usdc": "0.00244784864",

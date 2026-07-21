@@ -334,6 +334,23 @@ test("fails closed on future evidence outside the clock-skew tolerance", () => {
   assert.equal(invalid.reason, "future_timestamp_beyond_clock_skew_tolerance");
 });
 
+test("uses the older dual-source evidence time instead of its recompute time", () => {
+  const now = Date.parse("2026-07-20T13:02:28.246Z");
+  const freshness = buildEvidenceFreshnessView(
+    report,
+    {
+      ...dualReport,
+      generated_at: "2026-07-20T12:59:00.000Z",
+      evidence_at: "2026-07-20T05:00:00.000Z"
+    },
+    circleReport,
+    enterpriseReport,
+    now
+  );
+  assert.equal(freshness.sources.dual_source.status, "aging");
+  assert.equal(freshness.sources.dual_source.generated_at, "2026-07-20T05:00:00.000Z");
+});
+
 test("returns a four-source freshness gate that cannot authorize posting", async () => {
   const response = await fetch(`${origin}/api/evidence-freshness`);
   assert.equal(response.status, 200);

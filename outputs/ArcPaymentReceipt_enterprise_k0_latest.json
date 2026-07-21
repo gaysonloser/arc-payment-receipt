@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-07-20T11:32:28.246Z",
+  "generated_at": "2026-07-21T05:47:45.012Z",
   "mode": "real_chain_event_synthetic_erp_dry_run",
   "source": {
     "report_path": "ArcPaymentReceipt_event_monitor_latest.json",
-    "report_sha256": "b98eeb5ab12105d54b9a570eeb61bcd55a4c9a6ae19ce95a924b0fff59299621",
+    "report_sha256": "64d991bfd8522e1439eb7d0b63d7de944f46f369513c6cd84d648c3b5ab38574",
     "dual_source_path": "ArcPaymentReceipt_dual_source_monitor_latest.json",
-    "dual_source_sha256": "db4757db0c8bd0ebfccbaf9dc6842a2b2c1be4ca26c41cc5c1d10f52e002d676",
+    "dual_source_sha256": "c47b9407323343947f05b0f7fee1adc3c0beb35f42309bf9b7635d0b61fee968",
     "circle_history_path": "ArcCircleContracts_event_history_latest.json",
-    "circle_history_sha256": "ca043e97316cd77f7498ce39262d53faa72d01a74db1dda90d8265c6dd6ef001"
+    "circle_history_sha256": "9d36122dba07ce0b0d9704283df6c4d922a10e9a7f17610ac9dcc2582cf87242"
   },
   "policy": {
     "required_confirmations": 1,
@@ -55,7 +55,9 @@
   "source_assurance": {
     "evidence_model": "circle_event_monitor_plus_arc_rpc_and_storage",
     "selected_event_in_rpc_report": true,
-    "arcscan_complete_without_pagination": true,
+    "event_discovery_complete": true,
+    "event_discovery_method": "arc_official_rpc_full_range",
+    "arcscan_complete_without_pagination": false,
     "rpc_payload_verified": true,
     "receipt_storage_matches_event": true,
     "circle_contract_verified": true,
@@ -112,7 +114,7 @@
         ],
         "adoption_status": "candidate_blocked_pending_enterprise_schema_type_approval"
       },
-      "confirmations": 1430,
+      "confirmations": 155547,
       "finality_status": "finalized",
       "finality_evidence": {
         "basis": "included_in_committed_arc_block",
@@ -173,11 +175,11 @@
     "unresolved_contract_fields": [
       {
         "field": "amount_minor",
-        "reason": "Asset atomic units are evidence-backed, but Arc amount exceeds the JSON safe-integer range and decimal-string serialization is not yet approved"
+        "reason": "Asset atomic units are the evidence-backed candidate, but Arc amount exceeds JSON safe integer and the enterprise schema owner has not approved decimal-string serialization"
       },
       {
         "field": "fees_minor",
-        "reason": "Fee atomic units are available, but amount and fee must share an approved BigInt-safe serialization contract"
+        "reason": "Fee atomic units are available, but amount and fee must share the enterprise-schema-approved BigInt-safe serialization contract"
       },
       {
         "field": "business_reference_hash",
@@ -185,15 +187,15 @@
       },
       {
         "field": "entity_ref_and_business_unit_ref",
-        "reason": "Enterprise entity and business-unit identifiers are not Arc chain facts and remain unbound"
+        "reason": "Enterprise entity and business-unit identifiers belong to the enterprise data owner and are not Arc chain facts"
       },
       {
         "field": "source_document_type_and_ref",
-        "reason": "Synthetic fixture values are candidates only; the authoritative ERP document remains unbound"
+        "reason": "Synthetic fixture values are candidates only; the enterprise data owner must bind the authoritative ERP document"
       },
       {
         "field": "kingdee_object_type",
-        "reason": "The target Kingdee object is selected by the enterprise workflow and is not a chain fact"
+        "reason": "Kingdee target object is selected by the enterprise workflow and is not a chain fact"
       }
     ],
     "controls": {
@@ -205,7 +207,7 @@
         "fee_native_matches_display": true,
         "arc_commit_finality_consistent": true,
         "contract_balance_zero": true,
-        "arcscan_complete_without_pagination": true,
+        "event_discovery_complete": true,
         "rpc_payload_verified": true,
         "receipt_storage_matches_event": true,
         "circle_contract_verified": true,
@@ -242,7 +244,7 @@
     "log_index": 26,
     "block_number": 52740216,
     "block_timestamp": "2026-07-20T07:19:50.000Z",
-    "confirmations": 1430,
+    "confirmations": 155547,
     "removed": false,
     "protocol_finality": {
       "status": "finalized",

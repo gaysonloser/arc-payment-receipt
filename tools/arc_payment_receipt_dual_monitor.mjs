@@ -16,6 +16,12 @@ function eventKey(event) {
 export function buildDualSourceReport(rpc, circle) {
   const monitorCreatedAt = Date.parse(circle.monitor_created_at);
   if (!Number.isFinite(monitorCreatedAt)) throw new Error("Circle snapshot has invalid monitor_created_at");
+  const rpcSnapshotAt = Date.parse(rpc.generated_at);
+  const circleSnapshotAt = Date.parse(circle.generated_at);
+  const sourceSnapshotTimestampsValid = Number.isFinite(rpcSnapshotAt) && Number.isFinite(circleSnapshotAt);
+  const evidenceAt = sourceSnapshotTimestampsValid
+    ? new Date(Math.min(rpcSnapshotAt, circleSnapshotAt)).toISOString()
+    : null;
 
   const rpcBeforeMonitor = rpc.events.filter((event) => Date.parse(event.timestamp) < monitorCreatedAt);
   const rpcOverlap = rpc.events.filter((event) => Date.parse(event.timestamp) >= monitorCreatedAt);
@@ -31,18 +37,21 @@ export function buildDualSourceReport(rpc, circle) {
     event_signature_matches: circle.event_signature === "PaymentReceived(bytes32,address,address,uint256,bytes32)",
     overlap_event_counts_match: rpcOverlap.length === circleEvents.length,
     overlap_events_match: unmatchedRpc.length === 0 && unmatchedCircle.length === 0,
-    rpc_integrity_checks_pass: Object.values(rpc.checks).every(Boolean)
+    rpc_integrity_checks_pass: Object.values(rpc.checks).every(Boolean),
+    source_snapshot_timestamps_valid: sourceSnapshotTimestampsValid
   };
   const aligned = Object.values(checks).every(Boolean);
 
   return {
     schema_version: 1,
     generated_at: new Date().toISOString(),
+    evidence_at: evidenceAt,
     status: aligned ? "aligned_in_overlap_window" : "review_required",
     contract: rpc.contract,
     coverage: {
       rpc_from_block: rpc.range.from,
       rpc_to_block: rpc.range.to,
+      rpc_snapshot_at: rpc.generated_at,
       circle_monitor_created_at: circle.monitor_created_at,
       circle_snapshot_at: circle.generated_at
     },
@@ -73,12 +82,14 @@ function renderMarkdown(report) {
     "# Arc PaymentReceipt Dual Source Monitor",
     "",
     `Generated: \`${report.generated_at}\``,
+    `Evidence at: \`${report.evidence_at}\``,
     `Status: \`${report.status}\``,
     `Contract: \`${report.contract}\``,
     "",
     "## Coverage",
     "",
     `- RPC blocks: \`${report.coverage.rpc_from_block}\` to \`${report.coverage.rpc_to_block}\``,
+    `- RPC snapshot: \`${report.coverage.rpc_snapshot_at}\``,
     `- Circle monitor created: \`${report.coverage.circle_monitor_created_at}\``,
     `- Circle snapshot: \`${report.coverage.circle_snapshot_at}\``,
     "",

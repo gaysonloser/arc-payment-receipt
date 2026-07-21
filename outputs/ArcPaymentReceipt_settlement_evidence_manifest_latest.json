@@ -2,7 +2,7 @@
   "manifest_version": "1.0",
   "mode": "read-only_unsigned_evidence_manifest",
   "scope": "single_settlement",
-  "generated_at": "2026-07-20T11:32:28.246Z",
+  "generated_at": "2026-07-21T05:47:45.012Z",
   "network": {
     "name": "Arc Testnet",
     "chain_id": 5042002,
@@ -59,7 +59,7 @@
   "integrity": {
     "algorithm": "sha256",
     "canonicalization": "json-key-sort-v1",
-    "digest": "8768fc2e323dff085d3a5d0553993522c0a221cd133e2a654d4c8fde47f4ecfa",
+    "digest": "ca93a6e741a0ca55ea85cffda9e12b8e6f06f90c506a79f312c0171204c470e9",
     "signed": false,
     "semantic": "content_digest_not_signature"
   }

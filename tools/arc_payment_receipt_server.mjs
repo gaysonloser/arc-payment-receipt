@@ -95,7 +95,7 @@ export function classifyEvidenceFreshness(generatedAt, now = Date.now()) {
 export function buildEvidenceFreshnessView(report, dual, circle, enterprise, now = Date.now()) {
   const sources = {
     rpc: classifyEvidenceFreshness(report.generated_at, now),
-    dual_source: classifyEvidenceFreshness(dual.generated_at, now),
+    dual_source: classifyEvidenceFreshness(dual.evidence_at ?? dual.generated_at, now),
     circle: classifyEvidenceFreshness(circle.generated_at, now),
     enterprise: classifyEvidenceFreshness(enterprise.generated_at, now)
   };
