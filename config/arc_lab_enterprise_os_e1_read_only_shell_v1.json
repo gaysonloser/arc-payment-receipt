@@ -2,15 +2,15 @@
   "schema_version": "1.0",
   "standard_id": "CATVERSE_TWIN_LEDGER_RENDER_DUAL_SERVICE_V1",
   "updated": "2026-07-22 CST",
-  "status": "e1_read_only_compatibility_package_ready_not_deployed",
+  "status": "e1_read_only_compatibility_package_published",
   "service": {
     "name": "arc-payment-receipt",
     "public_url": "https://arc-payment-receipt.onrender.com/",
-    "region": "unknown_until_render_dashboard_readback",
+    "region": "Singapore",
     "reuse_existing_arc_service": true,
     "create_second_arc_service": false,
     "cost_policy": "existing_render_free_service_only_no_paid_upgrade_authorized",
-    "rollback_baseline_git_head": "30054e0"
+    "rollback_baseline_git_head": "568816e"
   },
   "product": {
     "case": "CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab",
@@ -43,8 +43,8 @@
     "signer_present": false,
     "database_present": false,
     "state_changing_endpoint_present": false,
-    "git_publication_authorized_in_current_scope": false,
-    "render_deploy_executed_in_current_scope": false,
+    "git_publication_authorized_in_current_scope": true,
+    "render_deploy_executed_in_current_scope": true,
     "render_paid_upgrade_authorized": false,
     "cors_policy": "deny_by_default_no_cors_header",
     "secret_policy": "no_secret_or_credential_required_for_e1"
@@ -88,14 +88,14 @@
     "no_wallet_or_chain_action": true,
     "no_erp_write": true
   },
-  "deployment_blocker_if_not_deployed": {
-    "code": "E1_RENDER_UPDATE_BLOCKED_BY_GIT_PUBLICATION_EXCLUDED",
-    "reason": "Updating the existing Render service normally requires a public Git push or an authorized Render deploy action. The current scope excludes Git public publication and credential-based external deployment.",
-    "next_confirmation_needed": "Confirm Git public push plus existing Render Free manual deploy for this E1 read-only compatibility package."
+  "deployment_result": {
+    "code": "E1_RENDER_UPDATE_DEPLOYED_ON_EXISTING_FREE_SERVICE",
+    "reason": "The E1 read-only compatibility package was published after explicit ARC-LAB-E1-PUBLISH confirmation and deployed through the existing Render Free service.",
+    "next_confirmation_needed": "E2 ERP credential, E3 ERP draft writes, further Git publication, wallet, chain, Circle, Encode, and Arc House actions remain separately gated."
   },
   "rollback": {
     "preferred": "Use Render previous deploy rollback for arc-payment-receipt if E1 deploy is unhealthy.",
-    "source_rollback": "Revert the E1 compatibility commit to baseline 30054e0 and redeploy the existing service.",
+    "source_rollback": "Rollback to previous live deploy or revert the E1 compatibility commit to baseline 568816e and redeploy the existing service.",
     "health_gate": "Require /api/health and /healthz to return 200 before accepting E1."
   }
 }
