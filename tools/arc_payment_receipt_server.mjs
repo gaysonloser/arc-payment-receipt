@@ -12,35 +12,45 @@ export const DEFAULT_DUAL_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentRe
 export const DEFAULT_CIRCLE_SNAPSHOT_PATH = resolve(HERE, "../outputs/ArcCircleContracts_event_history_latest.json");
 export const DEFAULT_ENTERPRISE_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt_enterprise_k0_latest.json");
 export const DEFAULT_VIEWER_PATH = resolve(HERE, "arc_payment_receipt_viewer.html");
+export const DEFAULT_ARC_LAB_VIEWER_PATH = resolve(HERE, "arc_lab_enterprise_os_viewer.html");
+export const DEFAULT_ARC_LAB_PORTFOLIO_PATH = resolve(HERE, "../config/arc_lab_enterprise_os_e1_read_only_shell_v1.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
-function json(response, status, body) {
+const SECURITY_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+  "x-frame-options": "DENY",
+  "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "strict-transport-security": "max-age=31536000; includeSubDomains"
+};
+
+function json(response, status, body, method = "GET") {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    "x-content-type-options": "nosniff"
+    ...SECURITY_HEADERS
   });
-  response.end(`${JSON.stringify(body, null, 2)}\n`);
+  response.end(method === "HEAD" ? "" : `${JSON.stringify(body, null, 2)}\n`);
 }
 
-function text(response, status, body, contentType = "text/plain; charset=utf-8") {
+function text(response, status, body, contentType = "text/plain; charset=utf-8", method = "GET") {
   response.writeHead(status, {
     "content-type": contentType,
     "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
-    "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
+    "content-security-policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+    ...SECURITY_HEADERS
   });
-  response.end(body);
+  response.end(method === "HEAD" ? "" : body);
 }
 
-function binary(response, status, body, contentType) {
+function binary(response, status, body, contentType, method = "GET") {
   response.writeHead(status, {
     "content-type": contentType,
     "cache-control": "public, max-age=86400, immutable",
-    "x-content-type-options": "nosniff"
+    ...SECURITY_HEADERS
   });
-  response.end(body);
+  response.end(method === "HEAD" ? "" : body);
 }
 
 export async function loadEvidence(path = DEFAULT_EVIDENCE_PATH) {
@@ -56,6 +66,10 @@ export async function loadCircleSnapshot(path = DEFAULT_CIRCLE_SNAPSHOT_PATH) {
 }
 
 export async function loadEnterpriseEvidence(path = DEFAULT_ENTERPRISE_EVIDENCE_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadArcLabPortfolio(path = DEFAULT_ARC_LAB_PORTFOLIO_PATH) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
@@ -894,6 +908,8 @@ export function createReceiptServer(options = {}) {
   const loadCircleReport = options.loadCircleReport ?? (() => loadCircleSnapshot(options.circleSnapshotPath));
   const loadEnterpriseReport = options.loadEnterpriseReport ?? (() => loadEnterpriseEvidence(options.enterpriseEvidencePath));
   const loadViewer = options.loadViewer ?? (() => readFile(options.viewerPath ?? DEFAULT_VIEWER_PATH, "utf8"));
+  const loadArcLabViewer = options.loadArcLabViewer ?? (() => readFile(options.arcLabViewerPath ?? DEFAULT_ARC_LAB_VIEWER_PATH, "utf8"));
+  const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const now = options.now ?? (() => Date.now());
@@ -901,23 +917,28 @@ export function createReceiptServer(options = {}) {
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://localhost");
-      if (request.method !== "GET") {
-        json(response, 405, { error: "method_not_allowed" });
+      if (!["GET", "HEAD"].includes(request.method)) {
+        json(response, 405, { error: "method_not_allowed" }, request.method);
         return;
       }
 
       if (url.pathname === "/" || url.pathname === "/arc-payment-receipt") {
-        text(response, 200, await loadViewer(), "text/html; charset=utf-8");
+        text(response, 200, await loadViewer(), "text/html; charset=utf-8", request.method);
+        return;
+      }
+
+      if (url.pathname === "/arc-lab" || url.pathname === "/enterprise-os") {
+        text(response, 200, await loadArcLabViewer(), "text/html; charset=utf-8", request.method);
         return;
       }
 
       if (url.pathname === "/assets/payment-receipt-logo.png") {
-        binary(response, 200, await loadLogo(), "image/png");
+        binary(response, 200, await loadLogo(), "image/png", request.method);
         return;
       }
 
       if (url.pathname === "/assets/favicon.png") {
-        binary(response, 200, await loadFavicon(), "image/png");
+        binary(response, 200, await loadFavicon(), "image/png", request.method);
         return;
       }
 
@@ -960,7 +981,36 @@ export function createReceiptServer(options = {}) {
           settlement_event_chain_fact_status: settlementContractView.chain_fact_contract.status,
           settlement_event_handoff_status: settlementContractView.canonical_handoff.status,
           generated_at: report.generated_at
-        });
+        }, request.method);
+        return;
+      }
+
+      if (url.pathname === "/healthz") {
+        const [report, dual, circle, enterprise, arcLab] = await Promise.all([
+          loadReport(),
+          loadDualReport(),
+          loadCircleReport(),
+          loadEnterpriseReport(),
+          loadArcLab()
+        ]);
+        json(response, 200, {
+          status: "ok",
+          mode: "read-only",
+          service: arcLab.service,
+          standard_id: arcLab.standard_id,
+          product: arcLab.product,
+          legacy_payment_receipt: {
+            contract: report.contract,
+            event_count: report.event_count,
+            latest_scanned_block: report.range.to,
+            dual_source_status: dual.status,
+            circle_subscription_state: circle.subscription_state,
+            webhook_active: circle.webhook_active,
+            evidence_manifest_digest: buildSettlementEvidenceManifest(enterprise).integrity.digest
+          },
+          e1_controls: arcLab.e1_controls,
+          evidence_freshness: buildEvidenceFreshnessView(report, dual, circle, enterprise, now())
+        }, request.method);
         return;
       }
 
@@ -976,6 +1026,48 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/circle-monitor") {
         json(response, 200, await loadCircleReport());
+        return;
+      }
+
+      if (url.pathname === "/api/arc-lab-portfolio" || url.pathname === "/api/v1/topology") {
+        json(response, 200, await loadArcLab(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/evidence") {
+        const [report, dual, circle, enterprise, arcLab] = await Promise.all([
+          loadReport(),
+          loadDualReport(),
+          loadCircleReport(),
+          loadEnterpriseReport(),
+          loadArcLab()
+        ]);
+        json(response, 200, {
+          status: "read_only_sanitized_e1_evidence",
+          standard_id: arcLab.standard_id,
+          service: arcLab.service,
+          product: arcLab.product,
+          checks: {
+            no_secret_or_credential_required: !arcLab.e1_controls.erp_credential_present,
+            no_erp_write: !arcLab.e1_controls.erp_write_enabled,
+            no_wallet_or_chain_action: !arcLab.e1_controls.wallet_connection_enabled && !arcLab.e1_controls.chain_transaction_enabled,
+            no_second_arc_service: !arcLab.service.create_second_arc_service,
+            payment_component_is_not_umbrella: arcLab.product.payment_component_is_umbrella === false,
+            render_free_tier_only: arcLab.service.cost_policy.includes("free"),
+            public_git_publication_excluded: !arcLab.e1_controls.git_publication_authorized_in_current_scope,
+            render_deploy_executed: arcLab.e1_controls.render_deploy_executed_in_current_scope
+          },
+          legacy_payment_receipt: {
+            contract: report.contract,
+            event_count: report.event_count,
+            dual_source_status: dual.status,
+            circle_subscription_state: circle.subscription_state,
+            evidence_manifest_digest: buildSettlementEvidenceManifest(enterprise).integrity.digest
+          },
+          coverage_summary: arcLab.coverage_summary,
+          deployment_blocker_if_not_deployed: arcLab.deployment_blocker_if_not_deployed,
+          rollback: arcLab.rollback
+        }, request.method);
         return;
       }
 
@@ -1101,6 +1193,7 @@ function parseArgs(argv) {
     else if (argv[index] === "--dual-evidence") { options.dualEvidencePath = resolve(value); index += 1; }
     else if (argv[index] === "--circle-snapshot") { options.circleSnapshotPath = resolve(value); index += 1; }
     else if (argv[index] === "--enterprise-evidence") { options.enterpriseEvidencePath = resolve(value); index += 1; }
+    else if (argv[index] === "--arc-lab-portfolio") { options.arcLabPortfolioPath = resolve(value); index += 1; }
     else throw new Error(`Unknown argument: ${argv[index]}`);
   }
   if (!Number.isInteger(options.port) || options.port < 1 || options.port > 65535) {

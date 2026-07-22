@@ -20,6 +20,6 @@ Query the opaque P1 order ID. Show payer, merchant, amount, metadata hash, block
 
 Show that Circle imported the contract as verified and subscribed to `PaymentReceived`. Then show the dual-source panel: RPC history has one P1 event, but it occurred before the Circle monitor was created; the overlap window is `0 / 0` and aligned.
 
-## 2:40-3:00 - Boundaries
+## 2:40-3:00 - Enterprise boundary
 
-State that no payment was repeated to manufacture a Circle log, no webhook or persistent API key remains, and no personal data belongs in order IDs or metadata hashes. Close with the production path: independent audit, real payer/merchant separation, refunds/disputes, and operational monitoring.
+Open the AOXPET Arc Lab shell. State that Arc House is community and contribution context, Arc Testnet is the settlement fact layer, Circle Console is source assurance, Render is read-only presentation, and ERPNext is future business proof under a separate AAL Company. Close with the production path: independent audit, real payer/merchant separation, refunds/disputes, isolated ERP draft rails, operational monitoring, and human approval before any write or posting.

@@ -8,6 +8,37 @@ Payment Receipt is an independent DeFi prototype built on Arc Testnet. Its verif
 
 The demo runs as a free Render web service. It may take 50 seconds or more to wake after a period of inactivity.
 
+## Arc Lab Enterprise OS E1
+
+This service is also the only planned public Arc runtime for **CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab**. The E1 upgrade adds a read-only enterprise shell inside the existing `arc-payment-receipt` Render service; it does not create a second Arc web service.
+
+Payment Receipt is now positioned as the D09 treasury and payment component. It is not the umbrella for the enterprise portfolio. The Arc Lab namespace is `ARC-LAB-*`, target company is `AOXPET Arc Lab / AAL / USD`, and the public shell keeps Base runtime, ERP company, credentials, events, queues, and evidence isolated.
+
+The Arc Lab hero is procurement and manufacturing settlement control: supplier milestones, quality hold/release, cost residual boundaries, inventory read-only verification, and close/report impact. The payment receipt contract remains useful because cash settlement is one component of that operating system.
+
+E1 exposes only sanitized GET/HEAD routes:
+
+- `GET /arc-lab`
+- `GET /enterprise-os`
+- `GET /healthz`
+- `GET /api/arc-lab-portfolio`
+- `GET /api/v1/topology`
+- `GET /api/v1/evidence`
+
+E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
+
+## Enterprise OS overview
+
+Arc Lab follows the CATVERSE Twin-Ledger standard:
+
+```text
+Arc / Circle evidence
+  -> AAL Enterprise OS read-only control shell
+  -> ERPNext authoritative Company, ledgers, close, reports and FP&A
+```
+
+GitHub is the engineering proof and technical source of truth. Render is the running proof for reviewers. ERPNext is the business proof, but only after a separately approved isolated AAL Company exists. This repository must not publish ERP credentials, raw ERP payloads, wallet material, local absolute paths, or unsanitized logs.
+
 ## Why it exists
 
 Stablecoin settlement alone does not give an application a privacy-aware order reference, a durable receipt record, or a clean reconciliation surface. This prototype keeps custody out of the contract while making settlement evidence independently verifiable.
@@ -32,6 +63,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A fail-closed Settlement Readiness Gate that separates technical settlement evidence from ERP draft handoff and accounting posting authority.
 - A bounded Settlement Review Packet that combines evidence integrity, freshness, accounting totals, unresolved owner decisions, and a reviewer checklist without exposing raw ERP payloads.
 - A SettlementEvent handoff-contract validator that verifies Arc identity, amount/fee candidate preservation, finality, non-posting controls, and schema-owner gaps.
+- A read-only AOXPET Arc Lab Enterprise OS shell that frames the payment component inside 14-domain procurement, manufacturing, inventory, assets, projects, treasury, financing, accounting, close, FP&A, and human-gate controls.
 
 ## Verified evidence
 
@@ -59,9 +91,42 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 10. The Settlement Readiness Gate requires finalized settlement, source assurance, reconciliation, balanced accounting, fail-closed exceptions, fresh evidence, and a complete enterprise owner contract before allowing non-posting review.
 11. The SettlementEvent validator checks the chain-owned handoff fields while keeping unresolved enterprise fields under the external schema owner's authority.
 12. The Review Packet fails closed unless the Manifest, Readiness Gate, and handoff contract all permit non-posting human review.
-13. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
+13. The AAL shell frames the payment component inside 14-domain enterprise controls, with procurement, manufacturing, inventory, assets, projects, treasury, financing, accounting, close, FP&A, and human gates separated.
+14. The backend serves generated evidence and exact receipt lookups; it accepts no writes.
 
 See [Architecture](docs/ARCHITECTURE.md), [Security and privacy](SECURITY.md), and the [three-minute demo script](docs/DEMO_SCRIPT.md).
+See [Interaction Trail](docs/INTERACTION_TRAIL.md) for how Arc House, Arc Testnet, Circle Console, Render, and ERPNext are kept separate but connected.
+
+## 14-domain and C0-C7 status
+
+Current Arc Lab status is truthful and partial:
+
+- Implemented locally: D04 Procure-to-Pay, D05 Inventory and Cost, D06 Manufacturing/Quality/Subcontracting, D07 Assets.
+- In progress locally: D03 Order-to-Cash, D08 Projects, D14 Governance and Human Gates.
+- Blocked with packets: D01 Company Configuration, D02 Opening Balances.
+- Queued: D09 Treasury, D10 Financing/RWA Evidence, D11 Accounting/Tax/Three Ledgers, D12 Close/Audit/Reporting, D13 FP&A.
+
+Existing ERPNext drafts `ACC-JV-2026-00006` and `ACC-PAY-2026-00002` are historical shared-sandbox draft-only evidence. They are not AAL Company proof and must not be migrated into Arc Lab claims.
+
+## Claim matrix
+
+| Claim | Status | Boundary |
+| --- | --- | --- |
+| Existing Payment Receipt contract and read-only evidence API | live | Arc Testnet and public Render component |
+| AAL Enterprise OS shell | release candidate | E1 read-only only; no ERP credential or write |
+| Procurement/manufacturing/cost-control domain model | local proof | fixtures and controls only |
+| AAL ERPNext Company, ledgers, close and reports | unverified | E2/E3/C0-C7 not authorized |
+| Wallet, chain transaction or contract deploy authority | not present | always action-time confirmation |
+
+## Cost, cold start and rollback
+
+The intended public runtime is the existing Render Free service. Cold starts are expected after inactivity. Paid upgrades are not authorized by this repository.
+
+Rollback options:
+
+- Use Render previous deploy rollback for `arc-payment-receipt`.
+- Revert the E1 release candidate and redeploy the previous healthy commit.
+- Accept deployment only when both `/api/health` and `/healthz` return `200`.
 
 ## Run locally
 
@@ -107,6 +172,12 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/settlement-review-packet`
 - `GET /api/settlement-event-contract`
 - `GET /api/receipts/:orderId`
+- `GET /arc-lab`
+- `GET /enterprise-os`
+- `GET /healthz`
+- `GET /api/arc-lab-portfolio`
+- `GET /api/v1/topology`
+- `GET /api/v1/evidence`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
 

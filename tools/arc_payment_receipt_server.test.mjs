@@ -272,6 +272,7 @@ after(async () => {
 test("serves a read-only health response", async () => {
   const response = await fetch(`${origin}/api/health`);
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
   assert.deepEqual(await response.json(), {
     status: "ok",
     mode: "read-only",
@@ -313,6 +314,58 @@ test("serves a read-only health response", async () => {
     settlement_event_handoff_status: "blocked_owner_contract",
     generated_at: report.generated_at
   });
+});
+
+test("serves the Arc Lab E1 shell and sanitized topology", async () => {
+  const page = await fetch(`${origin}/arc-lab`);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /AOXPET Arc Lab Enterprise OS/);
+
+  const alias = await fetch(`${origin}/enterprise-os`);
+  assert.equal(alias.status, 200);
+
+  const health = await fetch(`${origin}/healthz`);
+  assert.equal(health.status, 200);
+  const healthJson = await health.json();
+  assert.equal(healthJson.status, "ok");
+  assert.equal(healthJson.standard_id, "CATVERSE_TWIN_LEDGER_RENDER_DUAL_SERVICE_V1");
+  assert.equal(healthJson.service.name, "arc-payment-receipt");
+  assert.equal(healthJson.product.company, "AOXPET Arc Lab");
+  assert.equal(healthJson.e1_controls.read_only_shell, true);
+
+  const topology = await fetch(`${origin}/api/arc-lab-portfolio`);
+  assert.equal(topology.status, 200);
+  const topologyJson = await topology.json();
+  assert.equal(topologyJson.service.create_second_arc_service, false);
+  assert.equal(topologyJson.product.namespace, "ARC-LAB-*");
+  assert.equal(topologyJson.product.payment_component_is_umbrella, false);
+  assert.equal(topologyJson.e1_controls.erp_credential_present, false);
+  assert.equal(topologyJson.e1_controls.erp_write_enabled, false);
+  assert.equal(topologyJson.e1_controls.wallet_connection_enabled, false);
+  assert.equal(topologyJson.e1_controls.chain_transaction_enabled, false);
+});
+
+test("serves E1 evidence with GET and HEAD only", async () => {
+  const evidence = await fetch(`${origin}/api/v1/evidence`);
+  assert.equal(evidence.status, 200);
+  const evidenceJson = await evidence.json();
+  assert.equal(evidenceJson.status, "read_only_sanitized_e1_evidence");
+  assert.equal(evidenceJson.checks.no_secret_or_credential_required, true);
+  assert.equal(evidenceJson.checks.no_erp_write, true);
+  assert.equal(evidenceJson.checks.no_wallet_or_chain_action, true);
+  assert.equal(evidenceJson.checks.no_second_arc_service, true);
+  assert.equal(evidenceJson.checks.payment_component_is_not_umbrella, true);
+  assert.equal(evidenceJson.legacy_payment_receipt.event_count, 2);
+  assert.equal(JSON.stringify(evidenceJson).includes("/Users/"), false);
+  assert.equal(JSON.stringify(evidenceJson).includes("api_key"), false);
+
+  const head = await fetch(`${origin}/api/v1/topology`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const put = await fetch(`${origin}/api/v1/evidence`, { method: "PUT" });
+  assert.equal(put.status, 405);
+  assert.equal((await put.json()).error, "method_not_allowed");
 });
 
 test("classifies fresh, aging, stale, and invalid evidence", () => {
