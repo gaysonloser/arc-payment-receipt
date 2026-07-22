@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "standard_id": "CATVERSE_TWIN_LEDGER_RENDER_DUAL_SERVICE_V1",
   "updated": "2026-07-22 CST",
-  "status": "e1_read_only_compatibility_package_published",
+  "status": "e1_read_only_enterprise_os_with_erp_interaction_mapping",
   "service": {
     "name": "arc-payment-receipt",
     "public_url": "https://arc-payment-receipt.onrender.com/",
@@ -51,33 +51,33 @@
   },
   "coverage_summary": {
     "domains_total": 14,
-    "implemented": ["D04_procure_to_pay", "D05_inventory_and_cost", "D06_manufacturing_quality_and_subcontracting", "D07_assets_and_depreciation"],
-    "in_progress": ["D03_order_to_cash", "D08_projects_expense_and_budget", "D14_agent_governance_security_and_human_gates"],
-    "blocked_with_packet": ["D01_company_configuration_and_master_data", "D02_opening_balances_and_dimensions"],
-    "queued": ["D09_treasury_payment_and_bank_reconciliation", "D10_receivable_financing_and_rwa_evidence", "D11_accounting_tax_and_three_ledgers", "D12_close_audit_and_reporting", "D13_fpa_to_decision"],
-    "result_units_completed": 8,
+    "implemented": ["D03_order_to_cash", "D04_procure_to_pay", "D05_inventory_and_cost", "D06_manufacturing_quality_and_subcontracting", "D07_assets_and_depreciation", "D08_projects_expense_and_budget", "D09_treasury_payment_and_bank_reconciliation", "D10_receivable_financing_and_rwa_evidence", "D11_accounting_tax_and_three_ledgers", "D12_close_audit_and_reporting", "D13_fpa_to_decision", "D14_agent_governance_security_and_human_gates"],
+    "in_progress": ["D01_company_configuration_and_master_data"],
+    "blocked_with_packet": ["D02_opening_balances_and_dimensions"],
+    "queued": [],
+    "result_units_completed": 23,
     "payment_cap_note": "Payment Receipt remains a D09 treasury/payment component and is not the portfolio umbrella."
   },
   "current_next_queue": [
     {
-      "domain": "D03_order_to_cash",
-      "next_result_unit": "D03-RU02 receivable settlement exception and AR aging impact",
-      "status": "allowed_next"
+      "domain": "D01_company_configuration_and_master_data",
+      "next_result_unit": "C0 completed; C1 master data and opening balances remain separately gated",
+      "status": "in_progress"
     },
     {
-      "domain": "D08_projects_expense_and_budget",
-      "next_result_unit": "D08-RU02 project change-order cash hold and budget variance impact",
-      "status": "allowed_next"
+      "domain": "D02_opening_balances_and_dimensions",
+      "next_result_unit": "C1 approved fixture and zero-difference opening trial balance",
+      "status": "blocked_with_packet"
     },
     {
-      "domain": "D10_receivable_financing_and_rwa_evidence",
-      "next_result_unit": "financing draw and repayment cash-state fixture",
-      "status": "rotate_after_current_pair"
+      "domain": "D09_treasury_payment_and_bank_reconciliation",
+      "next_result_unit": "ERPNext read-only reconciliation mapping is live; no new payment or ERP draft",
+      "status": "implemented"
     },
     {
-      "domain": "D11_accounting_tax_and_three_ledgers",
-      "next_result_unit": "three-ledger read-only crosswalk and close impact",
-      "status": "rotate_after_current_pair"
+      "domain": "D14_agent_governance_security_and_human_gates",
+      "next_result_unit": "public release governance, privacy and rollback verification",
+      "status": "implemented"
     }
   ],
   "acceptance_checks": {

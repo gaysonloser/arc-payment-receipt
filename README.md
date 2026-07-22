@@ -24,8 +24,11 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
 - `GET /api/v1/evidence`
+- `GET /api/v1/erp-interaction`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
+
+The sanitized ERP interaction route shows that the isolated AAL Company and dedicated draft-only identity have completed C0, while API credentials, master data, opening balances and business-document writes remain separately gated. It also exposes D09's read-only mapping across Payment Entry, Journal Entry, Bank Transaction, GL Entry and Payment Ledger Entry without publishing raw ERP payloads or identity values.
 
 ## Enterprise OS overview
 
@@ -101,10 +104,9 @@ See [Interaction Trail](docs/INTERACTION_TRAIL.md) for how Arc House, Arc Testne
 
 Current Arc Lab status is truthful and partial:
 
-- Implemented locally: D04 Procure-to-Pay, D05 Inventory and Cost, D06 Manufacturing/Quality/Subcontracting, D07 Assets.
-- In progress locally: D03 Order-to-Cash, D08 Projects, D14 Governance and Human Gates.
-- Blocked with packets: D01 Company Configuration, D02 Opening Balances.
-- Queued: D09 Treasury, D10 Financing/RWA Evidence, D11 Accounting/Tax/Three Ledgers, D12 Close/Audit/Reporting, D13 FP&A.
+- Implemented locally: D03 Order-to-Cash through D14 Governance and Human Gates, including D09's read-only ERP reconciliation mapping.
+- In progress: D01 Company Configuration. The isolated `AOXPET Arc Lab / AAL / USD` Company and dedicated draft-only identity exist, while credentials and master data remain separately gated.
+- Blocked with packet: D02 Opening Balances. No C1 opening balance or ERP business document has been written.
 
 Existing ERPNext drafts `ACC-JV-2026-00006` and `ACC-PAY-2026-00002` are historical shared-sandbox draft-only evidence. They are not AAL Company proof and must not be migrated into Arc Lab claims.
 
@@ -113,9 +115,10 @@ Existing ERPNext drafts `ACC-JV-2026-00006` and `ACC-PAY-2026-00002` are histori
 | Claim | Status | Boundary |
 | --- | --- | --- |
 | Existing Payment Receipt contract and read-only evidence API | live | Arc Testnet and public Render component |
-| AAL Enterprise OS shell | release candidate | E1 read-only only; no ERP credential or write |
+| AAL Enterprise OS shell | live candidate | E1 read-only only; no ERP credential or write |
 | Procurement/manufacturing/cost-control domain model | local proof | fixtures and controls only |
-| AAL ERPNext Company, ledgers, close and reports | unverified | E2/E3/C0-C7 not authorized |
+| AAL ERPNext Company and dedicated draft-only identity | C0 complete | no public identity value, API credential, master data, opening balance or business document |
+| AAL ledgers, close and reports | unverified | C1 and later stages remain separately gated |
 | Wallet, chain transaction or contract deploy authority | not present | always action-time confirmation |
 
 ## Cost, cold start and rollback
@@ -178,6 +181,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
 - `GET /api/v1/evidence`
+- `GET /api/v1/erp-interaction`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
 

@@ -14,6 +14,7 @@ export const DEFAULT_ENTERPRISE_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPay
 export const DEFAULT_VIEWER_PATH = resolve(HERE, "arc_payment_receipt_viewer.html");
 export const DEFAULT_ARC_LAB_VIEWER_PATH = resolve(HERE, "arc_lab_enterprise_os_viewer.html");
 export const DEFAULT_ARC_LAB_PORTFOLIO_PATH = resolve(HERE, "../config/arc_lab_enterprise_os_e1_read_only_shell_v1.json");
+export const DEFAULT_ARC_LAB_ERP_INTERACTION_PATH = resolve(HERE, "../config/arc_lab_erp_interaction_public_v1.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
@@ -70,6 +71,10 @@ export async function loadEnterpriseEvidence(path = DEFAULT_ENTERPRISE_EVIDENCE_
 }
 
 export async function loadArcLabPortfolio(path = DEFAULT_ARC_LAB_PORTFOLIO_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadArcLabErpInteraction(path = DEFAULT_ARC_LAB_ERP_INTERACTION_PATH) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
@@ -910,6 +915,7 @@ export function createReceiptServer(options = {}) {
   const loadViewer = options.loadViewer ?? (() => readFile(options.viewerPath ?? DEFAULT_VIEWER_PATH, "utf8"));
   const loadArcLabViewer = options.loadArcLabViewer ?? (() => readFile(options.arcLabViewerPath ?? DEFAULT_ARC_LAB_VIEWER_PATH, "utf8"));
   const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
+  const loadArcLabErp = options.loadArcLabErp ?? (() => loadArcLabErpInteraction(options.arcLabErpInteractionPath));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const now = options.now ?? (() => Date.now());
@@ -1030,7 +1036,21 @@ export function createReceiptServer(options = {}) {
       }
 
       if (url.pathname === "/api/arc-lab-portfolio" || url.pathname === "/api/v1/topology") {
-        json(response, 200, await loadArcLab(), request.method);
+        const [arcLab, erpInteraction] = await Promise.all([loadArcLab(), loadArcLabErp()]);
+        json(response, 200, {
+          ...arcLab,
+          erp_interaction_summary: {
+            status: erpInteraction.status,
+            c0: erpInteraction.c0,
+            d09_treasury_reconciliation: erpInteraction.d09_treasury_reconciliation,
+            next_gates: erpInteraction.next_gates
+          }
+        }, request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/erp-interaction") {
+        json(response, 200, await loadArcLabErp(), request.method);
         return;
       }
 

@@ -343,6 +343,33 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(topologyJson.e1_controls.erp_write_enabled, false);
   assert.equal(topologyJson.e1_controls.wallet_connection_enabled, false);
   assert.equal(topologyJson.e1_controls.chain_transaction_enabled, false);
+  assert.equal(topologyJson.coverage_summary.result_units_completed, 23);
+  assert.equal(topologyJson.erp_interaction_summary.c0.company_created, true);
+  assert.equal(topologyJson.erp_interaction_summary.c0.api_credentials_generated, false);
+  assert.equal(topologyJson.erp_interaction_summary.d09_treasury_reconciliation.postable, false);
+});
+
+test("serves sanitized AAL C0 and D09 ERP interaction mapping", async () => {
+  const response = await fetch(`${origin}/api/v1/erp-interaction`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.product.company, "AOXPET Arc Lab");
+  assert.equal(payload.c0.dedicated_service_identity_created, true);
+  assert.equal(payload.c0.identity_value_public, false);
+  assert.equal(payload.c0.business_documents_created, 0);
+  assert.equal(payload.d09_treasury_reconciliation.status, "implemented_read_only_mapping_no_payment_expansion");
+  assert.equal(payload.d09_treasury_reconciliation.new_arc_payment_executed, false);
+  assert.equal(payload.d09_treasury_reconciliation.erp_document_created, false);
+  assert.equal(payload.boundaries.raw_erp_payload_public, false);
+  assert.equal(payload.boundaries.secret_or_api_key_public, false);
+  assert.equal(JSON.stringify(payload).includes("@aoxpet.invalid"), false);
+
+  const head = await fetch(`${origin}/api/v1/erp-interaction`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/erp-interaction`, { method: "POST" });
+  assert.equal(post.status, 405);
 });
 
 test("serves E1 evidence with GET and HEAD only", async () => {

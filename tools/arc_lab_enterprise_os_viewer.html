@@ -114,15 +114,16 @@
       statusRow.innerHTML = metrics.map(([label, value]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`).join("");
 
       const domainRows = [
-        ["D03 Order to Cash", "in_progress", "Receivable settlement, AR reconciliation, and aging impact."],
+        ["D03 Order to Cash", "implemented", "Receivable settlement, AR reconciliation, aging and credit-memo controls."],
         ["D04 Procure to Pay", "implemented", "Supplier settlement control and AP close boundary."],
         ["D05 Inventory and Cost", "implemented", "Inventory read-only verification; ERP owns SLE, valuation, repost, and COGS."],
         ["D06 Manufacturing", "implemented", "Milestone, quality hold/release, and residual cash controls."],
         ["D07 Assets", "implemented", "Asset proceeds and insurance/impairment exception controls."],
-        ["D08 Projects", "in_progress", "Project milestone cash control and budget impact."],
-        ["D09 Treasury", "queued", "Payment Receipt component and bank reconciliation."],
-        ["D10-D14", "queued", "Financing, tax/three-ledger, close, FP&A, governance, and security gates."],
-        ["D01-D02", "blocked_with_packet", "Live company and opening balance plans need separate approval."]
+        ["D08 Projects", "implemented", "Project milestone cash control, change-order hold and budget impact."],
+        ["D09 Treasury", "implemented", "Read-only ERP reconciliation mapping; Payment Receipt remains one component."],
+        ["D10-D14", "implemented", "Financing, tax/three-ledger, close, FP&A, governance, and security gates."],
+        ["D01 Company", "in_progress", "AAL Company and dedicated draft-only identity exist; credentials and master data remain gated."],
+        ["D02 Opening", "blocked_with_packet", "Opening balances require a separately approved C1 fixture and zero-difference trial balance."]
       ];
       document.querySelector("#domains").innerHTML = domainRows.map(([name, status, text]) => `
         <div class="domain">

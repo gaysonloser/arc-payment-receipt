@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-07-22 CST",
+  "contract_id": "ARC_LAB_ERP_INTERACTION_PUBLIC_V1",
+  "status": "c0_company_identity_ready_d09_read_only_mapping",
+  "product": {
+    "company": "AOXPET Arc Lab",
+    "abbreviation": "AAL",
+    "functional_currency": "USD",
+    "namespace": "ARC-LAB-*"
+  },
+  "c0": {
+    "company_created": true,
+    "dedicated_service_identity_created": true,
+    "draft_only_role_assigned": true,
+    "company_user_permission_saved": true,
+    "api_credentials_generated": false,
+    "business_documents_created": 0,
+    "opening_balance_written": false,
+    "identity_value_public": false
+  },
+  "d09_treasury_reconciliation": {
+    "status": "implemented_read_only_mapping_no_payment_expansion",
+    "result_unit_id": "ARC-LAB-D09-RU01",
+    "erp_objects": ["Payment Entry", "Journal Entry", "Bank Transaction", "GL Entry", "Payment Ledger Entry"],
+    "mapped_fields": [
+      "business_event_id",
+      "idempotency_marker",
+      "chain_id",
+      "tx_hash",
+      "contract_address",
+      "merchant_address",
+      "payer_address",
+      "token_symbol",
+      "amount_minor",
+      "currency",
+      "order_id",
+      "metadata_hash",
+      "finality_status",
+      "circle_event_monitor_status",
+      "rpc_readback_status",
+      "storage_receipt_status",
+      "erp_document_candidate",
+      "postable",
+      "human_review_required"
+    ],
+    "postable": false,
+    "human_review_required": true,
+    "new_arc_payment_executed": false,
+    "erp_document_created": false
+  },
+  "boundaries": {
+    "erp_authority": "ERPNext",
+    "arc_role": "native USDC settlement evidence, finality and source assurance",
+    "render_role": "sanitized read-only running proof",
+    "circle_role": "independent event source assurance",
+    "arc_house_role": "community contribution and review context",
+    "payment_receipt_is_umbrella": false,
+    "raw_erp_payload_public": false,
+    "secret_or_api_key_public": false,
+    "erp_write_endpoint_public": false,
+    "wallet_or_chain_action": false
+  },
+  "next_gates": {
+    "c1_master_data_and_opening_balances": "separate_confirmation_required",
+    "e2_api_credentials": "separate_confirmation_required",
+    "erp_business_document_write": "separate_business_event_and_confirmation_required"
+  }
+}
