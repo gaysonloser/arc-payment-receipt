@@ -30,6 +30,12 @@ E1 includes no ERP credential, ERP write, wallet connection, signer, database, c
 
 The sanitized ERP interaction route shows that the isolated AAL Company and dedicated draft-only identity have completed C0, while API credentials, master data, opening balances and business-document writes remain separately gated. It also exposes D09's read-only mapping across Payment Entry, Journal Entry, Bank Transaction, GL Entry and Payment Ledger Entry without publishing raw ERP payloads or identity values.
 
+## Current Arc execution identity
+
+The current wallet for future, explicitly confirmed Arc actions is **ARC** (`0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6`) on Arc Testnet (`5042002`). It has been configured for the network and funded with 20 test USDC through the Circle faucet. This repository and the Render service remain read-only and never receive wallet credentials or signing authority.
+
+Wallet migration does not rewrite chain history. `0x8aAa...8889` remains the historical Payment Receipt deployer and immutable merchant; `0x63cd...13DA` remains the historical P2 payer and Enterprise Evidence Registry deployer. New actions are attributed to ARC only after their own transaction receipts are verified.
+
 ## Enterprise OS overview
 
 Arc Lab follows the CATVERSE Twin-Ledger standard:
@@ -120,6 +126,7 @@ Existing ERPNext drafts `ACC-JV-2026-00006` and `ACC-PAY-2026-00002` are histori
 | AAL ERPNext Company and dedicated draft-only identity | C0 complete | no public identity value, API credential, master data, opening balance or business document |
 | AAL ledgers, close and reports | unverified | C1 and later stages remain separately gated |
 | Wallet, chain transaction or contract deploy authority | not present | always action-time confirmation |
+| Current execution identity | configured | ARC `0x75F2...7Cc6`; public metadata only, no signer |
 
 ## Cost, cold start and rollback
 

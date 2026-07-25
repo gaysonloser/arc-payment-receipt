@@ -23,6 +23,38 @@
     "payment_component_is_umbrella": false,
     "single_domain_umbrella_allowed": false
   },
+  "execution_identity": {
+    "wallet_label": "ARC",
+    "address": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
+    "network": "Arc Testnet",
+    "chain_id": 5042002,
+    "role": "current_execution_wallet_for_future_confirmed_actions",
+    "activated_at": "2026-07-25",
+    "funding": {
+      "asset": "test USDC",
+      "amount": "20",
+      "transaction_hash": "0x1d979c443e716d3a744f30259ba4cc0d02b388c864b34afe44972326c1679abf"
+    },
+    "capability_state": {
+      "network_configured": true,
+      "faucet_funded": true,
+      "memo_canary": "prepared_requires_action_time_confirmation",
+      "receipt_canary": "prepared_after_memo_requires_action_time_confirmation"
+    },
+    "historical_chain_roles": [
+      {
+        "address": "0x8aAa1fC761A8d7eb03323614f9Ff7fb3218B8889",
+        "role": "historical_payment_receipt_deployer_and_immutable_merchant",
+        "current_execution_wallet": false
+      },
+      {
+        "address": "0x63cdBF1918133716C67B28390F5C5D9250B113DA",
+        "role": "historical_p2_payer_and_enterprise_evidence_registry_deployer",
+        "current_execution_wallet": false
+      }
+    ],
+    "history_policy": "Existing transactions, contract ownership and immutable merchant facts remain attributed to their original addresses. Wallet migration never rewrites historical chain evidence."
+  },
   "isolation": {
     "share_base_runtime": false,
     "share_base_company": false,

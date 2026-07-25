@@ -104,12 +104,17 @@
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
       const controls = data.e1_controls || {};
+      const identity = data.execution_identity || {};
+      const shortAddress = identity.address
+        ? `${identity.address.slice(0, 6)}...${identity.address.slice(-4)}`
+        : "not configured";
       const statusRow = document.querySelector("#status-row");
       const metrics = [
         ["Standard", data.standard_id],
         ["Company", `${product.company || "AOXPET Arc Lab"} / ${product.abbreviation || "AAL"}`],
         ["Domains", `${coverage.result_units_completed || 0} result units / ${coverage.domains_total || 14} domains`],
-        ["Mode", controls.read_only_shell ? "GET/HEAD read-only" : "restricted"]
+        ["Mode", controls.read_only_shell ? "GET/HEAD read-only" : "restricted"],
+        ["Execution Wallet", `${identity.wallet_label || "ARC"} / ${shortAddress}`]
       ];
       statusRow.innerHTML = metrics.map(([label, value]) => `<div class="metric"><strong>${value}</strong><span>${label}</span></div>`).join("");
 

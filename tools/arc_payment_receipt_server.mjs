@@ -1005,6 +1005,7 @@ export function createReceiptServer(options = {}) {
           service: arcLab.service,
           standard_id: arcLab.standard_id,
           product: arcLab.product,
+          execution_identity: arcLab.execution_identity,
           legacy_payment_receipt: {
             contract: report.contract,
             event_count: report.event_count,
@@ -1067,6 +1068,7 @@ export function createReceiptServer(options = {}) {
           standard_id: arcLab.standard_id,
           service: arcLab.service,
           product: arcLab.product,
+          execution_identity: arcLab.execution_identity,
           checks: {
             no_secret_or_credential_required: !arcLab.e1_controls.erp_credential_present,
             no_erp_write: !arcLab.e1_controls.erp_write_enabled,

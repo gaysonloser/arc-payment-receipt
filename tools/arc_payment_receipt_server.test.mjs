@@ -332,6 +332,8 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(healthJson.service.name, "arc-payment-receipt");
   assert.equal(healthJson.product.company, "AOXPET Arc Lab");
   assert.equal(healthJson.e1_controls.read_only_shell, true);
+  assert.equal(healthJson.execution_identity.wallet_label, "ARC");
+  assert.equal(healthJson.execution_identity.chain_id, 5042002);
 
   const topology = await fetch(`${origin}/api/arc-lab-portfolio`);
   assert.equal(topology.status, 200);
@@ -343,6 +345,7 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(topologyJson.e1_controls.erp_write_enabled, false);
   assert.equal(topologyJson.e1_controls.wallet_connection_enabled, false);
   assert.equal(topologyJson.e1_controls.chain_transaction_enabled, false);
+  assert.equal(topologyJson.execution_identity.address, "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6");
   assert.equal(topologyJson.coverage_summary.result_units_completed, 23);
   assert.equal(topologyJson.erp_interaction_summary.c0.company_created, true);
   assert.equal(topologyJson.erp_interaction_summary.c0.api_credentials_generated, false);
@@ -382,6 +385,7 @@ test("serves E1 evidence with GET and HEAD only", async () => {
   assert.equal(evidenceJson.checks.no_wallet_or_chain_action, true);
   assert.equal(evidenceJson.checks.no_second_arc_service, true);
   assert.equal(evidenceJson.checks.payment_component_is_not_umbrella, true);
+  assert.equal(evidenceJson.execution_identity.address, "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6");
   assert.equal(evidenceJson.legacy_payment_receipt.event_count, 2);
   assert.equal(JSON.stringify(evidenceJson).includes("/Users/"), false);
   assert.equal(JSON.stringify(evidenceJson).includes("api_key"), false);

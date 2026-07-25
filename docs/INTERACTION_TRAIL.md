@@ -8,9 +8,13 @@ Arc House is the community and review surface. It is useful for developer identi
 
 Arc House is not a runtime dependency for the Enterprise OS. The service does not call Arc House APIs, automate posts, claim points, or depend on private community state. Community actions are recorded separately from engineering evidence.
 
+Arc House membership, points, event registrations, and contribution history are account-bound rather than wallet-address fields. Moving future Arc execution to `ARC / 0x75F2...7Cc6` therefore does not reset or rewrite the community ledger. Public project links can point to the latest GitHub and Render evidence after the corresponding release is live.
+
 ## Lane 2: Arc Testnet and on-chain settlement
 
 Arc Testnet is the settlement fact layer. The deployed `ArcPaymentReceipt` contract accepts native test USDC through `pay(bytes32,bytes32)`, records an immutable receipt index, forwards value to the merchant in the same transaction, and emits `PaymentReceived`.
+
+The current wallet for future confirmed actions is `ARC / 0x75F2...7Cc6`. Existing contract deployment, merchant, payment, and registry-owner facts remain attributed to the original historical addresses; wallet migration never changes transaction provenance.
 
 The project does not repeat payments to manufacture logs. Additional wallet signatures, transfers, approvals, deployments, claims, or bridge actions require explicit action-time approval.
 
