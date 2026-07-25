@@ -25,6 +25,9 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/topology`
 - `GET /api/v1/evidence`
 - `GET /api/v1/erp-interaction`
+- `GET /api/v1/manufacturing-evidence`
+- `GET /api/v1/wallet-capability`
+- `GET /api/v1/w4-dual-source`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
 
@@ -34,7 +37,7 @@ The sanitized ERP interaction route shows that the isolated AAL Company and dedi
 
 The current wallet for future, explicitly confirmed Arc actions is **ARC** (`0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6`) on Arc Testnet (`5042002`). It has been configured for the network and funded with 20 test USDC through the Circle faucet. This repository and the Render service remain read-only and never receive wallet credentials or signing authority.
 
-Wallet migration does not rewrite chain history. `0x8aAa...8889` remains the historical Payment Receipt deployer and immutable merchant; `0x63cd...13DA` remains the historical P2 payer and Enterprise Evidence Registry deployer. New actions are attributed to ARC only after their own transaction receipts are verified.
+Wallet migration does not rewrite chain history. `0x8aAa...8889` remains the historical Payment Receipt deployer and immutable merchant; `0x63cd...13DA` remains the historical P2 payer and Enterprise Evidence Registry deployer. ARC capability recovery is now independently verified through official Memo tx `0x5f89...0a18` and synthetic Payment Receipt canary tx `0xccb9...48cc`. The public route exposes only sanitized receipts and never exposes a signer or transaction executor.
 
 ## Enterprise OS overview
 
@@ -73,6 +76,9 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A bounded Settlement Review Packet that combines evidence integrity, freshness, accounting totals, unresolved owner decisions, and a reviewer checklist without exposing raw ERP payloads.
 - A SettlementEvent handoff-contract validator that verifies Arc identity, amount/fee candidate preservation, finality, non-posting controls, and schema-owner gaps.
 - A read-only AOXPET Arc Lab Enterprise OS shell that frames the payment component inside 14-domain procurement, manufacturing, inventory, assets, projects, treasury, financing, accounting, close, FP&A, and human-gate controls.
+- A manufacturing `QUALITY_HOLD` evidence view that binds ERP material transfer/WIP facts to the Arc evidence-registry anchor without claiming manufacture completion or inventory tokenization.
+- A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
+- A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 
 ## Verified evidence
 

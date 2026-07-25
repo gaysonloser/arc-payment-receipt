@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-25T19:34:02Z",
+  "source": "Circle Console Testnet",
+  "network": "ARC-TESTNET",
+  "contract_id": "019f6e8f-b427-7cb8-9e86-ccd243211aff",
+  "contract_address": "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df",
+  "contract_verification": "VERIFIED",
+  "event_monitor_id": "019f6e8f-cbf5-78cd-add3-23cbb3c2bc08",
+  "event_signature": "PaymentReceived(bytes32,address,address,uint256,bytes32)",
+  "subscription_state": "Subscribed",
+  "monitor_created_at": "2026-07-17T05:32:25.461447Z",
+  "event_history_state": "W4 PaymentReceived event observed and detail-opened",
+  "event_logs": [
+    {
+      "timestamp": "2026-07-25T15:38:28.000Z",
+      "contract_name": "ArcPaymentReceipt",
+      "contract_address": "0x05fd366e0f1af3c5dcdcdc88ed8824bbf175e1df",
+      "network": "ARC-TESTNET",
+      "event_name": "PaymentReceived",
+      "event_signature": "PaymentReceived(bytes32,address,address,uint256,bytes32)",
+      "event_signature_hash": "0x2df51f58b1137cc09ade81bcd25f7b43daaf3584cf06d28132b94501050b083f",
+      "transaction_hash": "0xccb9a78bcc444802f2a65b416d611747023ac0aa6839a12c9e2c1d7c6f7148cc",
+      "log_index": null,
+      "order_id": "0x1b895eb39135e8addcf61e305775833b2c6b9fff8d43471743e308b73d3619a4",
+      "payer": "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6",
+      "merchant": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "amount_wei": "10000000000000000",
+      "amount_usdc": "0.01",
+      "metadata_hash": "0x94b98a3663969dec6d13bc3259a656ed570cc948f5e1084ec9c4a6f04c4ae2bc"
+    }
+  ],
+  "webhook_active": false,
+  "read_method": "authenticated_console_ui_event_history_and_event_information",
+  "subscription_observed_at": "2026-07-25T19:34:02Z",
+  "wallet_signature": false,
+  "onchain_write": false
+}

@@ -36,6 +36,7 @@
     .status-row, .grid, .domains { display: grid; gap: 14px; }
     .status-row { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-top: 24px; }
     .grid { grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr); align-items: start; }
+    .grid > * { min-width: 0; }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -48,7 +49,7 @@
       border-radius: 8px;
       padding: 14px;
     }
-    .metric strong { display: block; font-size: 22px; color: var(--blue); }
+    .metric strong { display: block; font-size: 22px; color: var(--blue); overflow-wrap: anywhere; }
     .metric span { color: var(--muted); font-size: 13px; }
     .domains { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 14px; }
     .domain {
@@ -66,8 +67,10 @@
     .queued { color: #4b5563; background: #eceff3; }
     ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.94em; }
-    .queue li { margin-bottom: 7px; }
-    .fine { margin-top: 18px; font-size: 13px; color: var(--muted); }
+    .queue li { margin-bottom: 7px; overflow-wrap: anywhere; }
+    .fine { margin-top: 18px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    .evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 14px; margin-top: 14px; }
+    .evidence-value { margin-top: 8px; font-size: 18px; font-weight: 750; color: var(--ink); overflow-wrap: anywhere; }
     @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -96,11 +99,25 @@
         <p class="fine" id="controls"></p>
       </aside>
     </section>
+    <section class="panel" style="margin-top: 14px;">
+      <h2>Cross-System Evidence</h2>
+      <div class="evidence-grid" id="evidence-grid"></div>
+    </section>
   </main>
   <script>
     async function main() {
-      const response = await fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } });
-      const data = await response.json();
+      const [portfolioResponse, manufacturingResponse, walletResponse, w4DualResponse] = await Promise.all([
+        fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/manufacturing-evidence", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/wallet-capability", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/w4-dual-source", { headers: { accept: "application/json" } })
+      ]);
+      if (![portfolioResponse, manufacturingResponse, walletResponse, w4DualResponse].every((response) => response.ok)) {
+        throw new Error("Evidence API unavailable");
+      }
+      const [data, manufacturing, wallet, w4Dual] = await Promise.all([
+        portfolioResponse.json(), manufacturingResponse.json(), walletResponse.json(), w4DualResponse.json()
+      ]);
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
       const controls = data.e1_controls || {};
@@ -110,7 +127,7 @@
         : "not configured";
       const statusRow = document.querySelector("#status-row");
       const metrics = [
-        ["Standard", data.standard_id],
+        ["Standard", "Twin-Ledger Dual Service V1"],
         ["Company", `${product.company || "AOXPET Arc Lab"} / ${product.abbreviation || "AAL"}`],
         ["Domains", `${coverage.result_units_completed || 0} result units / ${coverage.domains_total || 14} domains`],
         ["Mode", controls.read_only_shell ? "GET/HEAD read-only" : "restricted"],
@@ -127,7 +144,7 @@
         ["D08 Projects", "implemented", "Project milestone cash control, change-order hold and budget impact."],
         ["D09 Treasury", "implemented", "Read-only ERP reconciliation mapping; Payment Receipt remains one component."],
         ["D10-D14", "implemented", "Financing, tax/three-ledger, close, FP&A, governance, and security gates."],
-        ["D01 Company", "in_progress", "AAL Company and dedicated draft-only identity exist; credentials and master data remain gated."],
+        ["D01 Company", "in_progress", "AAL Company, dedicated draft-only identity, and initial master data exist; the public runtime remains credential-free."],
         ["D02 Opening", "blocked_with_packet", "Opening balances require a separately approved C1 fixture and zero-difference trial balance."]
       ];
       document.querySelector("#domains").innerHTML = domainRows.map(([name, status, text]) => `
@@ -142,7 +159,23 @@
         <li><strong>${item.domain}</strong><br>${item.next_result_unit}</li>
       `).join("");
       document.querySelector("#controls").textContent =
-        `No ERP credential: ${!controls.erp_credential_present}; no ERP write: ${!controls.erp_write_enabled}; no wallet/chain: ${!controls.wallet_connection_enabled && !controls.chain_transaction_enabled}.`;
+        `Public runtime only: ERP credential absent ${!controls.erp_credential_present}; ERP write disabled ${!controls.erp_write_enabled}; wallet/chain executor absent ${!controls.wallet_connection_enabled && !controls.chain_transaction_enabled}.`;
+
+      const receipt = wallet.actions.find((action) => action.type === "payment_receipt_canary");
+      const evidenceCards = [
+        ["Manufacturing state", manufacturing.state, `${manufacturing.erp.material_transfer.name} / WIP ${manufacturing.erp.inventory_readback.wip_qty} @ ${manufacturing.erp.inventory_readback.wip_valuation_rate}`],
+        ["Arc quality anchor", manufacturing.chain_anchor.transaction_hash, `${manufacturing.chain_anchor.contract_address} / block ${manufacturing.chain_anchor.block_number}`],
+        ["Current ARC wallet", wallet.wallet.address, `nonce ${wallet.wallet.ending_nonce} / ${wallet.status}`],
+        ["Payment Receipt canary", receipt.transaction_hash, `${receipt.amount_test_usdc} test USDC / storage match ${receipt.storage_matches_event}`],
+        ["W4 Circle / RPC", w4Dual.status, `${w4Dual.counts.circle_in_overlap_window} Circle / ${w4Dual.counts.rpc_in_overlap_window} RPC / unmatched 0`]
+      ];
+      document.querySelector("#evidence-grid").innerHTML = evidenceCards.map(([label, value, detail]) => `
+        <article class="domain">
+          <strong>${label}</strong>
+          <div class="evidence-value">${value}</div>
+          <p class="fine">${detail}</p>
+        </article>
+      `).join("");
     }
     main().catch((error) => {
       document.body.insertAdjacentHTML("beforeend", `<pre>${error.message}</pre>`);

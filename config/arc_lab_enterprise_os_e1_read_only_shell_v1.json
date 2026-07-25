@@ -38,8 +38,9 @@
     "capability_state": {
       "network_configured": true,
       "faucet_funded": true,
-      "memo_canary": "prepared_requires_action_time_confirmation",
-      "receipt_canary": "prepared_after_memo_requires_action_time_confirmation"
+      "memo_canary": "verified_tx_0x5f89eb449bdddd8f75d6da7b4a3e6502440b869f98ca71ce446b02ab56090a18",
+      "receipt_canary": "verified_tx_0xccb9a78bcc444802f2a65b416d611747023ac0aa6839a12c9e2c1d7c6f7148cc",
+      "circle_event_monitor": "refresh_pending_login"
     },
     "historical_chain_roles": [
       {
@@ -92,8 +93,8 @@
   },
   "current_next_queue": [
     {
-      "domain": "D01_company_configuration_and_master_data",
-      "next_result_unit": "C0 completed; C1 master data and opening balances remain separately gated",
+      "domain": "D06_manufacturing_quality_and_subcontracting",
+      "next_result_unit": "Wrap the existing ERP material transfer and QUALITY_HOLD chain anchor into the next human-reviewed release evidence",
       "status": "in_progress"
     },
     {
@@ -108,13 +109,13 @@
     },
     {
       "domain": "D14_agent_governance_security_and_human_gates",
-      "next_result_unit": "public release governance, privacy and rollback verification",
+      "next_result_unit": "Wallet capability and manufacturing evidence release candidate passed local read-only and privacy gates; publication remains separately confirmed",
       "status": "implemented"
     }
   ],
   "acceptance_checks": {
     "preserve_legacy_routes": ["/", "/arc-payment-receipt", "/api/health", "/api/evidence", "/api/dual-source", "/api/circle-monitor", "/api/receipts/:orderId"],
-    "new_read_only_routes": ["/arc-lab", "/enterprise-os", "/healthz", "/api/arc-lab-portfolio", "/api/v1/topology", "/api/v1/evidence"],
+    "new_read_only_routes": ["/arc-lab", "/enterprise-os", "/healthz", "/api/arc-lab-portfolio", "/api/v1/topology", "/api/v1/evidence", "/api/v1/manufacturing-evidence", "/api/v1/wallet-capability", "/api/v1/w4-dual-source"],
     "no_local_absolute_paths_in_public_json": true,
     "no_secret_in_public_json": true,
     "no_wallet_or_chain_action": true,

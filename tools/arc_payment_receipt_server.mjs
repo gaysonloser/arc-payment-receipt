@@ -15,6 +15,9 @@ export const DEFAULT_VIEWER_PATH = resolve(HERE, "arc_payment_receipt_viewer.htm
 export const DEFAULT_ARC_LAB_VIEWER_PATH = resolve(HERE, "arc_lab_enterprise_os_viewer.html");
 export const DEFAULT_ARC_LAB_PORTFOLIO_PATH = resolve(HERE, "../config/arc_lab_enterprise_os_e1_read_only_shell_v1.json");
 export const DEFAULT_ARC_LAB_ERP_INTERACTION_PATH = resolve(HERE, "../config/arc_lab_erp_interaction_public_v1.json");
+export const DEFAULT_MANUFACTURING_EVIDENCE_PATH = resolve(HERE, "../outputs/Arc_XERP_MFG_01_local_evidence.json");
+export const DEFAULT_WALLET_CAPABILITY_PATH = resolve(HERE, "../outputs/Arc_Wallet_Capability_Recovery_public.json");
+export const DEFAULT_W4_DUAL_SOURCE_PATH = resolve(HERE, "../outputs/Arc_W4_dual_source_monitor_aligned_20260726.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
@@ -75,6 +78,18 @@ export async function loadArcLabPortfolio(path = DEFAULT_ARC_LAB_PORTFOLIO_PATH)
 }
 
 export async function loadArcLabErpInteraction(path = DEFAULT_ARC_LAB_ERP_INTERACTION_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadManufacturingEvidence(path = DEFAULT_MANUFACTURING_EVIDENCE_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadWalletCapability(path = DEFAULT_WALLET_CAPABILITY_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadW4DualSource(path = DEFAULT_W4_DUAL_SOURCE_PATH) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
@@ -916,6 +931,9 @@ export function createReceiptServer(options = {}) {
   const loadArcLabViewer = options.loadArcLabViewer ?? (() => readFile(options.arcLabViewerPath ?? DEFAULT_ARC_LAB_VIEWER_PATH, "utf8"));
   const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
   const loadArcLabErp = options.loadArcLabErp ?? (() => loadArcLabErpInteraction(options.arcLabErpInteractionPath));
+  const loadManufacturing = options.loadManufacturing ?? (() => loadManufacturingEvidence(options.manufacturingEvidencePath));
+  const loadWalletRecovery = options.loadWalletRecovery ?? (() => loadWalletCapability(options.walletCapabilityPath));
+  const loadW4Dual = options.loadW4Dual ?? (() => loadW4DualSource(options.w4DualSourcePath));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const now = options.now ?? (() => Date.now());
@@ -1052,6 +1070,21 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/erp-interaction") {
         json(response, 200, await loadArcLabErp(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/manufacturing-evidence") {
+        json(response, 200, await loadManufacturing(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/wallet-capability") {
+        json(response, 200, await loadWalletRecovery(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/w4-dual-source") {
+        json(response, 200, await loadW4Dual(), request.method);
         return;
       }
 

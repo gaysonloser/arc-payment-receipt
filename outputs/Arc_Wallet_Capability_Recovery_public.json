@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-07-25T15:41:00.000Z",
+  "status": "confirmed",
+  "network": { "name": "Arc Testnet", "chain_id": 5042002 },
+  "wallet": {
+    "label": "ARC",
+    "address": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
+    "ending_nonce": 5,
+    "ending_balance_test_usdc": "19.981340123048218112"
+  },
+  "actions": [
+    {
+      "action_id": "ARC-W3-MEMO-20260725-001",
+      "type": "official_arc_memo",
+      "transaction_hash": "0x5f89eb449bdddd8f75d6da7b4a3e6502440b869f98ca71ce446b02ab56090a18",
+      "block_number": 53608716,
+      "nonce": 3,
+      "receipt_status": 1,
+      "target": "0x5294E9927c3306DcBaDb03fe70b92e01cCede505",
+      "memo_id": "0x652359133fe8e5719ca20ab8f8f125f6c786dd71a1cd9a27ba1ce81bb625881b",
+      "memo": "purpose=arc-wallet-capability;v=2",
+      "net_asset_change_before_gas": "0",
+      "actual_fee_test_usdc": "0.00154995"
+    },
+    {
+      "action_id": "ARC-W4-PAY-20260725-001",
+      "type": "payment_receipt_canary",
+      "transaction_hash": "0xccb9a78bcc444802f2a65b416d611747023ac0aa6839a12c9e2c1d7c6f7148cc",
+      "block_number": 53609492,
+      "nonce": 4,
+      "receipt_status": 1,
+      "contract": "0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df",
+      "order_id": "0x1b895eb39135e8addcf61e305775833b2c6b9fff8d43471743e308b73d3619a4",
+      "payer": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
+      "merchant": "0x8aAa1fC761A8d7eb03323614f9Ff7fb3218B8889",
+      "amount_test_usdc": "0.01",
+      "actual_gas_fee_test_usdc": "0.003079175",
+      "storage_matches_event": true,
+      "contract_balance_zero": true
+    }
+  ],
+  "source_assurance": {
+    "arc_rpc_verified": true,
+    "receipt_storage_verified": true,
+    "circle_event_history": "refresh_pending_login_required"
+  },
+  "boundaries": {
+    "read_only_public_evidence": true,
+    "wallet_executor_exposed": false,
+    "wallet_secret_present": false,
+    "erp_credential_present": false,
+    "repeat_transaction_allowed": false
+  }
+}

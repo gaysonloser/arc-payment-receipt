@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-25T15:40:19.964Z",
+  "network": {
+    "name": "Arc Testnet",
+    "chain_id": 5042002,
+    "rpc_url": "https://rpc.testnet.arc.network"
+  },
+  "contract": "0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df",
+  "range": {
+    "from": 53609492,
+    "to": 53609492,
+    "latest_at_start": 53609710
+  },
+  "coverage": {
+    "event_discovery": "Arc official RPC eth_getLogs full contract range scan",
+    "event_discovery_observed_at": "2026-07-25T15:40:19.964Z",
+    "verification": "Arc official RPC transaction objects, transaction receipts, receipt storage and balances",
+    "rpc_eth_getLogs_full_refresh": "complete",
+    "note": "Every PaymentReceived log from the configured deployment block through the captured latest block was discovered and independently verified through Arc RPC."
+  },
+  "event_count": 1,
+  "contract_balance_wei": "0",
+  "contract_balance_usdc": "0",
+  "checks": {
+    "unique_order_ids": true,
+    "all_transactions_succeeded": true,
+    "all_events_match_storage": true,
+    "contract_balance_zero": true,
+    "rpc_full_range_scanned": true,
+    "all_event_payloads_rpc_verified": true
+  },
+  "events": [
+    {
+      "order_id": "0x1b895eb39135e8addcf61e305775833b2c6b9fff8d43471743e308b73d3619a4",
+      "payer": "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6",
+      "merchant": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "amount_wei": "10000000000000000",
+      "amount_usdc": "0.01",
+      "metadata_hash": "0x94b98a3663969dec6d13bc3259a656ed570cc948f5e1084ec9c4a6f04c4ae2bc",
+      "transaction_hash": "0xccb9a78bcc444802f2a65b416d611747023ac0aa6839a12c9e2c1d7c6f7148cc",
+      "block_number": 53609492,
+      "log_index": 31,
+      "timestamp": "2026-07-25T15:38:28.000Z",
+      "transaction_status": 1,
+      "transaction_type": 0,
+      "transaction_nonce": 4,
+      "gas_limit": "155299",
+      "gas_used": "123167",
+      "effective_gas_price_wei": "25000000000",
+      "gas_cost_usdc": "0.003079175",
+      "stored_receipt": {
+        "payer": "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6",
+        "amount_wei": "10000000000000000",
+        "amount_usdc": "0.01",
+        "metadata_hash": "0x94b98a3663969dec6d13bc3259a656ed570cc948f5e1084ec9c4a6f04c4ae2bc",
+        "block_number": 53609492
+      },
+      "storage_matches_event": true
+    }
+  ]
+}

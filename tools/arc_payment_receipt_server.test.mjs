@@ -62,6 +62,24 @@ const circleReport = {
   webhook_active: false,
   event_history_state: "No emitted events yet"
 };
+const manufacturingEvidence = {
+  status: "chain_anchor_confirmed_quality_hold",
+  state: "QUALITY_HOLD",
+  chain_anchor: { transaction_hash: `0x${"56".repeat(32)}` },
+  controls: { manufacture_completion_claimed: false }
+};
+const walletCapability = {
+  status: "confirmed",
+  wallet: { address: "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6", ending_nonce: 5 },
+  actions: [{ type: "payment_receipt_canary", transaction_hash: `0x${"57".repeat(32)}` }],
+  boundaries: { wallet_executor_exposed: false }
+};
+const w4DualSource = {
+  status: "aligned_in_overlap_window",
+  counts: { rpc_in_overlap_window: 1, circle_in_overlap_window: 1 },
+  checks: { overlap_events_match: true },
+  unmatched: { rpc: [], circle: [] }
+};
 const enterpriseReport = {
   generated_at: "2026-07-20T12:02:28.246Z",
   fact: {
@@ -255,6 +273,9 @@ before(async () => {
     loadDualReport: async () => dualReport,
     loadCircleReport: async () => circleReport,
     loadEnterpriseReport: async () => enterpriseReport,
+    loadManufacturing: async () => manufacturingEvidence,
+    loadWalletRecovery: async () => walletCapability,
+    loadW4Dual: async () => w4DualSource,
     now: () => Date.parse("2026-07-20T13:02:28.246Z"),
     loadViewer: async () => "<!doctype html><title>viewer</title>",
     loadLogo: async () => Buffer.from("logo"),
@@ -265,8 +286,10 @@ before(async () => {
 });
 
 after(async () => {
-  server.closeAllConnections();
-  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  await new Promise((resolve, reject) => {
+    server.close((error) => error ? reject(error) : resolve());
+    server.closeAllConnections();
+  });
 });
 
 test("serves a read-only health response", async () => {
@@ -397,6 +420,41 @@ test("serves E1 evidence with GET and HEAD only", async () => {
   const put = await fetch(`${origin}/api/v1/evidence`, { method: "PUT" });
   assert.equal(put.status, 405);
   assert.equal((await put.json()).error, "method_not_allowed");
+});
+
+test("serves manufacturing and wallet capability evidence as read-only APIs", async () => {
+  const manufacturing = await fetch(`${origin}/api/v1/manufacturing-evidence`);
+  assert.equal(manufacturing.status, 200);
+  assert.equal((await manufacturing.json()).state, "QUALITY_HOLD");
+
+  const wallet = await fetch(`${origin}/api/v1/wallet-capability`);
+  assert.equal(wallet.status, 200);
+  const walletJson = await wallet.json();
+  assert.equal(walletJson.wallet.ending_nonce, 5);
+  assert.equal(walletJson.boundaries.wallet_executor_exposed, false);
+
+  const head = await fetch(`${origin}/api/v1/wallet-capability`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const write = await fetch(`${origin}/api/v1/manufacturing-evidence`, { method: "POST" });
+  assert.equal(write.status, 405);
+});
+
+test("serves W4 Circle and RPC alignment as read-only evidence", async () => {
+  const response = await fetch(`${origin}/api/v1/w4-dual-source`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "aligned_in_overlap_window");
+  assert.equal(payload.checks.overlap_events_match, true);
+  assert.deepEqual(payload.unmatched, { rpc: [], circle: [] });
+
+  const head = await fetch(`${origin}/api/v1/w4-dual-source`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/w4-dual-source`, { method: "POST" });
+  assert.equal(post.status, 405);
 });
 
 test("classifies fresh, aging, stale, and invalid evidence", () => {

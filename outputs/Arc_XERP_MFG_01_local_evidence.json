@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "ARC-XERP-MFG-01",
+  "status": "chain_anchor_confirmed_quality_hold",
+  "classification": "testnet_manufacturing_quality_control",
+  "company": "AOXPET Arc Lab",
+  "state": "QUALITY_HOLD",
+  "business_event_id": "arc-lab:xerp:mfg:quality-hold:20260724:001",
+  "erp": {
+    "authority": "ERPNext",
+    "material_transfer": {
+      "name": "MAT-STE-2026-00001",
+      "docstatus": 1,
+      "item_code": "ARC-LAB-RM-CATVERSE-001",
+      "qty": "50.000",
+      "source_warehouse": "Arc Lab Main - AAL",
+      "target_warehouse": "Work In Progress - AAL",
+      "basic_rate": "10.00"
+    },
+    "manufacture": {
+      "name": "MAT-STE-2026-00002",
+      "docstatus": 0,
+      "work_order": "MFG-WO-2026-00001",
+      "finished_qty": "25.000"
+    },
+    "quality_inspection": {
+      "name": "MAT-QA-2026-00001",
+      "docstatus": 0,
+      "reference_name": "MAT-STE-2026-00002",
+      "draft_status": "Accepted",
+      "reading": "VISUAL_ACCEPTED"
+    },
+    "inventory_readback": {
+      "wip_qty": "50.000",
+      "wip_valuation_rate": "10.00",
+      "wip_stock_value": "500.00",
+      "finished_goods_qty": "0.000",
+      "stock_ledger_entry_count": 3,
+      "work_order_produced_qty": "0.000"
+    }
+  },
+  "chain_anchor": {
+    "network": "Arc Testnet",
+    "chain_id": 5042002,
+    "contract_type": "ArcEnterpriseEvidenceRegistry",
+    "deployed": true,
+    "contract_address": "0xCBB00cb7541605A4E2E07B6000302Ee5445193dc",
+    "transaction_hash": "0x97f4b9c83867c8e3ec93b81237a15558c42a8047ea1281cd8b9e031440a8fb7c",
+    "block_number": 53538548,
+    "block_hash": "0xb2cc288e0acbf59ea8238a1a5591847a16ca735f595a8637538acbc4c1a2aa2c",
+    "owner": "0x63cdBF1918133716C67B28390F5C5D9250B113DA",
+    "state_code": 2,
+    "gas_used": 401295,
+    "actual_fee_test_usdc": "0.008832732811776000",
+    "event_id": "0x54ecc8657a60545cb1ff982695b4f2ec124fd5296aa117e94556edfe82a1590a",
+    "evidence_root": "0x3d8fceb7d16ddeb265d6b0cd141cd43b420e2308342112a52de8f9d769d54429",
+    "erp_fingerprint": "0x407bd0dfb09356f0b235f197f3aa06da54a080d245a5735ce6744c96b0da9331"
+  },
+  "controls": {
+    "quality_release_claimed": false,
+    "manufacture_completion_claimed": false,
+    "inventory_tokenization_claimed": false,
+    "production_cash_claimed": false,
+    "erp_is_inventory_cost_authority": true,
+    "human_review_required": true
+  },
+  "boundaries": {
+    "local_presentation_only": true,
+    "wallet_signature": true,
+    "chain_transaction": true,
+    "erp_write_in_this_result": false,
+    "git_push": false,
+    "render_deploy": false,
+    "payment_receipt_modified": false
+  }
+}
