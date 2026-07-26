@@ -1,0 +1,40 @@
+{
+  "schema_version": "arc-app-kit-boundary-public-v1",
+  "status": "official_capability_reviewed_not_enabled_for_custom_contract_call",
+  "reviewed_at": "2026-07-26T09:41:00.000Z",
+  "sources": [
+    {
+      "label": "Arc App Kit documentation",
+      "url": "https://docs.arc.io/app-kit",
+      "scope": "Wallet and stablecoin UX capabilities on Arc Testnet."
+    },
+    {
+      "label": "Arc node feature request #209",
+      "url": "https://github.com/circlefin/arc-node/issues/209",
+      "scope": "Builder request for explicit custom contract-call support."
+    }
+  ],
+  "product_boundary": {
+    "current_verified_path": "custom Arc contract call plus Circle/RPC evidence and ERP handoff",
+    "app_kit_role": "future wallet and stablecoin routing UX candidate",
+    "custom_pay_calldata_supported": false,
+    "app_kit_enabled_in_runtime": false,
+    "wallet_connection_exposed": false,
+    "bridge_or_swap_executed": false,
+    "chain_action_executed": false
+  },
+  "quality_release_alignment": {
+    "current_chain_state": "QUALITY_RELEASE",
+    "release_action": "confirmed single Arc Testnet registry deployment; App Kit was not used for this custom contract call",
+    "transaction_hash": "0x3e69c666115cac9d269572fc10094f8655f930abf587d5271a393e0360242566",
+    "registry": "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7",
+    "why_not_send_transfer": "A transfer cannot preserve the application receipt, predecessor verification, quality state transition, and ERP evidence binding required by the control plane."
+  },
+  "reviewer_claim": "App Kit is a planned compatibility surface, not a claimed production integration. The current product keeps a custom contract-call boundary so receipt semantics and enterprise controls remain verifiable.",
+  "public_safety": {
+    "contains_wallet_secret": false,
+    "contains_raw_erp_payload": false,
+    "contains_unsigned_calldata": false,
+    "allows_write": false
+  }
+}

@@ -1,15 +1,19 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "evidence_id": "ARC-XERP-MFG-02-PUBLIC-PROGRESS",
-  "status": "erp_manufacture_complete_chain_quality_release_pending",
+  "status": "cross_system_manufacturing_quality_release_confirmed",
   "company": "AOXPET Arc Lab",
   "network": "Arc Testnet",
   "chain_id": 5042002,
-  "execution_wallet": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
   "chain": {
-    "current_state": "QUALITY_HOLD",
+    "current_state": "QUALITY_RELEASE",
+    "predecessor_state": "QUALITY_HOLD",
     "predecessor_registry": "0xCBB00cb7541605A4E2E07B6000302Ee5445193dc",
-    "quality_release_anchored": false,
+    "registry": "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7",
+    "transaction_hash": "0x3e69c666115cac9d269572fc10094f8655f930abf587d5271a393e0360242566",
+    "block_number": 53732050,
+    "gas_fee_native_usdc": "0.012414406770304000",
+    "quality_release_anchored": true,
     "manufacture_completion_anchored": false
   },
   "erp": {
@@ -44,14 +48,12 @@
     "source_document_refs_public": false,
     "source_fingerprint_public": false
   },
-  "blockers": [
-    "QUALITY_RELEASE_NOT_ANCHORED_ON_ARC"
-  ],
-  "next": "Revalidate the exact QUALITY_RELEASE deployment packet immediately before the separately confirmed wallet action; do not repeat ERP submits.",
+  "blockers": [],
+  "next": "Publish the sanitized quality-release evidence with the same Git and Render release fingerprint; do not create another chain event.",
   "boundaries": {
     "new_business_documents": 0,
     "erp_submit_permission_active": false,
-    "chain_action_executed": false,
+    "chain_action_executed": true,
     "wallet_signature_requested": false,
     "inventory_tokenization_claimed": false,
     "erp_is_inventory_cost_authority": true,

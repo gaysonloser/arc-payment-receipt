@@ -70,15 +70,37 @@ const manufacturingEvidence = {
 };
 const walletCapability = {
   status: "confirmed",
-  wallet: { address: "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6", ending_nonce: 5 },
+  wallet: { address: "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6", ending_nonce: 6 },
   actions: [{ type: "payment_receipt_canary", transaction_hash: `0x${"57".repeat(32)}` }],
   boundaries: { wallet_executor_exposed: false }
+};
+const manufacturingProgress = {
+  status: "cross_system_manufacturing_quality_release_confirmed",
+  erp: {
+    quality_inspection: { docstatus: 1 },
+    manufacture: { docstatus: 1 },
+    inventory: { wip_qty: "0.000", finished_goods_qty: "25.000", finished_goods_valuation_rate: "20.00" },
+    readback_generated_at: "2026-07-26T03:43:19.365Z",
+    source_document_refs_public: false,
+    source_fingerprint_public: false
+  },
+  chain: { current_state: "QUALITY_RELEASE", quality_release_anchored: true },
+  boundaries: { chain_action_executed: true }
 };
 const w4DualSource = {
   status: "aligned_in_overlap_window",
   counts: { rpc_in_overlap_window: 1, circle_in_overlap_window: 1 },
   checks: { overlap_events_match: true },
   unmatched: { rpc: [], circle: [] }
+};
+const appKitBoundary = {
+  status: "official_capability_reviewed_not_enabled_for_custom_contract_call",
+  product_boundary: {
+    custom_pay_calldata_supported: false,
+    app_kit_enabled_in_runtime: false,
+    chain_action_executed: false
+  },
+  public_safety: { allows_write: false }
 };
 const enterpriseReport = {
   generated_at: "2026-07-20T12:02:28.246Z",
@@ -274,8 +296,10 @@ before(async () => {
     loadCircleReport: async () => circleReport,
     loadEnterpriseReport: async () => enterpriseReport,
     loadManufacturing: async () => manufacturingEvidence,
+    loadManufacturingProgressReport: async () => manufacturingProgress,
     loadWalletRecovery: async () => walletCapability,
     loadW4Dual: async () => w4DualSource,
+    loadAppKit: async () => appKitBoundary,
     now: () => Date.parse("2026-07-20T13:02:28.246Z"),
     loadViewer: async () => "<!doctype html><title>viewer</title>",
     loadLogo: async () => Buffer.from("logo"),
@@ -430,7 +454,7 @@ test("serves manufacturing and wallet capability evidence as read-only APIs", as
   const progress = await fetch(`${origin}/api/v1/manufacturing-progress`);
   assert.equal(progress.status, 200);
   const progressJson = await progress.json();
-  assert.equal(progressJson.status, "erp_manufacture_complete_chain_quality_release_pending");
+  assert.equal(progressJson.status, "cross_system_manufacturing_quality_release_confirmed");
   assert.equal(progressJson.erp.quality_inspection.docstatus, 1);
   assert.equal(progressJson.erp.manufacture.docstatus, 1);
   assert.equal(progressJson.erp.inventory.wip_qty, "0.000");
@@ -439,14 +463,14 @@ test("serves manufacturing and wallet capability evidence as read-only APIs", as
   assert.equal(progressJson.erp.readback_generated_at, "2026-07-26T03:43:19.365Z");
   assert.equal(progressJson.erp.source_document_refs_public, false);
   assert.equal(progressJson.erp.source_fingerprint_public, false);
-  assert.equal(progressJson.chain.current_state, "QUALITY_HOLD");
-  assert.equal(progressJson.chain.quality_release_anchored, false);
-  assert.equal(progressJson.boundaries.chain_action_executed, false);
+  assert.equal(progressJson.chain.current_state, "QUALITY_RELEASE");
+  assert.equal(progressJson.chain.quality_release_anchored, true);
+  assert.equal(progressJson.boundaries.chain_action_executed, true);
 
   const wallet = await fetch(`${origin}/api/v1/wallet-capability`);
   assert.equal(wallet.status, 200);
   const walletJson = await wallet.json();
-  assert.equal(walletJson.wallet.ending_nonce, 5);
+  assert.equal(walletJson.wallet.ending_nonce, 6);
   assert.equal(walletJson.boundaries.wallet_executor_exposed, false);
 
   const head = await fetch(`${origin}/api/v1/wallet-capability`, { method: "HEAD" });
@@ -473,6 +497,25 @@ test("serves W4 Circle and RPC alignment as read-only evidence", async () => {
   assert.equal(await head.text(), "");
 
   const post = await fetch(`${origin}/api/v1/w4-dual-source`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
+test("serves the App Kit compatibility boundary without claiming a custom call integration", async () => {
+  const response = await fetch(`${origin}/api/v1/app-kit-boundary`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "official_capability_reviewed_not_enabled_for_custom_contract_call");
+  assert.equal(payload.product_boundary.custom_pay_calldata_supported, false);
+  assert.equal(payload.product_boundary.app_kit_enabled_in_runtime, false);
+  assert.equal(payload.product_boundary.chain_action_executed, false);
+  assert.equal(payload.public_safety.allows_write, false);
+  assert.equal(JSON.stringify(payload).includes("0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6"), false);
+
+  const head = await fetch(`${origin}/api/v1/app-kit-boundary`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/app-kit-boundary`, { method: "POST" });
   assert.equal(post.status, 405);
 });
 
