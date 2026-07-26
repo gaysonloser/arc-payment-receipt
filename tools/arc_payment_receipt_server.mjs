@@ -16,6 +16,7 @@ export const DEFAULT_ARC_LAB_VIEWER_PATH = resolve(HERE, "arc_lab_enterprise_os_
 export const DEFAULT_ARC_LAB_PORTFOLIO_PATH = resolve(HERE, "../config/arc_lab_enterprise_os_e1_read_only_shell_v1.json");
 export const DEFAULT_ARC_LAB_ERP_INTERACTION_PATH = resolve(HERE, "../config/arc_lab_erp_interaction_public_v1.json");
 export const DEFAULT_MANUFACTURING_EVIDENCE_PATH = resolve(HERE, "../outputs/Arc_XERP_MFG_01_local_evidence.json");
+export const DEFAULT_MANUFACTURING_PROGRESS_PATH = resolve(HERE, "../outputs/Arc_XERP_MFG_02_progress_public.json");
 export const DEFAULT_WALLET_CAPABILITY_PATH = resolve(HERE, "../outputs/Arc_Wallet_Capability_Recovery_public.json");
 export const DEFAULT_W4_DUAL_SOURCE_PATH = resolve(HERE, "../outputs/Arc_W4_dual_source_monitor_aligned_20260726.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
@@ -82,6 +83,10 @@ export async function loadArcLabErpInteraction(path = DEFAULT_ARC_LAB_ERP_INTERA
 }
 
 export async function loadManufacturingEvidence(path = DEFAULT_MANUFACTURING_EVIDENCE_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadManufacturingProgress(path = DEFAULT_MANUFACTURING_PROGRESS_PATH) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
@@ -932,6 +937,7 @@ export function createReceiptServer(options = {}) {
   const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
   const loadArcLabErp = options.loadArcLabErp ?? (() => loadArcLabErpInteraction(options.arcLabErpInteractionPath));
   const loadManufacturing = options.loadManufacturing ?? (() => loadManufacturingEvidence(options.manufacturingEvidencePath));
+  const loadManufacturingProgressReport = options.loadManufacturingProgressReport ?? (() => loadManufacturingProgress(options.manufacturingProgressPath));
   const loadWalletRecovery = options.loadWalletRecovery ?? (() => loadWalletCapability(options.walletCapabilityPath));
   const loadW4Dual = options.loadW4Dual ?? (() => loadW4DualSource(options.w4DualSourcePath));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
@@ -1075,6 +1081,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/manufacturing-evidence") {
         json(response, 200, await loadManufacturing(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/manufacturing-progress") {
+        json(response, 200, await loadManufacturingProgressReport(), request.method);
         return;
       }
 

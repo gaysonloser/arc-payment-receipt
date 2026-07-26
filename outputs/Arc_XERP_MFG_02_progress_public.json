@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.1",
+  "evidence_id": "ARC-XERP-MFG-02-PUBLIC-PROGRESS",
+  "status": "erp_manufacture_complete_chain_quality_release_pending",
+  "company": "AOXPET Arc Lab",
+  "network": "Arc Testnet",
+  "chain_id": 5042002,
+  "execution_wallet": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
+  "chain": {
+    "current_state": "QUALITY_HOLD",
+    "predecessor_registry": "0xCBB00cb7541605A4E2E07B6000302Ee5445193dc",
+    "quality_release_anchored": false,
+    "manufacture_completion_anchored": false
+  },
+  "erp": {
+    "readback_generated_at": "2026-07-26T03:43:19.365Z",
+    "quality_inspection": {
+      "docstatus": 1,
+      "docstatus_label": "Submitted",
+      "status": "Accepted"
+    },
+    "manufacture": {
+      "docstatus": 1,
+      "docstatus_label": "Submitted"
+    },
+    "inventory": {
+      "wip_qty": "0.000",
+      "wip_valuation_rate": "10.00",
+      "finished_goods_qty": "25.000",
+      "finished_goods_valuation_rate": "20.00",
+      "finished_goods_stock_value": "500.00",
+      "work_order_produced_qty": "25.000",
+      "stock_ledger_entry_count": 5,
+      "stock_account_treatment": {
+        "same_stock_account": true,
+        "net_gl_entries": 0,
+        "explanation": "ERP valuation and SLE remain authoritative; the internal movement resolves to the same stock account."
+      }
+    },
+    "submit_permissions": {
+      "quality_inspection": false,
+      "stock_entry": false
+    },
+    "source_document_refs_public": false,
+    "source_fingerprint_public": false
+  },
+  "blockers": [
+    "QUALITY_RELEASE_NOT_ANCHORED_ON_ARC"
+  ],
+  "next": "Revalidate the exact QUALITY_RELEASE deployment packet immediately before the separately confirmed wallet action; do not repeat ERP submits.",
+  "boundaries": {
+    "new_business_documents": 0,
+    "erp_submit_permission_active": false,
+    "chain_action_executed": false,
+    "wallet_signature_requested": false,
+    "inventory_tokenization_claimed": false,
+    "erp_is_inventory_cost_authority": true,
+    "secret_or_raw_payload_exposed": false
+  }
+}

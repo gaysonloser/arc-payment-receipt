@@ -26,6 +26,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/evidence`
 - `GET /api/v1/erp-interaction`
 - `GET /api/v1/manufacturing-evidence`
+- `GET /api/v1/manufacturing-progress`
 - `GET /api/v1/wallet-capability`
 - `GET /api/v1/w4-dual-source`
 
@@ -76,7 +77,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A bounded Settlement Review Packet that combines evidence integrity, freshness, accounting totals, unresolved owner decisions, and a reviewer checklist without exposing raw ERP payloads.
 - A SettlementEvent handoff-contract validator that verifies Arc identity, amount/fee candidate preservation, finality, non-posting controls, and schema-owner gaps.
 - A read-only AOXPET Arc Lab Enterprise OS shell that frames the payment component inside 14-domain procurement, manufacturing, inventory, assets, projects, treasury, financing, accounting, close, FP&A, and human-gate controls.
-- A manufacturing `QUALITY_HOLD` evidence view that binds ERP material transfer/WIP facts to the Arc evidence-registry anchor without claiming manufacture completion or inventory tokenization.
+- A manufacturing evidence view that now shows accepted quality inspection, submitted manufacture, `25 @ 20.00 USD` ERP valuation and five SLE facts while truthfully retaining the Arc state as `QUALITY_HOLD` until the separately confirmed release anchor exists.
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 

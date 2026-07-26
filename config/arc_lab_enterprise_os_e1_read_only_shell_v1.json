@@ -94,7 +94,7 @@
   "current_next_queue": [
     {
       "domain": "D06_manufacturing_quality_and_subcontracting",
-      "next_result_unit": "Wrap the existing ERP material transfer and QUALITY_HOLD chain anchor into the next human-reviewed release evidence",
+      "next_result_unit": "ERP manufacture, SLE and valuation readback are complete; revalidate the exact QUALITY_RELEASE chain packet at action time without repeating ERP submits",
       "status": "in_progress"
     },
     {
@@ -109,13 +109,13 @@
     },
     {
       "domain": "D14_agent_governance_security_and_human_gates",
-      "next_result_unit": "Wallet capability and manufacturing evidence release candidate passed local read-only and privacy gates; publication remains separately confirmed",
+      "next_result_unit": "Publish the sanitized ERP-complete / chain-release-pending read-only evidence with rollback and privacy checks; chain execution remains separate",
       "status": "implemented"
     }
   ],
   "acceptance_checks": {
     "preserve_legacy_routes": ["/", "/arc-payment-receipt", "/api/health", "/api/evidence", "/api/dual-source", "/api/circle-monitor", "/api/receipts/:orderId"],
-    "new_read_only_routes": ["/arc-lab", "/enterprise-os", "/healthz", "/api/arc-lab-portfolio", "/api/v1/topology", "/api/v1/evidence", "/api/v1/manufacturing-evidence", "/api/v1/wallet-capability", "/api/v1/w4-dual-source"],
+    "new_read_only_routes": ["/arc-lab", "/enterprise-os", "/healthz", "/api/arc-lab-portfolio", "/api/v1/topology", "/api/v1/evidence", "/api/v1/manufacturing-evidence", "/api/v1/manufacturing-progress", "/api/v1/wallet-capability", "/api/v1/w4-dual-source"],
     "no_local_absolute_paths_in_public_json": true,
     "no_secret_in_public_json": true,
     "no_wallet_or_chain_action": true,

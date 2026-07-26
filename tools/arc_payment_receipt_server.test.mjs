@@ -286,9 +286,9 @@ before(async () => {
 });
 
 after(async () => {
+  server.closeAllConnections();
   await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
-    server.closeAllConnections();
   });
 });
 
@@ -427,6 +427,22 @@ test("serves manufacturing and wallet capability evidence as read-only APIs", as
   assert.equal(manufacturing.status, 200);
   assert.equal((await manufacturing.json()).state, "QUALITY_HOLD");
 
+  const progress = await fetch(`${origin}/api/v1/manufacturing-progress`);
+  assert.equal(progress.status, 200);
+  const progressJson = await progress.json();
+  assert.equal(progressJson.status, "erp_manufacture_complete_chain_quality_release_pending");
+  assert.equal(progressJson.erp.quality_inspection.docstatus, 1);
+  assert.equal(progressJson.erp.manufacture.docstatus, 1);
+  assert.equal(progressJson.erp.inventory.wip_qty, "0.000");
+  assert.equal(progressJson.erp.inventory.finished_goods_qty, "25.000");
+  assert.equal(progressJson.erp.inventory.finished_goods_valuation_rate, "20.00");
+  assert.equal(progressJson.erp.readback_generated_at, "2026-07-26T03:43:19.365Z");
+  assert.equal(progressJson.erp.source_document_refs_public, false);
+  assert.equal(progressJson.erp.source_fingerprint_public, false);
+  assert.equal(progressJson.chain.current_state, "QUALITY_HOLD");
+  assert.equal(progressJson.chain.quality_release_anchored, false);
+  assert.equal(progressJson.boundaries.chain_action_executed, false);
+
   const wallet = await fetch(`${origin}/api/v1/wallet-capability`);
   assert.equal(wallet.status, 200);
   const walletJson = await wallet.json();
@@ -439,6 +455,9 @@ test("serves manufacturing and wallet capability evidence as read-only APIs", as
 
   const write = await fetch(`${origin}/api/v1/manufacturing-evidence`, { method: "POST" });
   assert.equal(write.status, 405);
+
+  const progressWrite = await fetch(`${origin}/api/v1/manufacturing-progress`, { method: "POST" });
+  assert.equal(progressWrite.status, 405);
 });
 
 test("serves W4 Circle and RPC alignment as read-only evidence", async () => {

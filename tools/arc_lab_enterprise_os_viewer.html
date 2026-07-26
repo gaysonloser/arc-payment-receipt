@@ -106,17 +106,18 @@
   </main>
   <script>
     async function main() {
-      const [portfolioResponse, manufacturingResponse, walletResponse, w4DualResponse] = await Promise.all([
+      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, walletResponse, w4DualResponse] = await Promise.all([
         fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-evidence", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/manufacturing-progress", { headers: { accept: "application/json" } }),
         fetch("/api/v1/wallet-capability", { headers: { accept: "application/json" } }),
         fetch("/api/v1/w4-dual-source", { headers: { accept: "application/json" } })
       ]);
-      if (![portfolioResponse, manufacturingResponse, walletResponse, w4DualResponse].every((response) => response.ok)) {
+      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, walletResponse, w4DualResponse].every((response) => response.ok)) {
         throw new Error("Evidence API unavailable");
       }
-      const [data, manufacturing, wallet, w4Dual] = await Promise.all([
-        portfolioResponse.json(), manufacturingResponse.json(), walletResponse.json(), w4DualResponse.json()
+      const [data, manufacturing, manufacturingProgress, wallet, w4Dual] = await Promise.all([
+        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), walletResponse.json(), w4DualResponse.json()
       ]);
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
@@ -163,8 +164,9 @@
 
       const receipt = wallet.actions.find((action) => action.type === "payment_receipt_canary");
       const evidenceCards = [
-        ["Manufacturing state", manufacturing.state, `${manufacturing.erp.material_transfer.name} / WIP ${manufacturing.erp.inventory_readback.wip_qty} @ ${manufacturing.erp.inventory_readback.wip_valuation_rate}`],
-        ["Arc quality anchor", manufacturing.chain_anchor.transaction_hash, `${manufacturing.chain_anchor.contract_address} / block ${manufacturing.chain_anchor.block_number}`],
+        ["Predecessor anchor state", manufacturing.state, `Historical ERP fingerprint: ${manufacturing.erp.material_transfer.name} / WIP ${manufacturing.erp.inventory_readback.wip_qty} @ ${manufacturing.erp.inventory_readback.wip_valuation_rate}`],
+        ["Arc predecessor anchor", manufacturing.chain_anchor.transaction_hash, `${manufacturing.chain_anchor.contract_address} / block ${manufacturing.chain_anchor.block_number}`],
+        ["Current ERP completion", manufacturingProgress.status, `QI ${manufacturingProgress.erp.quality_inspection.docstatus_label}; manufacture ${manufacturingProgress.erp.manufacture.docstatus_label}; WIP ${manufacturingProgress.erp.inventory.wip_qty}; FG ${manufacturingProgress.erp.inventory.finished_goods_qty} @ ${manufacturingProgress.erp.inventory.finished_goods_valuation_rate}`],
         ["Current ARC wallet", wallet.wallet.address, `nonce ${wallet.wallet.ending_nonce} / ${wallet.status}`],
         ["Payment Receipt canary", receipt.transaction_hash, `${receipt.amount_test_usdc} test USDC / storage match ${receipt.storage_matches_event}`],
         ["W4 Circle / RPC", w4Dual.status, `${w4Dual.counts.circle_in_overlap_window} Circle / ${w4Dual.counts.rpc_in_overlap_window} RPC / unmatched 0`]
