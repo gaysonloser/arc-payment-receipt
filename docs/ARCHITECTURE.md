@@ -39,7 +39,7 @@ The AOXPET Arc Lab shell adds a portfolio view around the payment component. It 
 - Render is a read-only presentation layer.
 - ERPNext is the future business-proof authority for the isolated AAL Company.
 
-E1 contains no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
+E1 contains no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. A disabled ingress route exists only to fail closed until a separately provisioned signature key, durable queue, idempotency store, and Circle subscription are available.
 
 ## Failure semantics
 

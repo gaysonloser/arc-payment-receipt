@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, verify } from "node:crypto";
 
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
 const HASH = /^0x[0-9a-f]{64}$/i;
@@ -65,5 +65,79 @@ export function buildCircleWebhookReadiness(policy) {
       broadcasts_transactions: false,
       creates_erp_documents: false
     }
+  };
+}
+
+function hasNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+export function buildCircleWebhookRuntimePolicy(environment = process.env) {
+  const configured = {
+    receiver_enabled: environment.CIRCLE_WEBHOOK_ENABLED === "true",
+    durable_queue_declared: environment.CIRCLE_WEBHOOK_DURABLE_QUEUE === "true",
+    verification_key_present: hasNonEmptyString(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM)
+  };
+  const blockers = Object.entries(configured)
+    .filter(([, present]) => !present)
+    .map(([name]) => `${name}_required`);
+  return {
+    enabled: blockers.length === 0,
+    blockers,
+    configured,
+    boundaries: {
+      requires_circle_console_subscription: true,
+      requires_signature_verification: true,
+      requires_durable_idempotency_store: true,
+      creates_erp_documents: false,
+      broadcasts_transactions: false
+    }
+  };
+}
+
+export function verifyCircleWebhookSignature(rawBody, signature, publicKeyPem) {
+  if (!Buffer.isBuffer(rawBody) || !hasNonEmptyString(signature) || !hasNonEmptyString(publicKeyPem)) {
+    return false;
+  }
+  try {
+    return verify("sha256", rawBody, publicKeyPem, Buffer.from(signature, "base64"));
+  } catch {
+    return false;
+  }
+}
+
+export function createCircleWebhookProcessor(options = {}) {
+  const runtime = options.runtime ?? buildCircleWebhookRuntimePolicy(options.environment);
+  const policy = buildCircleWebhookPolicy(options.policy);
+  const durableQueue = options.durableQueue;
+  const idempotencyStore = options.idempotencyStore;
+  const publicKeyPem = options.publicKeyPem ?? options.environment?.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM;
+
+  return async ({ rawBody, headers, payload }) => {
+    if (!runtime.enabled) {
+      return { accepted: false, status: 503, error: "webhook_receiver_disabled", blockers: runtime.blockers };
+    }
+    if (!durableQueue?.enqueue || !idempotencyStore?.has || !idempotencyStore?.put) {
+      return { accepted: false, status: 503, error: "durable_queue_or_idempotency_store_unavailable" };
+    }
+    const signature = headers?.["x-circle-signature"];
+    if (!verifyCircleWebhookSignature(rawBody, signature, publicKeyPem)) {
+      return { accepted: false, status: 401, error: "invalid_circle_signature" };
+    }
+    const validation = validateCircleContractNotification(payload, policy);
+    if (!validation.accepted) {
+      return { accepted: false, status: 422, error: "invalid_circle_notification", validation };
+    }
+    if (await idempotencyStore.has(validation.idempotency_key)) {
+      return { accepted: true, status: 200, duplicate: true, idempotency_key: validation.idempotency_key };
+    }
+    await durableQueue.enqueue({
+      idempotency_key: validation.idempotency_key,
+      event_fingerprint: validation.event_fingerprint,
+      notification_type: payload.notificationType,
+      notification: payload.notification
+    });
+    await idempotencyStore.put(validation.idempotency_key);
+    return { accepted: true, status: 202, duplicate: false, idempotency_key: validation.idempotency_key };
   };
 }

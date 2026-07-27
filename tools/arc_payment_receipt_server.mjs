@@ -5,7 +5,11 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { buildCircleWebhookPolicy, buildCircleWebhookReadiness } from "./circle_contract_webhook_gate.mjs";
+import {
+  buildCircleWebhookPolicy,
+  buildCircleWebhookReadiness,
+  createCircleWebhookProcessor
+} from "./circle_contract_webhook_gate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt_event_monitor_latest.json");
@@ -278,6 +282,28 @@ function text(response, status, body, contentType = "text/plain; charset=utf-8",
     ...SECURITY_HEADERS
   });
   response.end(method === "HEAD" ? "" : body);
+}
+
+async function readJsonBody(request, maxBytes = 64 * 1024) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > maxBytes) {
+      const error = new Error("request_body_too_large");
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  const rawBody = Buffer.concat(chunks);
+  try {
+    return { rawBody, payload: JSON.parse(rawBody.toString("utf8")) };
+  } catch {
+    const error = new Error("invalid_json_body");
+    error.statusCode = 400;
+    throw error;
+  }
 }
 
 function binary(response, status, body, contentType, method = "GET") {
@@ -1247,11 +1273,23 @@ export function createReceiptServer(options = {}) {
   const loadPublicTrace = options.loadPublicTrace ?? (() => loadPublicTraceTrail(options.publicTraceTrailPath));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
+  const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
+    environment: options.environment ?? process.env,
+    policy: { ...CIRCLE_WEBHOOK_READINESS_POLICY, enabled: true, durableQueueAvailable: true },
+    durableQueue: options.circleWebhookDurableQueue,
+    idempotencyStore: options.circleWebhookIdempotencyStore
+  });
   const now = options.now ?? (() => Date.now());
 
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://localhost");
+      if (request.method === "POST" && url.pathname === "/api/v1/circle-webhook") {
+        const { rawBody, payload } = await readJsonBody(request);
+        const result = await circleWebhookProcessor({ rawBody, payload, headers: request.headers });
+        json(response, result.status, result, request.method);
+        return;
+      }
       if (!["GET", "HEAD"].includes(request.method)) {
         json(response, 405, { error: "method_not_allowed" }, request.method);
         return;
@@ -1600,7 +1638,8 @@ export function createReceiptServer(options = {}) {
 
       json(response, 404, { error: "not_found" });
     } catch (error) {
-      json(response, 500, { error: "internal_error", message: error.message });
+      const status = Number.isInteger(error.statusCode) ? error.statusCode : 500;
+      json(response, status, { error: status === 500 ? "internal_error" : error.message });
     }
   });
 }

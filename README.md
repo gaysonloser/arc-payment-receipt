@@ -39,7 +39,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/circle-webhook-readiness`
 
-E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
+E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
 
 The sanitized ERP interaction route shows that the isolated AAL Company and dedicated draft-only identity have completed C0, while API credentials, master data, opening balances and business-document writes remain separately gated. It also exposes D09's read-only mapping across Payment Entry, Journal Entry, Bank Transaction, GL Entry and Payment Ledger Entry without publishing raw ERP payloads or identity values.
 
@@ -225,7 +225,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/circle-webhook-readiness`
 
-All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook receiver, database, or state-changing endpoint. The webhook-readiness route is a public, fail-closed boundary: it documents the exact Arc registry event and the missing durable-queue prerequisite, but it cannot receive a notification, create a Circle subscription, or write to ERP.
+All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP.
 
 ## Safety and limitations
 
@@ -241,7 +241,7 @@ All other paths or write methods return explicit errors. The service has no sign
 - The Review Packet is neither an attestation nor an accounting record and contains no raw ERP payload.
 - The contract does not implement refunds, disputes, tax documents, identity, access control, or upgradeability.
 - Circle history begins after the demonstrated P1 event; pre-monitor backfill is not claimed.
-- No persistent Circle API key, Entity Secret, Circle Wallet, webhook, or autonomous signer is used.
+- No persistent Circle API key, Entity Secret, Circle Wallet, enabled webhook, or autonomous signer is used. A future webhook verifier must receive its public verification key through runtime configuration and must keep Circle credentials outside the repository.
 
 ## License
 

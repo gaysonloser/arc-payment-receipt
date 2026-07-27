@@ -454,6 +454,23 @@ test("serves E1 evidence with GET and HEAD only", async () => {
   assert.equal((await put.json()).error, "method_not_allowed");
 });
 
+test("keeps the Circle webhook endpoint fail-closed without a configured durable receiver", async () => {
+  const response = await fetch(`${origin}/api/v1/circle-webhook`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ notificationType: "contracts.eventLog" })
+  });
+  assert.equal(response.status, 503);
+  const body = await response.json();
+  assert.equal(body.accepted, false);
+  assert.equal(body.error, "webhook_receiver_disabled");
+  assert.deepEqual(body.blockers, [
+    "receiver_enabled_required",
+    "durable_queue_declared_required",
+    "verification_key_present_required"
+  ]);
+});
+
 test("serves manufacturing and wallet capability evidence as read-only APIs", async () => {
   const manufacturing = await fetch(`${origin}/api/v1/manufacturing-evidence`);
   assert.equal(manufacturing.status, 200);

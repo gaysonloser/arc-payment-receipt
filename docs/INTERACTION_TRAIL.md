@@ -28,7 +28,7 @@ Circle evidence is compared with the local Arc RPC monitor in an overlap window.
 
 Render is the running proof layer. It provides a public, read-only surface for the receipt viewer, source evidence, health checks, and the AOXPET Arc Lab Enterprise OS shell.
 
-Render does not replace Circle Console or ERPNext. It only presents sanitized evidence and product controls. E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
+Render does not replace Circle Console or ERPNext. It only presents sanitized evidence and product controls. E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The webhook ingress is shipped disabled and cannot accept events until its separate durable queue, verification key, idempotency store, and Circle subscription controls are provisioned.
 
 ## Lane 5: ERPNext business proof
 

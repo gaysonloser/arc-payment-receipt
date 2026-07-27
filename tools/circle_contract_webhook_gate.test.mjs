@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 
 import {
   buildCircleWebhookPolicy,
   buildCircleWebhookReadiness,
+  buildCircleWebhookRuntimePolicy,
+  createCircleWebhookProcessor,
+  verifyCircleWebhookSignature,
   validateCircleContractNotification
 } from "./circle_contract_webhook_gate.mjs";
 import { buildCircleWebhookPublicView } from "./arc_payment_receipt_server.mjs";
@@ -60,4 +64,58 @@ test("exports a public fail-closed readiness boundary without enabling a receive
   assert.equal(view.guarantees.circle_subscription_created, false);
   assert.equal(view.guarantees.erp_write, false);
   assert.equal(view.guarantees.wallet_or_chain_action, false);
+});
+
+test("runtime policy remains disabled without all non-secret deployment controls", () => {
+  const runtime = buildCircleWebhookRuntimePolicy({ CIRCLE_WEBHOOK_ENABLED: "true" });
+  assert.equal(runtime.enabled, false);
+  assert.deepEqual(runtime.blockers, ["durable_queue_declared_required", "verification_key_present_required"]);
+});
+
+test("processor verifies a signed notification and uses durable idempotency", async () => {
+  const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  const rawBody = Buffer.from(JSON.stringify(notification));
+  const signature = sign("sha256", rawBody, privateKey).toString("base64");
+  const queued = [];
+  const seen = new Set();
+  const processor = createCircleWebhookProcessor({
+    environment: {
+      CIRCLE_WEBHOOK_ENABLED: "true",
+      CIRCLE_WEBHOOK_DURABLE_QUEUE: "true",
+      CIRCLE_WEBHOOK_PUBLIC_KEY_PEM: publicKey.export({ type: "spki", format: "pem" })
+    },
+    policy,
+    publicKeyPem: publicKey.export({ type: "spki", format: "pem" }),
+    durableQueue: { enqueue: async (entry) => queued.push(entry) },
+    idempotencyStore: {
+      has: async (key) => seen.has(key),
+      put: async (key) => seen.add(key)
+    }
+  });
+
+  assert.equal(verifyCircleWebhookSignature(rawBody, signature, publicKey.export({ type: "spki", format: "pem" })), true);
+  const first = await processor({ rawBody, payload: notification, headers: { "x-circle-signature": signature } });
+  assert.deepEqual(first, { accepted: true, status: 202, duplicate: false, idempotency_key: "circle-event-001" });
+  assert.equal(queued.length, 1);
+  assert.equal(queued[0].notification_type, "contracts.eventLog");
+
+  const second = await processor({ rawBody, payload: notification, headers: { "x-circle-signature": signature } });
+  assert.deepEqual(second, { accepted: true, status: 200, duplicate: true, idempotency_key: "circle-event-001" });
+  assert.equal(queued.length, 1);
+});
+
+test("processor rejects unsigned traffic before parsing it as a supported event", async () => {
+  const processor = createCircleWebhookProcessor({
+    environment: {
+      CIRCLE_WEBHOOK_ENABLED: "true",
+      CIRCLE_WEBHOOK_DURABLE_QUEUE: "true",
+      CIRCLE_WEBHOOK_PUBLIC_KEY_PEM: "not-a-real-key"
+    },
+    policy,
+    publicKeyPem: "not-a-real-key",
+    durableQueue: { enqueue: async () => assert.fail("must not enqueue") },
+    idempotencyStore: { has: async () => false, put: async () => assert.fail("must not store") }
+  });
+  const result = await processor({ rawBody: Buffer.from("{}"), payload: notification, headers: {} });
+  assert.deepEqual(result, { accepted: false, status: 401, error: "invalid_circle_signature" });
 });
