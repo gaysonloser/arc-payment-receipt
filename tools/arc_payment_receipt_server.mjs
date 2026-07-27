@@ -158,6 +158,38 @@ export function buildManufacturingCloseImpactView(reconciliation, progress) {
   };
 }
 
+export function buildManufacturingFinalityTimeline(qualityHold, progress, reconciliation) {
+  const chain = progress?.chain ?? {};
+  const erp = progress?.erp ?? {};
+  const checks = {
+    quality_hold_chain_fact_present: typeof qualityHold?.chain_anchor?.transaction_hash === "string",
+    manufacture_completion_chain_fact_present: typeof chain.transaction_hash === "string" && chain.current_state === "MANUFACTURE_COMPLETED",
+    state_transition_bound: chain.predecessor_state === "QUALITY_RELEASE" && chain.quality_release_anchored === true && chain.manufacture_completion_anchored === true,
+    erp_result_reconciled: reconciliation?.status === "cross_system_manufacturing_reconciled",
+    erp_cost_authority_preserved: progress?.boundaries?.erp_is_inventory_cost_authority === true
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return {
+    status: failedChecks.length === 0 ? "manufacturing_finality_timeline_reconciled" : "not_ready_fail_closed",
+    evidence_id: "ARC-XERP-MFG-FINALITY-TIMELINE-V1",
+    timeline: [
+      { stage: "QUALITY_HOLD", source: "Arc Testnet", transaction_hash: qualityHold?.chain_anchor?.transaction_hash ?? null, registry: qualityHold?.chain_anchor?.contract_address ?? null, block_number: qualityHold?.chain_anchor?.block_number ?? null },
+      { stage: "QUALITY_RELEASE", source: "Arc Testnet", transaction_hash: null, registry: chain.predecessor_registry ?? null, derived_from_terminal_predecessor: chain.predecessor_state === "QUALITY_RELEASE" && chain.quality_release_anchored === true },
+      { stage: "MANUFACTURE_COMPLETED", source: "Arc Testnet", transaction_hash: chain.transaction_hash ?? null, registry: chain.registry ?? null, block_number: chain.block_number ?? null },
+      { stage: "ERP_READBACK", source: "ERP authority", quality_inspection_submitted: erp.quality_inspection?.docstatus === 1, manufacture_submitted: erp.manufacture?.docstatus === 1, stock_ledger_entry_count: erp.inventory?.stock_ledger_entry_count ?? null }
+    ],
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      quality_release_transaction_hash_disclosed: false,
+      circle_subscription_created: false,
+      erp_write_exposed: false,
+      wallet_or_chain_action: false,
+      inventory_tokenization_claimed: false
+    }
+  };
+}
+
 function json(response, status, body, method = "GET") {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -1307,6 +1339,13 @@ export function createReceiptServer(options = {}) {
         const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
         const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
         json(response, 200, buildManufacturingCloseImpactView(reconciliation, progress), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/manufacturing-finality-timeline") {
+        const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
+        const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
+        json(response, 200, buildManufacturingFinalityTimeline(qualityHold, progress, reconciliation), request.method);
         return;
       }
 
