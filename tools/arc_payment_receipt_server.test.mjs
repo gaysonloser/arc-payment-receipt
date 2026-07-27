@@ -7,6 +7,7 @@ import {
   buildEnterpriseEnvelopeView,
   buildEnterpriseSettlementView,
   buildEvidenceFreshnessView,
+  buildQualityReleaseEvidenceView,
   buildSettlementReadinessView,
   buildSettlementReviewPacket,
   buildSettlementEventContractView,
@@ -84,7 +85,14 @@ const manufacturingProgress = {
     source_document_refs_public: false,
     source_fingerprint_public: false
   },
-  chain: { current_state: "QUALITY_RELEASE", quality_release_anchored: true },
+  chain: {
+    current_state: "QUALITY_RELEASE",
+    predecessor_state: "QUALITY_HOLD",
+    registry: `0x${"58".repeat(20)}`,
+    transaction_hash: `0x${"59".repeat(32)}`,
+    block_number: 53732050,
+    quality_release_anchored: true
+  },
   boundaries: { chain_action_executed: true }
 };
 const w4DualSource = {
@@ -482,6 +490,24 @@ test("serves manufacturing and wallet capability evidence as read-only APIs", as
 
   const progressWrite = await fetch(`${origin}/api/v1/manufacturing-progress`, { method: "POST" });
   assert.equal(progressWrite.status, 405);
+});
+
+test("keeps QUALITY_RELEASE evidence separate from the historical Circle receipt monitor", async () => {
+  const view = buildQualityReleaseEvidenceView(manufacturingProgress, w4DualSource);
+  assert.equal(view.status, "rpc_confirmed_circle_registry_monitor_pending");
+  assert.equal(view.chain_fact.state, "QUALITY_RELEASE");
+  assert.equal(view.erp_authority.finished_goods_qty, "25.000");
+  assert.equal(view.source_assurance.quality_release_registry_circle_monitor, "not_imported_or_subscribed");
+  assert.equal(view.negative_controls.inventory_tokenization_claimed, false);
+
+  const response = await fetch(`${origin}/api/v1/quality-release-evidence`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "rpc_confirmed_circle_registry_monitor_pending");
+  assert.equal(payload.negative_controls.erp_write_exposed, false);
+
+  const write = await fetch(`${origin}/api/v1/quality-release-evidence`, { method: "POST" });
+  assert.equal(write.status, 405);
 });
 
 test("serves W4 Circle and RPC alignment as read-only evidence", async () => {

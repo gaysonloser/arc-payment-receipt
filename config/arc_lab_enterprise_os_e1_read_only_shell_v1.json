@@ -115,7 +115,7 @@
   ],
   "acceptance_checks": {
     "preserve_legacy_routes": ["/", "/arc-payment-receipt", "/api/health", "/api/evidence", "/api/dual-source", "/api/circle-monitor", "/api/receipts/:orderId"],
-    "new_read_only_routes": ["/arc-lab", "/enterprise-os", "/healthz", "/api/arc-lab-portfolio", "/api/v1/topology", "/api/v1/evidence", "/api/v1/manufacturing-evidence", "/api/v1/manufacturing-progress", "/api/v1/wallet-capability", "/api/v1/w4-dual-source"],
+    "new_read_only_routes": ["/arc-lab", "/enterprise-os", "/healthz", "/api/arc-lab-portfolio", "/api/v1/topology", "/api/v1/evidence", "/api/v1/manufacturing-evidence", "/api/v1/manufacturing-progress", "/api/v1/quality-release-evidence", "/api/v1/wallet-capability", "/api/v1/w4-dual-source"],
     "no_local_absolute_paths_in_public_json": true,
     "no_secret_in_public_json": true,
     "no_wallet_or_chain_action": true,

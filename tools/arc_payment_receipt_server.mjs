@@ -932,6 +932,63 @@ export function buildSettlementLedgerView(report, dual, enterpriseBundle) {
   };
 }
 
+export function buildQualityReleaseEvidenceView(progress, w4Dual) {
+  const chain = progress.chain ?? {};
+  const erp = progress.erp ?? {};
+  const inventory = erp.inventory ?? {};
+  const releaseConfirmed = chain.current_state === "QUALITY_RELEASE"
+    && chain.quality_release_anchored === true
+    && typeof chain.transaction_hash === "string"
+    && typeof chain.registry === "string";
+
+  return {
+    schema_version: "1.0",
+    evidence_id: "ARC-XERP-MFG-02-QUALITY-RELEASE-PUBLIC",
+    status: releaseConfirmed
+      ? "rpc_confirmed_circle_registry_monitor_pending"
+      : "release_evidence_incomplete",
+    chain_fact: {
+      network: progress.network,
+      chain_id: progress.chain_id,
+      state: chain.current_state ?? null,
+      predecessor_state: chain.predecessor_state ?? null,
+      registry: chain.registry ?? null,
+      transaction_hash: chain.transaction_hash ?? null,
+      block_number: chain.block_number ?? null,
+      zero_value_evidence_control: true
+    },
+    canonical_event: {
+      event_type: "manufacturing_quality_release",
+      business_meaning: "Quality release evidence for an ERP-authoritative manufacturing result.",
+      finality_status: releaseConfirmed ? "rpc_confirmed" : "not_confirmed"
+    },
+    erp_authority: {
+      quality_inspection_status: erp.quality_inspection?.status ?? null,
+      quality_inspection_docstatus: erp.quality_inspection?.docstatus ?? null,
+      manufacture_docstatus: erp.manufacture?.docstatus ?? null,
+      wip_qty: inventory.wip_qty ?? null,
+      finished_goods_qty: inventory.finished_goods_qty ?? null,
+      finished_goods_valuation_rate: inventory.finished_goods_valuation_rate ?? null,
+      stock_ledger_entry_count: inventory.stock_ledger_entry_count ?? null,
+      inventory_cost_authority: "ERP SLE, valuation, repost, and GL"
+    },
+    source_assurance: {
+      historical_receipt_circle_rpc_status: w4Dual.status,
+      historical_receipt_overlap_events: w4Dual.counts?.circle_in_overlap_window ?? null,
+      quality_release_registry_circle_monitor: "not_imported_or_subscribed",
+      required_next_action: "CIRCLE-MFG-02-IMPORT-SUBSCRIBE requires exact action-time confirmation"
+    },
+    negative_controls: {
+      payment_claimed: false,
+      inventory_tokenization_claimed: false,
+      erp_posting_claimed: false,
+      erp_write_exposed: false,
+      wallet_executor_exposed: false,
+      secret_or_raw_payload_exposed: false
+    }
+  };
+}
+
 export function createReceiptServer(options = {}) {
   const loadReport = options.loadReport ?? (() => loadEvidence(options.evidencePath));
   const loadDualReport = options.loadDualReport ?? (() => loadDualEvidence(options.dualEvidencePath));
@@ -1092,6 +1149,12 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/manufacturing-progress") {
         json(response, 200, await loadManufacturingProgressReport(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/quality-release-evidence") {
+        const [progress, w4Dual] = await Promise.all([loadManufacturingProgressReport(), loadW4Dual()]);
+        json(response, 200, buildQualityReleaseEvidenceView(progress, w4Dual), request.method);
         return;
       }
 
