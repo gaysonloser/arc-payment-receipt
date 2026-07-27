@@ -194,6 +194,50 @@ export function buildManufacturingFinalityTimeline(qualityHold, progress, reconc
   };
 }
 
+export function buildManufacturingReplayGuard(progress, reconciliation) {
+  const chain = progress?.chain ?? {};
+  const erp = progress?.erp ?? {};
+  const checks = {
+    terminal_chain_state_observed: chain.current_state === "MANUFACTURE_COMPLETED",
+    completion_anchor_observed: chain.manufacture_completion_anchored === true && typeof chain.transaction_hash === "string",
+    predecessor_bound: chain.predecessor_state === "QUALITY_RELEASE" && chain.quality_release_anchored === true,
+    erp_result_reconciled: reconciliation?.status === "cross_system_manufacturing_reconciled",
+    erp_cost_authority_preserved: progress?.boundaries?.erp_is_inventory_cost_authority === true
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  const terminal = checks.terminal_chain_state_observed && checks.completion_anchor_observed;
+  return {
+    status: failedChecks.length === 0 ? "terminal_state_replay_blocked" : "state_guard_fail_closed",
+    evidence_id: "ARC-XERP-MFG-REPLAY-GUARD-V1",
+    decision: terminal ? "do_not_replay_prior_quality_release_or_manufacture_anchor" : "do_not_prepare_or_broadcast_a_chain_action",
+    chain_fact: {
+      network: progress?.network ?? null,
+      chain_id: progress?.chain_id ?? null,
+      current_state: chain.current_state ?? null,
+      predecessor_state: chain.predecessor_state ?? null,
+      registry: chain.registry ?? null,
+      transaction_hash: chain.transaction_hash ?? null,
+      block_number: chain.block_number ?? null
+    },
+    erp_authority: {
+      quality_inspection_submitted: erp.quality_inspection?.docstatus === 1,
+      manufacture_submitted: erp.manufacture?.docstatus === 1,
+      finished_goods_qty: erp.inventory?.finished_goods_qty ?? null,
+      valuation_rate: erp.inventory?.finished_goods_valuation_rate ?? null,
+      inventory_cost_authority: "ERP SLE, valuation, repost, and GL"
+    },
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      chain_action_requested: false,
+      wallet_or_chain_action: false,
+      erp_write_exposed: false,
+      terminal_event_replayed: false,
+      inventory_tokenization_claimed: false
+    }
+  };
+}
+
 export function buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, webhookReadiness) {
   const items = [];
   if (qualityRelease?.source_assurance?.quality_release_registry_circle_monitor !== "subscribed") {
@@ -1455,6 +1499,13 @@ export function createReceiptServer(options = {}) {
         const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
         const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
         json(response, 200, buildManufacturingFinalityTimeline(qualityHold, progress, reconciliation), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/manufacturing-replay-guard") {
+        const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
+        const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
+        json(response, 200, buildManufacturingReplayGuard(progress, reconciliation), request.method);
         return;
       }
 

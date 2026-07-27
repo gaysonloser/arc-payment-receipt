@@ -111,7 +111,7 @@
   </main>
   <script>
     async function main() {
-      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse] = await Promise.all([
+      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, replayGuardResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse] = await Promise.all([
         fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-evidence", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-progress", { headers: { accept: "application/json" } }),
@@ -119,6 +119,7 @@
         fetch("/api/v1/cross-system-manufacturing-reconciliation", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-close-impact", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-finality-timeline", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/manufacturing-replay-guard", { headers: { accept: "application/json" } }),
         fetch("/api/v1/source-assurance-exceptions", { headers: { accept: "application/json" } }),
         fetch("/api/v1/production-boundary", { headers: { accept: "application/json" } }),
         fetch("/api/v1/wallet-capability", { headers: { accept: "application/json" } }),
@@ -126,11 +127,11 @@
         fetch("/api/v1/app-kit-boundary", { headers: { accept: "application/json" } }),
         fetch("/api/v1/public-trace-trail", { headers: { accept: "application/json" } })
       ]);
-      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse].every((response) => response.ok)) {
+      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, replayGuardResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse].every((response) => response.ok)) {
         throw new Error("Evidence API unavailable");
       }
-      const [data, manufacturing, manufacturingProgress, qualityRelease, reconciliation, closeImpact, finalityTimeline, exceptionQueue, productionBoundary, wallet, w4Dual, appKit, traceTrail] = await Promise.all([
-        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), reconciliationResponse.json(), closeImpactResponse.json(), finalityTimelineResponse.json(), exceptionQueueResponse.json(), productionBoundaryResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json()
+      const [data, manufacturing, manufacturingProgress, qualityRelease, reconciliation, closeImpact, finalityTimeline, replayGuard, exceptionQueue, productionBoundary, wallet, w4Dual, appKit, traceTrail] = await Promise.all([
+        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), reconciliationResponse.json(), closeImpactResponse.json(), finalityTimelineResponse.json(), replayGuardResponse.json(), exceptionQueueResponse.json(), productionBoundaryResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json()
       ]);
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
@@ -186,6 +187,7 @@
         ["Arc ↔ ERP reconciliation", reconciliation.status, `${reconciliation.failed_checks.length === 0 ? "All control checks passed" : `${reconciliation.failed_checks.length} failed checks`}; terminal ${reconciliation.chain.terminal_state}; ERP finished goods ${reconciliation.erp.finished_goods_qty}.`],
         ["Close / FP&A impact", closeImpact.status, `FG stock value ${closeImpact.close_impact.inventory_position.finished_goods_stock_value}; SLE ${closeImpact.close_impact.inventory_position.stock_ledger_entry_count}; net GL entries ${closeImpact.close_impact.ledger_treatment.net_gl_entries}; ERP period close is not executed.`],
         ["Finality inspector", finalityTimeline.status, `${finalityTimeline.timeline.length} ordered stages; chain actions in this view ${finalityTimeline.boundaries.wallet_or_chain_action ? "present" : "none"}; Circle subscription ${finalityTimeline.boundaries.circle_subscription_created ? "active" : "not created"}.`],
+        ["Replay guard", replayGuard.status, `${replayGuard.decision.replaceAll("_", " ")}; terminal chain state ${replayGuard.chain_fact.current_state || "unavailable"}.`],
         ["Source assurance queue", exceptionQueue.status, `${exceptionQueue.open_exception_count} visible exception(s); remediation is disabled and every external dependency remains fail closed.`],
         ["Production boundary", productionBoundary.status, `${productionBoundary.blocked_actions.length} blocked action classes; public runtime has no credential, signer, Circle resource change or ERP write.`],
         ["Source assurance boundary", qualityRelease.status, `Historical Receipt Circle/RPC ${qualityRelease.source_assurance.historical_receipt_circle_rpc_status}; V2 registry Circle monitor ${qualityRelease.source_assurance.quality_release_registry_circle_monitor}.`],

@@ -33,6 +33,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/cross-system-manufacturing-reconciliation`
 - `GET /api/v1/manufacturing-close-impact`
 - `GET /api/v1/manufacturing-finality-timeline`
+- `GET /api/v1/manufacturing-replay-guard`
 - `GET /api/v1/source-assurance-exceptions`
 - `GET /api/v1/production-boundary`
 - `GET /api/v1/app-kit-boundary`
@@ -89,6 +90,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A manufacturing evidence view that shows accepted quality inspection, submitted manufacture, `25 @ 20.00 USD` ERP valuation and five SLE facts, with the sequence `QUALITY_HOLD -> QUALITY_RELEASE -> MANUFACTURE_COMPLETED` anchored on Arc Testnet. ERP SLE, valuation, repost and GL remain the inventory-cost authority.
 - A Close/FP&A impact view that derives `500.00 USD` finished-goods stock value, five SLE facts and same-stock-account `net GL entries = 0` from the reconciled manufacturing evidence. It is read-only evidence, not an ERP close, posting, payment or cost-calculation claim.
 - A Finality Inspector that orders the confirmed quality-hold and manufacture-completion chain facts with the derived quality-release predecessor and ERP readback. It deliberately does not invent a missing release transaction hash or a Circle subscription.
+- A terminal-state Replay Guard that makes stale predecessor packets visible and rejects replaying a completed manufacturing anchor before any wallet action can be prepared.
 - A Source Assurance Queue that presents the active registry-monitor and webhook prerequisites as actionable, fail-closed exceptions rather than quietly treating missing Circle infrastructure as success.
 - A production-boundary view that keeps App Kit custom calls, wallet signing, Circle resources, webhook receiving and ERP writes visibly disabled until their separate action-time controls exist.
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
