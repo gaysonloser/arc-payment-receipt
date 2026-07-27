@@ -33,6 +33,10 @@ const SECURITY_HEADERS = {
   "strict-transport-security": "max-age=31536000; includeSubDomains"
 };
 
+function normalizeEvmAddress(value) {
+  return String(value ?? "").toLowerCase();
+}
+
 const CIRCLE_WEBHOOK_READINESS_POLICY = Object.freeze({
   enabled: false,
   durableQueueAvailable: false,
@@ -54,6 +58,56 @@ export function buildCircleWebhookPublicView() {
       erp_write: false,
       wallet_or_chain_action: false,
       secret_exposed: false
+    }
+  };
+}
+
+export function buildCrossSystemManufacturingReconciliation(qualityHold, progress) {
+  const chain = progress?.chain ?? {};
+  const erp = progress?.erp ?? {};
+  const inventory = erp.inventory ?? {};
+  const controls = qualityHold?.controls ?? {};
+  const checks = {
+    quality_hold_predecessor_matches: normalizeEvmAddress(qualityHold?.chain_anchor?.contract_address) === normalizeEvmAddress(chain.predecessor_registry),
+    terminal_manufacture_anchor_present: chain.current_state === "MANUFACTURE_COMPLETED" && Boolean(chain.manufacture_completion_anchored),
+    quality_release_predecessor_present: chain.predecessor_state === "QUALITY_RELEASE" && Boolean(chain.quality_release_anchored),
+    erp_quality_inspection_submitted: erp.quality_inspection?.docstatus === 1 && erp.quality_inspection?.status === "Accepted",
+    erp_manufacture_submitted: erp.manufacture?.docstatus === 1,
+    erp_inventory_reconciled: inventory.wip_qty === "0.000" && inventory.finished_goods_qty === "25.000" && inventory.finished_goods_valuation_rate === "20.00" && inventory.finished_goods_stock_value === "500.00",
+    inventory_cost_authority_preserved: controls.erp_is_inventory_cost_authority === true && progress?.boundaries?.erp_is_inventory_cost_authority === true,
+    no_new_business_documents: progress?.boundaries?.new_business_documents === 0,
+    no_inventory_tokenization_claim: controls.inventory_tokenization_claimed === false && progress?.boundaries?.inventory_tokenization_claimed === false
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return {
+    status: failedChecks.length === 0 ? "cross_system_manufacturing_reconciled" : "not_reconciled_fail_closed",
+    evidence_id: "ARC-XERP-MFG-RECONCILIATION-V1",
+    chain: {
+      network: qualityHold?.chain_anchor?.network ?? progress?.network ?? null,
+      chain_id: qualityHold?.chain_anchor?.chain_id ?? progress?.chain_id ?? null,
+      quality_hold_registry: qualityHold?.chain_anchor?.contract_address ?? null,
+      terminal_registry: chain.registry ?? null,
+      terminal_transaction_hash: chain.transaction_hash ?? null,
+      terminal_state: chain.current_state ?? null
+    },
+    erp: {
+      quality_inspection_submitted: erp.quality_inspection?.docstatus === 1,
+      manufacture_submitted: erp.manufacture?.docstatus === 1,
+      wip_qty: inventory.wip_qty ?? null,
+      finished_goods_qty: inventory.finished_goods_qty ?? null,
+      finished_goods_valuation_rate: inventory.finished_goods_valuation_rate ?? null,
+      finished_goods_stock_value: inventory.finished_goods_stock_value ?? null,
+      stock_ledger_entry_count: inventory.stock_ledger_entry_count ?? null
+    },
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      payment_claimed: false,
+      inventory_tokenization_claimed: false,
+      erp_cost_calculation_claimed: false,
+      erp_write_exposed: false,
+      wallet_or_chain_action: false,
+      raw_erp_document_reference_exposed: false
     }
   };
 }
@@ -1194,6 +1248,12 @@ export function createReceiptServer(options = {}) {
       if (url.pathname === "/api/v1/quality-release-evidence") {
         const [progress, w4Dual] = await Promise.all([loadManufacturingProgressReport(), loadW4Dual()]);
         json(response, 200, buildQualityReleaseEvidenceView(progress, w4Dual), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/cross-system-manufacturing-reconciliation") {
+        const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
+        json(response, 200, buildCrossSystemManufacturingReconciliation(qualityHold, progress), request.method);
         return;
       }
 

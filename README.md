@@ -30,6 +30,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/wallet-capability`
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/quality-release-evidence`
+- `GET /api/v1/cross-system-manufacturing-reconciliation`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/circle-webhook-readiness`
@@ -205,6 +206,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/manufacturing-evidence`
 - `GET /api/v1/manufacturing-progress`
 - `GET /api/v1/quality-release-evidence`
+- `GET /api/v1/cross-system-manufacturing-reconciliation`
 - `GET /api/v1/wallet-capability`
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/app-kit-boundary`
