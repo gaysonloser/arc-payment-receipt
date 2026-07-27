@@ -31,6 +31,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/quality-release-evidence`
 - `GET /api/v1/cross-system-manufacturing-reconciliation`
+- `GET /api/v1/manufacturing-close-impact`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/circle-webhook-readiness`
@@ -83,6 +84,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A SettlementEvent handoff-contract validator that verifies Arc identity, amount/fee candidate preservation, finality, non-posting controls, and schema-owner gaps.
 - A read-only AOXPET Arc Lab Enterprise OS shell that frames the payment component inside 14-domain procurement, manufacturing, inventory, assets, projects, treasury, financing, accounting, close, FP&A, and human-gate controls.
 - A manufacturing evidence view that shows accepted quality inspection, submitted manufacture, `25 @ 20.00 USD` ERP valuation and five SLE facts, with the sequence `QUALITY_HOLD -> QUALITY_RELEASE -> MANUFACTURE_COMPLETED` anchored on Arc Testnet. ERP SLE, valuation, repost and GL remain the inventory-cost authority.
+- A Close/FP&A impact view that derives `500.00 USD` finished-goods stock value, five SLE facts and same-stock-account `net GL entries = 0` from the reconciled manufacturing evidence. It is read-only evidence, not an ERP close, posting, payment or cost-calculation claim.
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 - A source-separated public delivery trail that distinguishes Arc evidence controls, ERP readback, Circle/RPC overlap, Git source and Render runtime. It excludes local checks, unsigned actions, duplicated facts and activity-only records.
@@ -207,6 +209,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/manufacturing-progress`
 - `GET /api/v1/quality-release-evidence`
 - `GET /api/v1/cross-system-manufacturing-reconciliation`
+- `GET /api/v1/manufacturing-close-impact`
 - `GET /api/v1/wallet-capability`
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/app-kit-boundary`

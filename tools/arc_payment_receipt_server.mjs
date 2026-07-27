@@ -112,6 +112,52 @@ export function buildCrossSystemManufacturingReconciliation(qualityHold, progres
   };
 }
 
+export function buildManufacturingCloseImpactView(reconciliation, progress) {
+  const inventory = progress?.erp?.inventory ?? {};
+  const treatment = inventory.stock_account_treatment ?? {};
+  const checks = {
+    cross_system_reconciliation_passed: reconciliation?.status === "cross_system_manufacturing_reconciled",
+    manufacture_terminal_state: reconciliation?.chain?.terminal_state === "MANUFACTURE_COMPLETED",
+    submitted_erp_documents_confirmed: reconciliation?.erp?.quality_inspection_submitted === true && reconciliation?.erp?.manufacture_submitted === true,
+    stock_ledger_present: Number(inventory.stock_ledger_entry_count) > 0,
+    stock_value_reconciled: inventory.finished_goods_stock_value === "500.00",
+    stock_account_treatment_confirmed: treatment.same_stock_account === true && treatment.net_gl_entries === 0,
+    erp_cost_authority_preserved: progress?.boundaries?.erp_is_inventory_cost_authority === true,
+    no_payment_or_period_close_execution: progress?.boundaries?.new_business_documents === 0
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return {
+    status: failedChecks.length === 0 ? "close_impact_read_only_reconciled" : "not_ready_fail_closed",
+    evidence_id: "ARC-XERP-MFG-CLOSE-IMPACT-V1",
+    close_impact: {
+      inventory_position: {
+        finished_goods_qty: inventory.finished_goods_qty ?? null,
+        finished_goods_valuation_rate: inventory.finished_goods_valuation_rate ?? null,
+        finished_goods_stock_value: inventory.finished_goods_stock_value ?? null,
+        stock_ledger_entry_count: inventory.stock_ledger_entry_count ?? null
+      },
+      ledger_treatment: {
+        same_stock_account: treatment.same_stock_account === true,
+        net_gl_entries: treatment.net_gl_entries ?? null,
+        explanation: treatment.explanation ?? null
+      },
+      reporting_boundary: "Read-only close/FP&A evidence. ERP remains the authority for valuation, SLE, GL, repost and period close."
+    },
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      erp_period_closed: false,
+      journal_entry_created: false,
+      payment_claimed: false,
+      inventory_tokenization_claimed: false,
+      erp_cost_calculation_claimed: false,
+      erp_write_exposed: false,
+      wallet_or_chain_action: false,
+      raw_erp_document_reference_exposed: false
+    }
+  };
+}
+
 function json(response, status, body, method = "GET") {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -1254,6 +1300,13 @@ export function createReceiptServer(options = {}) {
       if (url.pathname === "/api/v1/cross-system-manufacturing-reconciliation") {
         const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
         json(response, 200, buildCrossSystemManufacturingReconciliation(qualityHold, progress), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/manufacturing-close-impact") {
+        const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
+        const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
+        json(response, 200, buildManufacturingCloseImpactView(reconciliation, progress), request.method);
         return;
       }
 
