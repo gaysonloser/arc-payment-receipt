@@ -8,7 +8,9 @@
     "preflight_or_local_test_counted": false,
     "wallet_executor_exposed": false,
     "erp_raw_payload_exposed": false,
-    "circle_resource_write_executed": false,
+    "circle_contract_import_executed": true,
+    "circle_event_subscription_created": false,
+    "circle_subscription_blocker": "active_webhook_required",
     "public_claims_limited_to_verifiable_outcomes": true
   },
   "records": [
@@ -61,6 +63,14 @@
       "verification": "Historical PaymentReceived overlap is independently aligned between Circle Event Monitor and RPC."
     },
     {
+      "id": "circle-console-quality-release-import",
+      "source_class": "circle_console",
+      "result_type": "contract_import",
+      "fingerprint": "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7",
+      "state": "complete_no_subscription",
+      "verification": "ArcEnterpriseEvidenceRegistryV2 is imported in Circle Console Testnet. No event subscription was created because the Console requires an active webhook."
+    },
+    {
       "id": "public-api-quality-release",
       "source_class": "public_api",
       "result_type": "sanitized_quality_release_evidence",
@@ -72,7 +82,7 @@
       "id": "github-source-release",
       "source_class": "github",
       "result_type": "public_source_release",
-      "fingerprint": "f32319cfc1ee451e50dd8508cc6ca438a034ff9f",
+      "fingerprint": "a7468248c6ffb2d36e80d149ea1c59117b140224",
       "state": "public_main",
       "verification": "Public source release for the current Arc Enterprise OS evidence surface."
     },
@@ -80,7 +90,7 @@
       "id": "render-running-release",
       "source_class": "render",
       "result_type": "running_release",
-      "fingerprint": "dep-d9jd34vaqgkc73badur0",
+      "fingerprint": "dep-d9jed23eo5us73b9doo0",
       "state": "live",
       "verification": "Existing Render Free service runs the same public source release; rollback remains the preceding successful deployment."
     }
