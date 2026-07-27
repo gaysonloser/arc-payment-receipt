@@ -234,6 +234,33 @@ export function buildSourceAssuranceExceptionQueue(reconciliation, qualityReleas
   };
 }
 
+export function buildProductionBoundaryView(wallet, appKit, exceptions) {
+  const checks = {
+    wallet_executor_not_exposed: wallet?.boundaries?.wallet_executor_exposed === false,
+    custom_contract_call_not_enabled: appKit?.product_boundary?.custom_pay_calldata_supported === false,
+    app_kit_runtime_not_enabled: appKit?.product_boundary?.app_kit_enabled_in_runtime === false,
+    source_exceptions_visible: Number(exceptions?.open_exception_count) > 0,
+    exception_auto_remediation_disabled: exceptions?.boundaries?.auto_remediation === false,
+    erp_write_not_exposed: exceptions?.boundaries?.erp_write_exposed === false
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return {
+    status: failedChecks.length === 0 ? "production_boundary_enforced" : "not_ready_fail_closed",
+    evidence_id: "ARC-PRODUCTION-BOUNDARY-V1",
+    execution_mode: "read_only_public_surface",
+    blocked_actions: ["wallet signing", "chain broadcast", "Circle subscription", "webhook receive", "ERP write", "App Kit custom contract call"],
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      production_deployed_claim: false,
+      credential_present: false,
+      wallet_or_chain_action: false,
+      erp_write_exposed: false,
+      circle_resource_changed: false
+    }
+  };
+}
+
 function json(response, status, body, method = "GET") {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -1398,6 +1425,15 @@ export function createReceiptServer(options = {}) {
         const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
         const qualityRelease = buildQualityReleaseEvidenceView(progress, await loadW4Dual());
         json(response, 200, buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, buildCircleWebhookPublicView()), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/production-boundary") {
+        const [qualityHold, progress, wallet, appKit] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport(), loadWalletRecovery(), loadAppKit()]);
+        const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
+        const qualityRelease = buildQualityReleaseEvidenceView(progress, await loadW4Dual());
+        const exceptions = buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, buildCircleWebhookPublicView());
+        json(response, 200, buildProductionBoundaryView(wallet, appKit, exceptions), request.method);
         return;
       }
 

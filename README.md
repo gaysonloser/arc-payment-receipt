@@ -34,6 +34,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/manufacturing-close-impact`
 - `GET /api/v1/manufacturing-finality-timeline`
 - `GET /api/v1/source-assurance-exceptions`
+- `GET /api/v1/production-boundary`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/circle-webhook-readiness`
@@ -89,6 +90,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A Close/FP&A impact view that derives `500.00 USD` finished-goods stock value, five SLE facts and same-stock-account `net GL entries = 0` from the reconciled manufacturing evidence. It is read-only evidence, not an ERP close, posting, payment or cost-calculation claim.
 - A Finality Inspector that orders the confirmed quality-hold and manufacture-completion chain facts with the derived quality-release predecessor and ERP readback. It deliberately does not invent a missing release transaction hash or a Circle subscription.
 - A Source Assurance Queue that presents the active registry-monitor and webhook prerequisites as actionable, fail-closed exceptions rather than quietly treating missing Circle infrastructure as success.
+- A production-boundary view that keeps App Kit custom calls, wallet signing, Circle resources, webhook receiving and ERP writes visibly disabled until their separate action-time controls exist.
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 - A source-separated public delivery trail that distinguishes Arc evidence controls, ERP readback, Circle/RPC overlap, Git source and Render runtime. It excludes local checks, unsigned actions, duplicated facts and activity-only records.
@@ -216,6 +218,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/manufacturing-close-impact`
 - `GET /api/v1/manufacturing-finality-timeline`
 - `GET /api/v1/source-assurance-exceptions`
+- `GET /api/v1/production-boundary`
 - `GET /api/v1/wallet-capability`
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/app-kit-boundary`
