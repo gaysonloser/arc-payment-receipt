@@ -190,6 +190,50 @@ export function buildManufacturingFinalityTimeline(qualityHold, progress, reconc
   };
 }
 
+export function buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, webhookReadiness) {
+  const items = [];
+  if (qualityRelease?.source_assurance?.quality_release_registry_circle_monitor !== "subscribed") {
+    items.push({
+      id: "CIRCLE_REGISTRY_MONITOR_PENDING",
+      severity: "medium",
+      source: "Circle Contracts",
+      disposition: "human_action_required",
+      detail: "The registry event is RPC-confirmed, but its Circle monitor has not been imported and subscribed."
+    });
+  }
+  for (const blocker of webhookReadiness?.blockers ?? []) {
+    items.push({
+      id: `WEBHOOK_${String(blocker).toUpperCase()}`,
+      severity: "high",
+      source: "Circle webhook boundary",
+      disposition: "fail_closed",
+      detail: "No receiver or subscription is enabled by this public service."
+    });
+  }
+  const checks = {
+    chain_erp_reconciliation_passed: reconciliation?.status === "cross_system_manufacturing_reconciled",
+    registry_monitor_pending_explicit: items.some((item) => item.id === "CIRCLE_REGISTRY_MONITOR_PENDING"),
+    public_receiver_disabled: webhookReadiness?.guarantees?.endpoint_accepts_webhooks === false,
+    no_erp_or_wallet_write: reconciliation?.boundaries?.erp_write_exposed === false && reconciliation?.boundaries?.wallet_or_chain_action === false
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return {
+    status: failedChecks.length === 0 ? "source_assurance_exceptions_visible" : "not_ready_fail_closed",
+    evidence_id: "ARC-XERP-MFG-SOURCE-ASSURANCE-QUEUE-V1",
+    open_exception_count: items.length,
+    items,
+    checks,
+    failed_checks: failedChecks,
+    boundaries: {
+      auto_remediation: false,
+      circle_resource_changed: false,
+      erp_write_exposed: false,
+      wallet_or_chain_action: false,
+      secrets_exposed: false
+    }
+  };
+}
+
 function json(response, status, body, method = "GET") {
   response.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
@@ -1346,6 +1390,14 @@ export function createReceiptServer(options = {}) {
         const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
         const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
         json(response, 200, buildManufacturingFinalityTimeline(qualityHold, progress, reconciliation), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/source-assurance-exceptions") {
+        const [qualityHold, progress] = await Promise.all([loadManufacturing(), loadManufacturingProgressReport()]);
+        const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, progress);
+        const qualityRelease = buildQualityReleaseEvidenceView(progress, await loadW4Dual());
+        json(response, 200, buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, buildCircleWebhookPublicView()), request.method);
         return;
       }
 
