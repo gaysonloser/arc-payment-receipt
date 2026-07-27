@@ -92,7 +92,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - P1 test payment: [`0x56b6...0fdbf`](https://testnet.arcscan.app/tx/0x56b64a6a56209b2a82b170c6b1ea6ca5c8114d122488957f91b13cd40c00fdbf)
 - P2 segregated-payer payment: [`0x1837...8fe6`](https://testnet.arcscan.app/tx/0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6)
 - Circle contract state: `COMPLETE / VERIFIED`
-- Circle monitor state: `PaymentReceived / Subscribed`
+- Circle monitor state: historical `PaymentReceived / Subscribed` evidence remains source-separated; the current `ArcEnterpriseEvidenceRegistryV2` import is `Complete` with no event subscription because Circle Console requires an active webhook.
 - Arc RPC coverage: deployment block `52,159,957` through observed block `52,895,762`
 - Current overlap state: `1 RPC / 1 Circle / aligned_in_overlap_window`
 - Settlement Evidence Manifest SHA-256: `ca93a6e741a0ca55ea85cffda9e12b8e6f06f90c506a79f312c0171204c470e9`
