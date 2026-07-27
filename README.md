@@ -80,7 +80,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A bounded Settlement Review Packet that combines evidence integrity, freshness, accounting totals, unresolved owner decisions, and a reviewer checklist without exposing raw ERP payloads.
 - A SettlementEvent handoff-contract validator that verifies Arc identity, amount/fee candidate preservation, finality, non-posting controls, and schema-owner gaps.
 - A read-only AOXPET Arc Lab Enterprise OS shell that frames the payment component inside 14-domain procurement, manufacturing, inventory, assets, projects, treasury, financing, accounting, close, FP&A, and human-gate controls.
-- A manufacturing evidence view that now shows accepted quality inspection, submitted manufacture, `25 @ 20.00 USD` ERP valuation and five SLE facts while truthfully retaining the Arc state as `QUALITY_HOLD` until the separately confirmed release anchor exists.
+- A manufacturing evidence view that shows accepted quality inspection, submitted manufacture, `25 @ 20.00 USD` ERP valuation and five SLE facts, with the sequence `QUALITY_HOLD -> QUALITY_RELEASE -> MANUFACTURE_COMPLETED` anchored on Arc Testnet. ERP SLE, valuation, repost and GL remain the inventory-cost authority.
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 - A source-separated public delivery trail that distinguishes Arc evidence controls, ERP readback, Circle/RPC overlap, Git source and Render runtime. It excludes local checks, unsigned actions, duplicated facts and activity-only records.
@@ -93,6 +93,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - P2 segregated-payer payment: [`0x1837...8fe6`](https://testnet.arcscan.app/tx/0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6)
 - Circle contract state: `COMPLETE / VERIFIED`
 - Circle monitor state: historical `PaymentReceived / Subscribed` evidence remains source-separated; the current `ArcEnterpriseEvidenceRegistryV2` import is `Complete` with no event subscription because Circle Console requires an active webhook.
+- Manufacturing completion anchor: [`0xc9f5...2cfe`](https://testnet.arcscan.app/tx/0xc9f58ce2662d23dd08906bcceaadd4c90ba70914edee2da4a33668c666932cfe), registry `0x094f...a1e7`, zero value, state `MANUFACTURE_COMPLETED`.
 - Arc RPC coverage: deployment block `52,159,957` through observed block `52,895,762`
 - Current overlap state: `1 RPC / 1 Circle / aligned_in_overlap_window`
 - Settlement Evidence Manifest SHA-256: `ca93a6e741a0ca55ea85cffda9e12b8e6f06f90c506a79f312c0171204c470e9`

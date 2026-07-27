@@ -945,11 +945,16 @@ export function buildQualityReleaseEvidenceView(progress, w4Dual) {
     && chain.quality_release_anchored === true
     && typeof chain.transaction_hash === "string"
     && typeof chain.registry === "string";
+  const manufactureCompleted = chain.current_state === "MANUFACTURE_COMPLETED"
+    && chain.quality_release_anchored === true
+    && chain.manufacture_completion_anchored === true
+    && typeof chain.transaction_hash === "string"
+    && typeof chain.registry === "string";
 
   return {
     schema_version: "1.0",
     evidence_id: "ARC-XERP-MFG-02-QUALITY-RELEASE-PUBLIC",
-    status: releaseConfirmed
+    status: (releaseConfirmed || manufactureCompleted)
       ? "rpc_confirmed_circle_registry_monitor_pending"
       : "release_evidence_incomplete",
     chain_fact: {
@@ -963,9 +968,11 @@ export function buildQualityReleaseEvidenceView(progress, w4Dual) {
       zero_value_evidence_control: true
     },
     canonical_event: {
-      event_type: "manufacturing_quality_release",
-      business_meaning: "Quality release evidence for an ERP-authoritative manufacturing result.",
-      finality_status: releaseConfirmed ? "rpc_confirmed" : "not_confirmed"
+      event_type: manufactureCompleted ? "manufacturing_completed" : "manufacturing_quality_release",
+      business_meaning: manufactureCompleted
+        ? "Manufacture-completion evidence for an ERP-authoritative manufacturing result."
+        : "Quality release evidence for an ERP-authoritative manufacturing result.",
+      finality_status: (releaseConfirmed || manufactureCompleted) ? "rpc_confirmed" : "not_confirmed"
     },
     erp_authority: {
       quality_inspection_status: erp.quality_inspection?.status ?? null,

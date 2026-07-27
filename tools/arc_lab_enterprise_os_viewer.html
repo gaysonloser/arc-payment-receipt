@@ -175,7 +175,7 @@
       const releaseTransaction = release.transaction_hash || "not anchored";
       const releaseRegistry = release.registry || "not deployed";
       const evidenceCards = [
-        ["Current Arc quality state", release.current_state || "not anchored", `Release anchor ${release.quality_release_anchored === true ? "confirmed" : "not confirmed"}; predecessor ${release.predecessor_state || manufacturing.state || "unavailable"}.`],
+        ["Current Arc manufacturing state", release.current_state || "not anchored", `Quality release ${release.quality_release_anchored === true ? "confirmed" : "not confirmed"}; manufacture completion ${release.manufacture_completion_anchored === true ? "confirmed" : "not confirmed"}; predecessor ${release.predecessor_state || manufacturing.state || "unavailable"}.`],
         ["QUALITY_RELEASE anchor", releaseTransaction, `${releaseRegistry} / block ${release.block_number ?? "unavailable"} / zero-value evidence control.`],
         ["ERP manufacturing result", manufacturingProgress.status, `QI ${manufacturingProgress.erp.quality_inspection.docstatus_label}; manufacture ${manufacturingProgress.erp.manufacture.docstatus_label}; WIP ${manufacturingProgress.erp.inventory.wip_qty}; FG ${manufacturingProgress.erp.inventory.finished_goods_qty} @ ${manufacturingProgress.erp.inventory.finished_goods_valuation_rate}`],
         ["Source assurance boundary", qualityRelease.status, `Historical Receipt Circle/RPC ${qualityRelease.source_assurance.historical_receipt_circle_rpc_status}; V2 registry Circle monitor ${qualityRelease.source_assurance.quality_release_registry_circle_monitor}.`],
