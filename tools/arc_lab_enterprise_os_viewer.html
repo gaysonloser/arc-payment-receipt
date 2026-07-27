@@ -164,13 +164,16 @@
         `Public runtime only: ERP credential absent ${!controls.erp_credential_present}; ERP write disabled ${!controls.erp_write_enabled}; wallet/chain executor absent ${!controls.wallet_connection_enabled && !controls.chain_transaction_enabled}.`;
 
       const receipt = wallet.actions.find((action) => action.type === "payment_receipt_canary");
+      const release = manufacturingProgress.chain || {};
+      const releaseTransaction = release.transaction_hash || "not anchored";
+      const releaseRegistry = release.registry || "not deployed";
       const evidenceCards = [
-        ["Predecessor anchor state", manufacturing.state, `Historical ERP fingerprint: ${manufacturing.erp.material_transfer.name} / WIP ${manufacturing.erp.inventory_readback.wip_qty} @ ${manufacturing.erp.inventory_readback.wip_valuation_rate}`],
-        ["Arc predecessor anchor", manufacturing.chain_anchor.transaction_hash, `${manufacturing.chain_anchor.contract_address} / block ${manufacturing.chain_anchor.block_number}`],
-        ["Current ERP completion", manufacturingProgress.status, `QI ${manufacturingProgress.erp.quality_inspection.docstatus_label}; manufacture ${manufacturingProgress.erp.manufacture.docstatus_label}; WIP ${manufacturingProgress.erp.inventory.wip_qty}; FG ${manufacturingProgress.erp.inventory.finished_goods_qty} @ ${manufacturingProgress.erp.inventory.finished_goods_valuation_rate}`],
+        ["Current Arc quality state", release.current_state || "not anchored", `Release anchor ${release.quality_release_anchored === true ? "confirmed" : "not confirmed"}; predecessor ${release.predecessor_state || manufacturing.state || "unavailable"}.`],
+        ["QUALITY_RELEASE anchor", releaseTransaction, `${releaseRegistry} / block ${release.block_number ?? "unavailable"} / zero-value evidence control.`],
+        ["ERP manufacturing result", manufacturingProgress.status, `QI ${manufacturingProgress.erp.quality_inspection.docstatus_label}; manufacture ${manufacturingProgress.erp.manufacture.docstatus_label}; WIP ${manufacturingProgress.erp.inventory.wip_qty}; FG ${manufacturingProgress.erp.inventory.finished_goods_qty} @ ${manufacturingProgress.erp.inventory.finished_goods_valuation_rate}`],
         ["Current ARC wallet", wallet.wallet.address, `nonce ${wallet.wallet.ending_nonce} / ${wallet.status}`],
         ["Payment Receipt canary", receipt.transaction_hash, `${receipt.amount_test_usdc} test USDC / storage match ${receipt.storage_matches_event}`],
-        ["W4 Circle / RPC", w4Dual.status, `${w4Dual.counts.circle_in_overlap_window} Circle / ${w4Dual.counts.rpc_in_overlap_window} RPC / unmatched 0`],
+        ["W4 Circle / RPC", w4Dual.status, `${w4Dual.counts.circle_in_overlap_window} Circle / ${w4Dual.counts.rpc_in_overlap_window} RPC / unmatched 0. The release registry is presented as RPC-confirmed until separately monitored in Circle.`],
         ["App Kit boundary", appKit.status, `Custom pay calldata enabled ${appKit.product_boundary.custom_pay_calldata_supported}; no wallet, bridge, swap, or chain write exposed`]
       ];
       document.querySelector("#evidence-grid").innerHTML = evidenceCards.map(([label, value, detail]) => `

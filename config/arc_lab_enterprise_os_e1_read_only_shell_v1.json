@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "standard_id": "CATVERSE_TWIN_LEDGER_RENDER_DUAL_SERVICE_V1",
-  "updated": "2026-07-22 CST",
+  "updated": "2026-07-27 CST",
   "status": "e1_read_only_enterprise_os_with_erp_interaction_mapping",
   "service": {
     "name": "arc-payment-receipt",
@@ -94,8 +94,8 @@
   "current_next_queue": [
     {
       "domain": "D06_manufacturing_quality_and_subcontracting",
-      "next_result_unit": "ERP manufacture, SLE and valuation readback are complete; revalidate the exact QUALITY_RELEASE chain packet at action time without repeating ERP submits",
-      "status": "in_progress"
+      "next_result_unit": "QUALITY_RELEASE is anchored on Arc Testnet and ERP manufacture/SLE/valuation readback is complete. The only remaining source-assurance increment is a separately approved Circle monitor import/subscription for the V2 registry; do not repeat ERP submits or chain writes.",
+      "status": "implemented"
     },
     {
       "domain": "D02_opening_balances_and_dimensions",
@@ -109,7 +109,7 @@
     },
     {
       "domain": "D14_agent_governance_security_and_human_gates",
-      "next_result_unit": "Publish the sanitized ERP-complete / chain-release-pending read-only evidence with rollback and privacy checks; chain execution remains separate",
+      "next_result_unit": "The sanitized QUALITY_RELEASE public package is live. Maintain the rollback, privacy, and read-only boundary while any new Circle resource or public release remains action-time confirmed.",
       "status": "implemented"
     }
   ],
