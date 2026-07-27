@@ -103,23 +103,29 @@
       <h2>Cross-System Evidence</h2>
       <div class="evidence-grid" id="evidence-grid"></div>
     </section>
+    <section class="panel" style="margin-top: 14px;">
+      <h2>Verified Delivery Trail</h2>
+      <p>Each row represents one source-separated result. Local checks, unsigned actions, duplicate deployments and repeated social activity are excluded.</p>
+      <div class="evidence-grid" id="trace-trail"></div>
+    </section>
   </main>
   <script>
     async function main() {
-      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, walletResponse, w4DualResponse, appKitResponse] = await Promise.all([
+      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse] = await Promise.all([
         fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-evidence", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-progress", { headers: { accept: "application/json" } }),
         fetch("/api/v1/quality-release-evidence", { headers: { accept: "application/json" } }),
         fetch("/api/v1/wallet-capability", { headers: { accept: "application/json" } }),
         fetch("/api/v1/w4-dual-source", { headers: { accept: "application/json" } }),
-        fetch("/api/v1/app-kit-boundary", { headers: { accept: "application/json" } })
+        fetch("/api/v1/app-kit-boundary", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/public-trace-trail", { headers: { accept: "application/json" } })
       ]);
-      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, walletResponse, w4DualResponse, appKitResponse].every((response) => response.ok)) {
+      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse].every((response) => response.ok)) {
         throw new Error("Evidence API unavailable");
       }
-      const [data, manufacturing, manufacturingProgress, qualityRelease, wallet, w4Dual, appKit] = await Promise.all([
-        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json()
+      const [data, manufacturing, manufacturingProgress, qualityRelease, wallet, w4Dual, appKit, traceTrail] = await Promise.all([
+        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json()
       ]);
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
@@ -183,6 +189,14 @@
           <strong>${label}</strong>
           <div class="evidence-value">${value}</div>
           <p class="fine">${detail}</p>
+        </article>
+      `).join("");
+      document.querySelector("#trace-trail").innerHTML = (traceTrail.records || []).map((record) => `
+        <article class="domain">
+          <strong>${record.result_type.replaceAll("_", " ")}</strong>
+          <span class="tag implemented">${record.source_class.replaceAll("_", " ")}</span>
+          <div class="evidence-value">${record.state.replaceAll("_", " ")}</div>
+          <p class="fine"><code>${record.fingerprint}</code><br>${record.verification}</p>
         </article>
       `).join("");
     }

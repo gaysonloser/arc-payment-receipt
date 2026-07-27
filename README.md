@@ -29,6 +29,9 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/manufacturing-progress`
 - `GET /api/v1/wallet-capability`
 - `GET /api/v1/w4-dual-source`
+- `GET /api/v1/quality-release-evidence`
+- `GET /api/v1/app-kit-boundary`
+- `GET /api/v1/public-trace-trail`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
 
@@ -80,6 +83,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A manufacturing evidence view that now shows accepted quality inspection, submitted manufacture, `25 @ 20.00 USD` ERP valuation and five SLE facts while truthfully retaining the Arc state as `QUALITY_HOLD` until the separately confirmed release anchor exists.
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
+- A source-separated public delivery trail that distinguishes Arc evidence controls, ERP readback, Circle/RPC overlap, Git source and Render runtime. It excludes local checks, unsigned actions, duplicated facts and activity-only records.
 
 ## Verified evidence
 
@@ -196,6 +200,13 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/topology`
 - `GET /api/v1/evidence`
 - `GET /api/v1/erp-interaction`
+- `GET /api/v1/manufacturing-evidence`
+- `GET /api/v1/manufacturing-progress`
+- `GET /api/v1/quality-release-evidence`
+- `GET /api/v1/wallet-capability`
+- `GET /api/v1/w4-dual-source`
+- `GET /api/v1/app-kit-boundary`
+- `GET /api/v1/public-trace-trail`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
 

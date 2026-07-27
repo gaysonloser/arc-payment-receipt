@@ -20,6 +20,7 @@ export const DEFAULT_MANUFACTURING_PROGRESS_PATH = resolve(HERE, "../outputs/Arc
 export const DEFAULT_WALLET_CAPABILITY_PATH = resolve(HERE, "../outputs/Arc_Wallet_Capability_Recovery_public.json");
 export const DEFAULT_W4_DUAL_SOURCE_PATH = resolve(HERE, "../outputs/Arc_W4_dual_source_monitor_aligned_20260726.json");
 export const DEFAULT_APP_KIT_BOUNDARY_PATH = resolve(HERE, "../outputs/Arc_App_Kit_Integration_Boundary_public.json");
+export const DEFAULT_PUBLIC_TRACE_TRAIL_PATH = resolve(HERE, "../outputs/Arc_Public_Trace_Trail_v1.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
@@ -100,6 +101,10 @@ export async function loadW4DualSource(path = DEFAULT_W4_DUAL_SOURCE_PATH) {
 }
 
 export async function loadAppKitBoundary(path = DEFAULT_APP_KIT_BOUNDARY_PATH) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
+
+export async function loadPublicTraceTrail(path = DEFAULT_PUBLIC_TRACE_TRAIL_PATH) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
@@ -1003,6 +1008,7 @@ export function createReceiptServer(options = {}) {
   const loadWalletRecovery = options.loadWalletRecovery ?? (() => loadWalletCapability(options.walletCapabilityPath));
   const loadW4Dual = options.loadW4Dual ?? (() => loadW4DualSource(options.w4DualSourcePath));
   const loadAppKit = options.loadAppKit ?? (() => loadAppKitBoundary(options.appKitBoundaryPath));
+  const loadPublicTrace = options.loadPublicTrace ?? (() => loadPublicTraceTrail(options.publicTraceTrailPath));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const now = options.now ?? (() => Date.now());
@@ -1170,6 +1176,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/app-kit-boundary") {
         json(response, 200, await loadAppKit(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/public-trace-trail") {
+        json(response, 200, await loadPublicTrace(), request.method);
         return;
       }
 

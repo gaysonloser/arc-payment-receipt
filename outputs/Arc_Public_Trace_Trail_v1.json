@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "trail_id": "ARC-PUBLIC-TRACE-TRAIL-V1",
+  "status": "sanitized_read_only",
+  "purpose": "A public, source-separated trail of independently verifiable Arc Enterprise OS outcomes. This is not a points counter, transaction counter, or activity feed.",
+  "boundaries": {
+    "duplicate_facts_collapsed": true,
+    "preflight_or_local_test_counted": false,
+    "wallet_executor_exposed": false,
+    "erp_raw_payload_exposed": false,
+    "circle_resource_write_executed": false,
+    "public_claims_limited_to_verifiable_outcomes": true
+  },
+  "records": [
+    {
+      "id": "arc-chain-quality-hold",
+      "source_class": "chain",
+      "result_type": "quality_hold_evidence_anchor",
+      "fingerprint": "0xCBB00cb7541605A4E2E07B6000302Ee5445193dc",
+      "state": "QUALITY_HOLD",
+      "verification": "Arc Testnet registry address recorded as the predecessor of the release control."
+    },
+    {
+      "id": "arc-chain-quality-release",
+      "source_class": "chain",
+      "result_type": "quality_release_evidence_anchor",
+      "fingerprint": "0x3e69c666115cac9d269572fc10094f8655f930abf587d5271a393e0360242566",
+      "state": "QUALITY_RELEASE",
+      "verification": "Arc Testnet transaction anchors the release control; it is not a payment or inventory tokenization claim."
+    },
+    {
+      "id": "erp-quality-inspection",
+      "source_class": "erp_reconciliation",
+      "result_type": "quality_inspection_readback",
+      "fingerprint": "erp:quality-inspection:submitted:accepted",
+      "state": "submitted_accepted",
+      "verification": "ERP readback confirms accepted quality inspection; raw document references remain private."
+    },
+    {
+      "id": "erp-manufacture",
+      "source_class": "erp_reconciliation",
+      "result_type": "manufacture_readback",
+      "fingerprint": "erp:manufacture:submitted:fg-25",
+      "state": "submitted",
+      "verification": "ERP readback confirms manufacturing completion with 25 finished goods."
+    },
+    {
+      "id": "erp-inventory-ledger",
+      "source_class": "erp_reconciliation",
+      "result_type": "inventory_sle_readback",
+      "fingerprint": "erp:sle:5:fg-value-500",
+      "state": "erp_authoritative",
+      "verification": "ERP remains the authority for stock ledger, valuation, repost and GL treatment."
+    },
+    {
+      "id": "circle-rpc-payment-receipt",
+      "source_class": "circle_console",
+      "result_type": "dual_source_receipt_alignment",
+      "fingerprint": "circle-rpc:payment-received:overlap-1-of-1",
+      "state": "aligned_in_overlap_window",
+      "verification": "Historical PaymentReceived overlap is independently aligned between Circle Event Monitor and RPC."
+    },
+    {
+      "id": "public-api-quality-release",
+      "source_class": "public_api",
+      "result_type": "sanitized_quality_release_evidence",
+      "fingerprint": "/api/v1/quality-release-evidence",
+      "state": "read_only",
+      "verification": "Public API renders the quality release boundary without ERP write or wallet execution."
+    },
+    {
+      "id": "github-source-release",
+      "source_class": "github",
+      "result_type": "public_source_release",
+      "fingerprint": "f32319cfc1ee451e50dd8508cc6ca438a034ff9f",
+      "state": "public_main",
+      "verification": "Public source release for the current Arc Enterprise OS evidence surface."
+    },
+    {
+      "id": "render-running-release",
+      "source_class": "render",
+      "result_type": "running_release",
+      "fingerprint": "dep-d9jd34vaqgkc73badur0",
+      "state": "live",
+      "verification": "Existing Render Free service runs the same public source release; rollback remains the preceding successful deployment."
+    }
+  ]
+}

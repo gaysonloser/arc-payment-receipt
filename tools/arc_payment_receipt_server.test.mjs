@@ -526,6 +526,25 @@ test("serves W4 Circle and RPC alignment as read-only evidence", async () => {
   assert.equal(post.status, 405);
 });
 
+test("serves a source-separated public delivery trail without counting local preparation", async () => {
+  const response = await fetch(`${origin}/api/v1/public-trace-trail`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "sanitized_read_only");
+  assert.equal(payload.boundaries.duplicate_facts_collapsed, true);
+  assert.equal(payload.boundaries.preflight_or_local_test_counted, false);
+  assert.equal(payload.records.some((record) => record.id === "arc-chain-quality-release"), true);
+  assert.equal(payload.records.some((record) => record.id === "erp-inventory-ledger"), true);
+  assert.equal(payload.records.some((record) => record.id === "render-running-release"), true);
+
+  const head = await fetch(`${origin}/api/v1/public-trace-trail`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/public-trace-trail`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
 test("serves the App Kit compatibility boundary without claiming a custom call integration", async () => {
   const response = await fetch(`${origin}/api/v1/app-kit-boundary`);
   assert.equal(response.status, 200);
