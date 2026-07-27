@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { buildCircleWebhookPolicy, buildCircleWebhookReadiness } from "./circle_contract_webhook_gate.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt_event_monitor_latest.json");
@@ -31,6 +32,31 @@ const SECURITY_HEADERS = {
   "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   "strict-transport-security": "max-age=31536000; includeSubDomains"
 };
+
+const CIRCLE_WEBHOOK_READINESS_POLICY = Object.freeze({
+  enabled: false,
+  durableQueueAvailable: false,
+  chainId: 5042002,
+  contractAddress: "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7",
+  eventSignature: "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)"
+});
+
+export function buildCircleWebhookPublicView() {
+  const readiness = buildCircleWebhookReadiness(buildCircleWebhookPolicy(CIRCLE_WEBHOOK_READINESS_POLICY));
+  return {
+    ...readiness,
+    surface: "read_only_configuration_boundary",
+    next_owner_action: "Provide a durable HTTPS queue and explicitly authorize Circle Console subscription creation.",
+    guarantees: {
+      endpoint_accepts_webhooks: false,
+      circle_subscription_created: false,
+      circle_resource_changed: false,
+      erp_write: false,
+      wallet_or_chain_action: false,
+      secret_exposed: false
+    }
+  };
+}
 
 function json(response, status, body, method = "GET") {
   response.writeHead(status, {
@@ -1188,6 +1214,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/public-trace-trail") {
         json(response, 200, await loadPublicTrace(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/circle-webhook-readiness") {
+        json(response, 200, buildCircleWebhookPublicView(), request.method);
         return;
       }
 

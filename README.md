@@ -32,6 +32,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/quality-release-evidence`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
+- `GET /api/v1/circle-webhook-readiness`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, webhook, or state-changing endpoint.
 
@@ -208,8 +209,9 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
+- `GET /api/v1/circle-webhook-readiness`
 
-All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook, database, or state-changing endpoint.
+All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, webhook receiver, database, or state-changing endpoint. The webhook-readiness route is a public, fail-closed boundary: it documents the exact Arc registry event and the missing durable-queue prerequisite, but it cannot receive a notification, create a Circle subscription, or write to ERP.
 
 ## Safety and limitations
 
