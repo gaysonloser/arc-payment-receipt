@@ -111,21 +111,22 @@
   </main>
   <script>
     async function main() {
-      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse] = await Promise.all([
+      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse] = await Promise.all([
         fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-evidence", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-progress", { headers: { accept: "application/json" } }),
         fetch("/api/v1/quality-release-evidence", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/cross-system-manufacturing-reconciliation", { headers: { accept: "application/json" } }),
         fetch("/api/v1/wallet-capability", { headers: { accept: "application/json" } }),
         fetch("/api/v1/w4-dual-source", { headers: { accept: "application/json" } }),
         fetch("/api/v1/app-kit-boundary", { headers: { accept: "application/json" } }),
         fetch("/api/v1/public-trace-trail", { headers: { accept: "application/json" } })
       ]);
-      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse].every((response) => response.ok)) {
+      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse].every((response) => response.ok)) {
         throw new Error("Evidence API unavailable");
       }
-      const [data, manufacturing, manufacturingProgress, qualityRelease, wallet, w4Dual, appKit, traceTrail] = await Promise.all([
-        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json()
+      const [data, manufacturing, manufacturingProgress, qualityRelease, reconciliation, wallet, w4Dual, appKit, traceTrail] = await Promise.all([
+        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), reconciliationResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json()
       ]);
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
@@ -178,6 +179,7 @@
         ["Current Arc manufacturing state", release.current_state || "not anchored", `Quality release ${release.quality_release_anchored === true ? "confirmed" : "not confirmed"}; manufacture completion ${release.manufacture_completion_anchored === true ? "confirmed" : "not confirmed"}; predecessor ${release.predecessor_state || manufacturing.state || "unavailable"}.`],
         ["QUALITY_RELEASE anchor", releaseTransaction, `${releaseRegistry} / block ${release.block_number ?? "unavailable"} / zero-value evidence control.`],
         ["ERP manufacturing result", manufacturingProgress.status, `QI ${manufacturingProgress.erp.quality_inspection.docstatus_label}; manufacture ${manufacturingProgress.erp.manufacture.docstatus_label}; WIP ${manufacturingProgress.erp.inventory.wip_qty}; FG ${manufacturingProgress.erp.inventory.finished_goods_qty} @ ${manufacturingProgress.erp.inventory.finished_goods_valuation_rate}`],
+        ["Arc ↔ ERP reconciliation", reconciliation.status, `${reconciliation.failed_checks.length === 0 ? "All control checks passed" : `${reconciliation.failed_checks.length} failed checks`}; terminal ${reconciliation.chain.terminal_state}; ERP finished goods ${reconciliation.erp.finished_goods_qty}.`],
         ["Source assurance boundary", qualityRelease.status, `Historical Receipt Circle/RPC ${qualityRelease.source_assurance.historical_receipt_circle_rpc_status}; V2 registry Circle monitor ${qualityRelease.source_assurance.quality_release_registry_circle_monitor}.`],
         ["Current ARC wallet", wallet.wallet.address, `nonce ${wallet.wallet.ending_nonce} / ${wallet.status}`],
         ["Payment Receipt canary", receipt.transaction_hash, `${receipt.amount_test_usdc} test USDC / storage match ${receipt.storage_matches_event}`],
