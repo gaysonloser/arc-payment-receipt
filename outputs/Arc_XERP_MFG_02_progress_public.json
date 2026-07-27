@@ -49,7 +49,7 @@
     "source_fingerprint_public": false
   },
   "blockers": [],
-  "next": "Publish this sanitized manufacture-completion evidence with the same Git and Render release fingerprint; do not create another chain event.",
+  "next": "The sanitized manufacture-completion evidence is publicly released. Any future chain state must represent a distinct business event; do not create another anchor for this completed manufacture result.",
   "boundaries": {
     "new_business_documents": 0,
     "erp_submit_permission_active": false,
