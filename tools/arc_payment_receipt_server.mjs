@@ -558,6 +558,15 @@ export function buildOpeningBalanceLineClassificationView(fixture = null) {
   return { mode: "read-only_opening_balance_line_classification", contract_id: "ARC-AAL-C1-OPENING-BALANCE-LINE-V1", status: lines.length > 0 && invalidLines.length === 0 ? "line_classification_valid_for_separate_owner_review" : "line_classification_rejected_fail_closed", line_count: lines.length, invalid_lines: invalidLines, boundaries: { fixture_is_not_an_erp_document: true, erp_write_executed: false } };
 }
 
+export function buildOpeningBalanceReviewPacket(erpInteraction, fixture = null) {
+  const readiness = buildOpeningBalanceReadinessView(erpInteraction);
+  const fixtureContract = buildOpeningBalanceFixtureContractView(erpInteraction, fixture);
+  const lineClassification = buildOpeningBalanceLineClassificationView(fixture);
+  const reviewReady = readiness.status === "ready_for_separate_owner_approval" && fixtureContract.status === "fixture_valid_for_separate_owner_review" && lineClassification.status === "line_classification_valid_for_separate_owner_review";
+  const payload = { readiness, fixture_contract: fixtureContract, line_classification: lineClassification };
+  return { mode: "read-only_opening_balance_review_packet", packet_id: "ARC-AAL-C1-OPENING-BALANCE-REVIEW-PACKET-V1", status: reviewReady ? "ready_for_separate_owner_review" : "blocked_fail_closed", review_ready: reviewReady, packet_sha256: createHash("sha256").update(JSON.stringify(payload)).digest("hex"), ...payload, boundaries: { erp_write_executed: false, wallet_or_chain_action: false } };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1631,6 +1640,9 @@ export function createReceiptServer(options = {}) {
       }
       if (url.pathname === "/api/v1/opening-balance-line-classification") {
         json(response, 200, buildOpeningBalanceLineClassificationView(), request.method); return;
+      }
+      if (url.pathname === "/api/v1/opening-balance-review-packet") {
+        json(response, 200, buildOpeningBalanceReviewPacket(await loadArcLabErp()), request.method); return;
       }
 
       if (url.pathname === "/api/v1/manufacturing-evidence") {

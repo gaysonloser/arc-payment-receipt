@@ -10,6 +10,7 @@ import {
   buildOpeningBalanceReadinessView,
   buildOpeningBalanceFixtureContractView,
   buildOpeningBalanceLineClassificationView,
+  buildOpeningBalanceReviewPacket,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
@@ -519,6 +520,16 @@ test("rejects incomplete C1 lines and accepts exactly one posting side per class
   const valid = buildOpeningBalanceLineClassificationView({ lines: [{ account_code: "1001", debit: 10, credit: 0 }, { account_code: "3001", debit: 0, credit: 10 }] });
   assert.equal(valid.status, "line_classification_valid_for_separate_owner_review");
   assert.equal(valid.invalid_lines.length, 0);
+});
+
+test("assembles a fail-closed C1 review packet with a deterministic content digest", async () => {
+  const response = await fetch(`${origin}/api/v1/opening-balance-review-packet`);
+  const packet = await response.json();
+  assert.equal(packet.status, "blocked_fail_closed");
+  assert.match(packet.packet_sha256, /^[0-9a-f]{64}$/);
+  const ready = buildOpeningBalanceReviewPacket({ c0: { company_created: true, dedicated_service_identity_created: true, draft_only_role_assigned: true, api_credentials_generated: false, opening_balance_written: false, business_documents_created: 0 } }, { approved: true, currency: "USD", write_requested: false, lines: [{ account_code: "1001", debit: 10, credit: 0 }, { account_code: "3001", debit: 0, credit: 10 }] });
+  assert.equal(ready.status, "ready_for_separate_owner_review");
+  assert.equal(ready.boundaries.erp_write_executed, false);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
