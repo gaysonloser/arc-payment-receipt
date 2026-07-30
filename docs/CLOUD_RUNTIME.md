@@ -13,7 +13,7 @@
 | Community credit | Arc House owner ledger |
 | Final wallet review | Owner device |
 
-The local Mac is not a long-running Arc server. It is used for source editing, browser work and final wallet review. A wallet-only page may run from a disposable `/private/tmp` copy for one exact action and must be removed after receipt readback.
+The local Mac is not a long-running Arc server. It is used for source editing, browser work and final wallet review. A wallet-only page may run from a disposable local copy for one exact action and must be removed after receipt readback.
 
 ## Publication discipline
 

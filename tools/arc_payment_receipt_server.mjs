@@ -414,6 +414,71 @@ export async function loadPublicTraceTrail(path = DEFAULT_PUBLIC_TRACE_TRAIL_PAT
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+const DISCLOSURE_SENSITIVE_FIELD = /(?:^|[_-])(secret|private[_-]?key|mnemonic|seed|credential|cookie|api[_-]?key)(?:$|[_-])/i;
+const DISCLOSURE_SENSITIVE_VALUE = [
+  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i,
+  /\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9_-]+\b/,
+  /\bBearer\s+[A-Za-z0-9._~+\/-]+=*\b/i,
+  /(?:^|[\s"'])\/(?:Users|home|var|private|tmp)\/[\S]+/
+];
+
+function disclosureValueIsEmpty(value) {
+  return value === false || value === null || value === undefined || value === "";
+}
+
+function collectDisclosureFindings(value, document, path = "$", findings = []) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectDisclosureFindings(item, document, `${path}[${index}]`, findings));
+    return findings;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, item] of Object.entries(value)) {
+      const itemPath = `${path}.${key}`;
+      if (DISCLOSURE_SENSITIVE_FIELD.test(key) && !disclosureValueIsEmpty(item)) {
+        findings.push({ document, path: itemPath, category: "sensitive_field_has_value" });
+      }
+      collectDisclosureFindings(item, document, itemPath, findings);
+    }
+    return findings;
+  }
+  if (typeof value === "string" && DISCLOSURE_SENSITIVE_VALUE.some((pattern) => pattern.test(value))) {
+    findings.push({ document, path, category: "sensitive_value_pattern" });
+  }
+  return findings;
+}
+
+/**
+ * Audits a bounded set of public JSON documents before they are offered as
+ * reviewer-facing API surfaces.  It reports field locations only: potential
+ * sensitive values are never echoed back into the response or logs.
+ */
+export function buildPublicDisclosureAuditView(documents) {
+  const entries = Object.entries(documents ?? {});
+  const findings = entries.flatMap(([name, document]) => collectDisclosureFindings(document, name));
+  return {
+    mode: "read-only_public_disclosure_boundary_audit",
+    audit_id: "ARC-PUBLIC-DISCLOSURE-BOUNDARY-V1",
+    status: findings.length === 0 ? "bounded_public_documents_clear" : "review_required_fail_closed",
+    reviewed_documents: entries.map(([name, document]) => ({
+      name,
+      content_sha256: createHash("sha256").update(JSON.stringify(document)).digest("hex")
+    })),
+    findings,
+    summary: {
+      document_count: entries.length,
+      prohibited_value_findings: findings.length,
+      review_required: findings.length > 0
+    },
+    boundaries: {
+      scans_only_the_listed_public_json_documents: true,
+      returns_sensitive_values: false,
+      proves_no_secret_exists_elsewhere: false,
+      authorizes_wallet_or_chain_action: false,
+      authorizes_erp_or_circle_action: false
+    }
+  };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1568,6 +1633,22 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/external-route-intake-boundary") {
         json(response, 200, await loadExternalRouteIntake(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/public-disclosure-audit") {
+        const [agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
+          loadAgentIdentity(),
+          loadExternalRouteIntake(),
+          loadDeliverySurfaces(),
+          loadPublicTrace()
+        ]);
+        json(response, 200, buildPublicDisclosureAuditView({
+          agent_identity: agentIdentity,
+          external_route_intake: externalRouteIntake,
+          delivery_surfaces: deliverySurfaces,
+          public_trace_trail: publicTrace
+        }), request.method);
         return;
       }
 

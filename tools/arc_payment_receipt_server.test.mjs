@@ -7,6 +7,7 @@ import {
   buildEnterpriseEnvelopeView,
   buildEnterpriseSettlementView,
   buildEvidenceFreshnessView,
+  buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
   buildSettlementReadinessView,
   buildSettlementReviewPacket,
@@ -432,6 +433,40 @@ test("fails closed for a recovery-only external bridge route", async () => {
 
   const post = await fetch(`${origin}/api/v1/external-route-intake-boundary`, { method: "POST" });
   assert.equal(post.status, 405);
+});
+
+test("audits the bounded public documents without returning sensitive values", async () => {
+  const response = await fetch(`${origin}/api/v1/public-disclosure-audit`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.mode, "read-only_public_disclosure_boundary_audit");
+  assert.equal(payload.status, "bounded_public_documents_clear");
+  assert.equal(payload.summary.document_count, 4);
+  assert.equal(payload.summary.prohibited_value_findings, 0);
+  assert.equal(payload.boundaries.returns_sensitive_values, false);
+  assert.equal(payload.boundaries.proves_no_secret_exists_elsewhere, false);
+  assert.match(payload.reviewed_documents[0].content_sha256, /^[0-9a-f]{64}$/);
+
+  const head = await fetch(`${origin}/api/v1/public-disclosure-audit`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/public-disclosure-audit`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
+test("fails closed on a potential disclosure without echoing its value", () => {
+  const audit = buildPublicDisclosureAuditView({
+    safe: { boundaries: { secret_exposed: false } },
+    unsafe: { credential: "not-for-publication" }
+  });
+  assert.equal(audit.status, "review_required_fail_closed");
+  assert.deepEqual(audit.findings, [{
+    document: "unsafe",
+    path: "$.credential",
+    category: "sensitive_field_has_value"
+  }]);
+  assert.equal(JSON.stringify(audit).includes("not-for-publication"), false);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
