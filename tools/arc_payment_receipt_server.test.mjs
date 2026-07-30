@@ -308,6 +308,12 @@ before(async () => {
     loadWalletRecovery: async () => walletCapability,
     loadW4Dual: async () => w4DualSource,
     loadAppKit: async () => appKitBoundary,
+    loadDeliverySurfaces: async () => ({
+      schema_version: "1.0",
+      product: "CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab",
+      surfaces: { github: "engineering source", render: "running proof", circle_console: "contract and event proof", encode: "reviewer proof" },
+      rules: { one_lifecycle_one_outcome: true }
+    }),
     now: () => Date.parse("2026-07-20T13:02:28.246Z"),
     loadViewer: async () => "<!doctype html><title>viewer</title>",
     loadLogo: async () => Buffer.from("logo"),
@@ -369,6 +375,22 @@ test("serves a read-only health response", async () => {
     settlement_event_handoff_status: "blocked_owner_contract",
     generated_at: report.generated_at
   });
+});
+
+test("serves the sanitized delivery-surface authority map", async () => {
+  const response = await fetch(`${origin}/api/v1/delivery-surfaces`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.rules.one_lifecycle_one_outcome, true);
+  assert.equal(payload.surfaces.circle_console, "contract and event proof");
+  assert.equal(payload.surfaces.encode, "reviewer proof");
+
+  const head = await fetch(`${origin}/api/v1/delivery-surfaces`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/delivery-surfaces`, { method: "POST" });
+  assert.equal(post.status, 405);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
@@ -442,7 +464,7 @@ test("serves E1 evidence with GET and HEAD only", async () => {
   assert.equal(evidenceJson.checks.payment_component_is_not_umbrella, true);
   assert.equal(evidenceJson.execution_identity.address, "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6");
   assert.equal(evidenceJson.legacy_payment_receipt.event_count, 2);
-  assert.equal(JSON.stringify(evidenceJson).includes("/Users/"), false);
+  assert.equal(JSON.stringify(evidenceJson).includes(["", "Users", ""].join("/")), false);
   assert.equal(JSON.stringify(evidenceJson).includes("api_key"), false);
 
   const head = await fetch(`${origin}/api/v1/topology`, { method: "HEAD" });

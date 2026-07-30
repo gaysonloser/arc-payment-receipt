@@ -8,6 +8,8 @@ Payment Receipt is an independent DeFi prototype built on Arc Testnet. Its verif
 
 The demo runs as a free Render web service. It may take 50 seconds or more to wake after a period of inactivity.
 
+**Delivery surfaces:** GitHub is the engineering source and ephemeral CI authority; this existing Render service is the public running proof; Arc Testnet provides immutable chain facts; Circle Console provides an independent contract/event view; Frappe Cloud ERPNext remains the business, ledger, SLE and cost authority; Encode and Arc House retain reviewer and community-credit records. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+
 ## Arc Lab Enterprise OS E1
 
 This service is also the only planned public Arc runtime for **CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab**. The E1 upgrade adds a read-only enterprise shell inside the existing `arc-payment-receipt` Render service; it does not create a second Arc web service.
@@ -38,6 +40,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/production-boundary`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
+- `GET /api/v1/delivery-surfaces`
 - `GET /api/v1/circle-webhook-readiness`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
@@ -225,6 +228,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/w4-dual-source`
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
+- `GET /api/v1/delivery-surfaces`
 - `GET /api/v1/circle-webhook-readiness`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP.

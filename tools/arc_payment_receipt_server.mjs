@@ -26,8 +26,13 @@ export const DEFAULT_WALLET_CAPABILITY_PATH = resolve(HERE, "../outputs/Arc_Wall
 export const DEFAULT_W4_DUAL_SOURCE_PATH = resolve(HERE, "../outputs/Arc_W4_dual_source_monitor_aligned_20260726.json");
 export const DEFAULT_APP_KIT_BOUNDARY_PATH = resolve(HERE, "../outputs/Arc_App_Kit_Integration_Boundary_public.json");
 export const DEFAULT_PUBLIC_TRACE_TRAIL_PATH = resolve(HERE, "../outputs/Arc_Public_Trace_Trail_v1.json");
+export const DEFAULT_DELIVERY_SURFACES_PATH = resolve(HERE, "../config/public_delivery_surfaces_v1.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
+
+async function loadJson(path) {
+  return JSON.parse(await readFile(path, "utf8"));
+}
 
 const SECURITY_HEADERS = {
   "x-content-type-options": "nosniff",
@@ -1315,6 +1320,7 @@ export function createReceiptServer(options = {}) {
   const loadW4Dual = options.loadW4Dual ?? (() => loadW4DualSource(options.w4DualSourcePath));
   const loadAppKit = options.loadAppKit ?? (() => loadAppKitBoundary(options.appKitBoundaryPath));
   const loadPublicTrace = options.loadPublicTrace ?? (() => loadPublicTraceTrail(options.publicTraceTrailPath));
+  const loadDeliverySurfaces = options.loadDeliverySurfaces ?? (() => loadJson(options.deliverySurfacesPath ?? DEFAULT_DELIVERY_SURFACES_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
@@ -1543,6 +1549,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/public-trace-trail") {
         json(response, 200, await loadPublicTrace(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/delivery-surfaces") {
+        json(response, 200, await loadDeliverySurfaces(), request.method);
         return;
       }
 

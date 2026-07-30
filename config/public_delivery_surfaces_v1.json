@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "product": "CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab",
+  "component": "Payment Receipt",
+  "component_is_umbrella": false,
+  "surfaces": {
+    "github": "engineering source and ephemeral CI",
+    "render": "public running proof",
+    "arc_testnet": "immutable chain proof",
+    "circle_console": "independent contract and event platform proof",
+    "erpnext": "business document, ledger, SLE and cost authority",
+    "encode": "hackathon reviewer proof",
+    "arc_house": "community-credit owner ledger",
+    "discord": "participation only; no assumed points",
+    "review_media": "versioned deck and walkthrough"
+  },
+  "rules": {
+    "one_lifecycle_one_outcome": true,
+    "github_render_same_release": true,
+    "circle_rpc_source_separation": true,
+    "local_runtime_persistent": false,
+    "secret_or_raw_erp_payload_public": false
+  }
+}
