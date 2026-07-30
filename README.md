@@ -44,6 +44,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/agent-identity`
 - `GET /api/v1/external-route-intake-boundary`
 - `GET /api/v1/public-disclosure-audit`
+- `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/circle-webhook-readiness`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
@@ -105,6 +106,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A bounded ERC-8004 identity record that exposes the confirmed Arc Testnet registration, its public agent URI and explicit non-authorization controls. It is a read-only fact surface, not a wallet, signer, permission or business attestation.
 - A fail-closed external-route intake boundary that keeps a recovery-only third-party Base-to-Arc page outside payment, chain, Circle and ERP evidence unless an independently proven prior deposit reaches a separate owner review.
 - A bounded public-disclosure auditor that hashes the selected reviewer-facing JSON documents and fails closed on potential secret, credential, bearer-token or local-path leakage without returning a detected value.
+- A public-boundary consistency gate that cross-checks identity, external-route, delivery and trace controls before admitting a reviewer to the read-only surface.
 
 ## Verified evidence
 
@@ -238,6 +240,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/agent-identity`
 - `GET /api/v1/external-route-intake-boundary`
 - `GET /api/v1/public-disclosure-audit`
+- `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/circle-webhook-readiness`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP.

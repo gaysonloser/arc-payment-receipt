@@ -7,6 +7,7 @@ import {
   buildEnterpriseEnvelopeView,
   buildEnterpriseSettlementView,
   buildEvidenceFreshnessView,
+  buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
   buildSettlementReadinessView,
@@ -313,7 +314,7 @@ before(async () => {
       schema_version: "1.0",
       product: "CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab",
       surfaces: { github: "engineering source", render: "running proof", circle_console: "contract and event proof", encode: "reviewer proof" },
-      rules: { one_lifecycle_one_outcome: true }
+      rules: { one_lifecycle_one_outcome: true, github_render_same_release: true }
     }),
     now: () => Date.parse("2026-07-20T13:02:28.246Z"),
     loadViewer: async () => "<!doctype html><title>viewer</title>",
@@ -467,6 +468,26 @@ test("fails closed on a potential disclosure without echoing its value", () => {
     category: "sensitive_field_has_value"
   }]);
   assert.equal(JSON.stringify(audit).includes("not-for-publication"), false);
+});
+
+test("admits only a consistent set of public safety boundaries", async () => {
+  const response = await fetch(`${origin}/api/v1/public-boundary-consistency`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.mode, "read-only_public_boundary_consistency_gate");
+  assert.equal(payload.status, "public_boundaries_consistent");
+  assert.equal(payload.failed_checks.length, 0);
+  assert.equal(payload.decision.reviewer_read_only_admission, true);
+  assert.equal(payload.decision.wallet_or_chain_action_authorized, false);
+
+  const drifted = buildPublicBoundaryConsistencyView({
+    agentIdentity: { boundaries: { wallet_connection: true, signer_or_key_present: false, chain_transaction_enabled: false } },
+    externalRouteIntake: { boundaries: {}, product_decision: {} },
+    deliverySurfaces: { rules: {} },
+    publicTrace: { boundaries: {} }
+  });
+  assert.equal(drifted.status, "boundary_inconsistency_review_required");
+  assert.equal(drifted.failed_checks.includes("identity_never_enables_a_wallet"), true);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {

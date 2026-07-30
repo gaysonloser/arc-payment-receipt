@@ -479,6 +479,45 @@ export function buildPublicDisclosureAuditView(documents) {
   };
 }
 
+/**
+ * Checks whether independently published boundary documents still agree on
+ * their safe, read-only operating posture.  Unlike the disclosure audit, this
+ * validates declared controls rather than searching document values.
+ */
+export function buildPublicBoundaryConsistencyView({ agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace }) {
+  const identity = agentIdentity?.boundaries ?? {};
+  const external = externalRouteIntake?.boundaries ?? {};
+  const decision = externalRouteIntake?.product_decision ?? {};
+  const rules = deliverySurfaces?.rules ?? {};
+  const trace = publicTrace?.boundaries ?? {};
+  const checks = {
+    github_and_render_must_share_a_release: rules.github_render_same_release === true && rules.one_lifecycle_one_outcome === true,
+    identity_never_enables_a_wallet: identity.wallet_connection === false && identity.signer_or_key_present === false && identity.chain_transaction_enabled === false,
+    external_recovery_route_is_not_new_funding: decision.accept_as_new_funding_route === false && external.wallet_connection_or_signature_performed === false && external.new_base_deposit_performed === false && external.arc_transaction_performed === false,
+    external_route_never_becomes_evidence_authority: decision.accept_as_arc_chain_fact === false && decision.accept_as_circle_or_erp_authority === false && decision.accept_as_payment_receipt_evidence === false,
+    public_trail_excludes_unverified_activity: trace.duplicate_facts_collapsed === true && trace.preflight_or_local_test_counted === false && trace.public_claims_limited_to_verifiable_outcomes === true,
+    public_trail_exposes_no_erp_or_wallet_executor: trace.wallet_executor_exposed === false && trace.erp_raw_payload_exposed === false
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return {
+    mode: "read-only_public_boundary_consistency_gate",
+    gate_id: "ARC-PUBLIC-BOUNDARY-CONSISTENCY-V1",
+    status: failedChecks.length === 0 ? "public_boundaries_consistent" : "boundary_inconsistency_review_required",
+    checks,
+    failed_checks: failedChecks,
+    decision: {
+      reviewer_read_only_admission: failedChecks.length === 0,
+      wallet_or_chain_action_authorized: false,
+      erp_or_circle_action_authorized: false
+    },
+    boundaries: {
+      validates_declared_controls_only: true,
+      verifies_external_provider_truth: false,
+      replaces_action_time_owner_review: false
+    }
+  };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1648,6 +1687,22 @@ export function createReceiptServer(options = {}) {
           external_route_intake: externalRouteIntake,
           delivery_surfaces: deliverySurfaces,
           public_trace_trail: publicTrace
+        }), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/public-boundary-consistency") {
+        const [agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
+          loadAgentIdentity(),
+          loadExternalRouteIntake(),
+          loadDeliverySurfaces(),
+          loadPublicTrace()
+        ]);
+        json(response, 200, buildPublicBoundaryConsistencyView({
+          agentIdentity,
+          externalRouteIntake,
+          deliverySurfaces,
+          publicTrace
         }), request.method);
         return;
       }
