@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "ARC-ERC8004-IDENTITY-REGISTRATION-V1",
+  "status": "confirmed_read_only_identity_registration",
+  "network": {
+    "name": "Arc Testnet",
+    "chain_id": 5042002,
+    "rpc_authority": "https://rpc.testnet.arc.network"
+  },
+  "registry": {
+    "address": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "role": "IdentityRegistry transaction destination"
+  },
+  "identity": {
+    "token_id": "851940",
+    "owner": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
+    "agent_uri": "https://arc-payment-receipt.onrender.com/api/arc-lab-portfolio",
+    "registration_transaction": "0xcc89bca451d1dd6347d5fa3a017b945b97644c0b31c8ad83d26b3d2ccce3e96e",
+    "transaction_nonce": 14,
+    "receipt_status": "success",
+    "balance_of_owner_at_latest_read": "1"
+  },
+  "verification": {
+    "method": "official Arc Testnet RPC transaction, receipt and balanceOf readback",
+    "verified_on": "2026-07-30",
+    "receipt_events": [
+      "ERC-721 Transfer mint",
+      "registration event",
+      "agent URI update"
+    ]
+  },
+  "boundaries": {
+    "read_only_api": true,
+    "wallet_connection": false,
+    "signer_or_key_present": false,
+    "chain_transaction_enabled": false,
+    "identity_is_not_authorization": true,
+    "identity_is_not_human_or_business_attestation": true,
+    "does_not_replace_erp_or_circle_authority": true
+  }
+}

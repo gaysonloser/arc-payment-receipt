@@ -41,6 +41,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/delivery-surfaces`
+- `GET /api/v1/agent-identity`
 - `GET /api/v1/circle-webhook-readiness`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
@@ -99,6 +100,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A read-only wallet-capability view for the confirmed Arc Memo and Payment Receipt canary, with replay disabled and Circle freshness shown separately.
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 - A source-separated public delivery trail that distinguishes Arc evidence controls, ERP readback, Circle/RPC overlap, Git source and Render runtime. It excludes local checks, unsigned actions, duplicated facts and activity-only records.
+- A bounded ERC-8004 identity record that exposes the confirmed Arc Testnet registration, its public agent URI and explicit non-authorization controls. It is a read-only fact surface, not a wallet, signer, permission or business attestation.
 
 ## Verified evidence
 
@@ -229,6 +231,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/app-kit-boundary`
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/delivery-surfaces`
+- `GET /api/v1/agent-identity`
 - `GET /api/v1/circle-webhook-readiness`
 
 All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP.

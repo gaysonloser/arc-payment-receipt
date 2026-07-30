@@ -393,6 +393,27 @@ test("serves the sanitized delivery-surface authority map", async () => {
   assert.equal(post.status, 405);
 });
 
+test("serves the confirmed ERC-8004 identity record as a bounded read-only API", async () => {
+  const response = await fetch(`${origin}/api/v1/agent-identity`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "confirmed_read_only_identity_registration");
+  assert.equal(payload.network.chain_id, 5042002);
+  assert.equal(payload.identity.token_id, "851940");
+  assert.equal(payload.identity.transaction_nonce, 14);
+  assert.equal(payload.identity.balance_of_owner_at_latest_read, "1");
+  assert.equal(payload.boundaries.wallet_connection, false);
+  assert.equal(payload.boundaries.chain_transaction_enabled, false);
+  assert.equal(payload.boundaries.identity_is_not_authorization, true);
+
+  const head = await fetch(`${origin}/api/v1/agent-identity`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/agent-identity`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   const page = await fetch(`${origin}/arc-lab`);
   assert.equal(page.status, 200);

@@ -27,6 +27,7 @@ export const DEFAULT_W4_DUAL_SOURCE_PATH = resolve(HERE, "../outputs/Arc_W4_dual
 export const DEFAULT_APP_KIT_BOUNDARY_PATH = resolve(HERE, "../outputs/Arc_App_Kit_Integration_Boundary_public.json");
 export const DEFAULT_PUBLIC_TRACE_TRAIL_PATH = resolve(HERE, "../outputs/Arc_Public_Trace_Trail_v1.json");
 export const DEFAULT_DELIVERY_SURFACES_PATH = resolve(HERE, "../config/public_delivery_surfaces_v1.json");
+export const DEFAULT_AGENT_IDENTITY_PATH = resolve(HERE, "../outputs/Arc_ERC8004_Agent_Identity_public.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
@@ -1321,6 +1322,7 @@ export function createReceiptServer(options = {}) {
   const loadAppKit = options.loadAppKit ?? (() => loadAppKitBoundary(options.appKitBoundaryPath));
   const loadPublicTrace = options.loadPublicTrace ?? (() => loadPublicTraceTrail(options.publicTraceTrailPath));
   const loadDeliverySurfaces = options.loadDeliverySurfaces ?? (() => loadJson(options.deliverySurfacesPath ?? DEFAULT_DELIVERY_SURFACES_PATH));
+  const loadAgentIdentity = options.loadAgentIdentity ?? (() => loadJson(options.agentIdentityPath ?? DEFAULT_AGENT_IDENTITY_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
@@ -1554,6 +1556,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/delivery-surfaces") {
         json(response, 200, await loadDeliverySurfaces(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/agent-identity") {
+        json(response, 200, await loadAgentIdentity(), request.method);
         return;
       }
 
