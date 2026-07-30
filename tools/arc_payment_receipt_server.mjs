@@ -548,6 +548,16 @@ export function buildOpeningBalanceFixtureContractView(erpInteraction, fixture =
   return { mode: "read-only_opening_balance_fixture_contract", contract_id: "ARC-AAL-C1-OPENING-BALANCE-FIXTURE-V1", status: failedChecks.length ? "fixture_rejected_fail_closed" : "fixture_valid_for_separate_owner_review", checks, failed_checks: failedChecks, totals: { debit, credit, difference: debit - credit }, boundaries: { fixture_is_not_an_erp_document: true, erp_write_executed: false, wallet_or_chain_action: false } };
 }
 
+export function buildOpeningBalanceLineClassificationView(fixture = null) {
+  const lines = Array.isArray(fixture?.lines) ? fixture.lines : [];
+  const invalidLines = lines.map((line, index) => {
+    const debit = Number(line?.debit ?? 0); const credit = Number(line?.credit ?? 0);
+    const valid = typeof line?.account_code === "string" && line.account_code.trim() !== "" && Number.isFinite(debit) && Number.isFinite(credit) && debit >= 0 && credit >= 0 && ((debit > 0) !== (credit > 0));
+    return valid ? null : { index, reason: "account_code_and_exactly_one_positive_side_required" };
+  }).filter(Boolean);
+  return { mode: "read-only_opening_balance_line_classification", contract_id: "ARC-AAL-C1-OPENING-BALANCE-LINE-V1", status: lines.length > 0 && invalidLines.length === 0 ? "line_classification_valid_for_separate_owner_review" : "line_classification_rejected_fail_closed", line_count: lines.length, invalid_lines: invalidLines, boundaries: { fixture_is_not_an_erp_document: true, erp_write_executed: false } };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1618,6 +1628,9 @@ export function createReceiptServer(options = {}) {
       if (url.pathname === "/api/v1/opening-balance-fixture-contract") {
         json(response, 200, buildOpeningBalanceFixtureContractView(await loadArcLabErp()), request.method);
         return;
+      }
+      if (url.pathname === "/api/v1/opening-balance-line-classification") {
+        json(response, 200, buildOpeningBalanceLineClassificationView(), request.method); return;
       }
 
       if (url.pathname === "/api/v1/manufacturing-evidence") {

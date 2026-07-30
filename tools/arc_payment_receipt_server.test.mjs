@@ -9,6 +9,7 @@ import {
   buildEvidenceFreshnessView,
   buildOpeningBalanceReadinessView,
   buildOpeningBalanceFixtureContractView,
+  buildOpeningBalanceLineClassificationView,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
@@ -511,6 +512,13 @@ test("rejects an absent opening-balance fixture and verifies an approved zero-di
   assert.equal(valid.status, "fixture_valid_for_separate_owner_review");
   assert.equal(valid.totals.difference, 0);
   assert.equal(valid.boundaries.erp_write_executed, false);
+});
+
+test("rejects incomplete C1 lines and accepts exactly one posting side per classified line", () => {
+  assert.equal(buildOpeningBalanceLineClassificationView().status, "line_classification_rejected_fail_closed");
+  const valid = buildOpeningBalanceLineClassificationView({ lines: [{ account_code: "1001", debit: 10, credit: 0 }, { account_code: "3001", debit: 0, credit: 10 }] });
+  assert.equal(valid.status, "line_classification_valid_for_separate_owner_review");
+  assert.equal(valid.invalid_lines.length, 0);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
