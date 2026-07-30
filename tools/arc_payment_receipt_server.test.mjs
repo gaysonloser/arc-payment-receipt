@@ -414,6 +414,26 @@ test("serves the confirmed ERC-8004 identity record as a bounded read-only API",
   assert.equal(post.status, 405);
 });
 
+test("fails closed for a recovery-only external bridge route", async () => {
+  const response = await fetch(`${origin}/api/v1/external-route-intake-boundary`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "external_route_recovery_only_not_accepted_for_new_intake");
+  assert.equal(payload.observed_route.new_deposits_accepted, false);
+  assert.equal(payload.observed_route.existing_deposit_recovery_only, true);
+  assert.equal(payload.product_decision.accept_as_arc_chain_fact, false);
+  assert.equal(payload.product_decision.accept_as_circle_or_erp_authority, false);
+  assert.equal(payload.boundaries.wallet_connection_or_signature_performed, false);
+  assert.equal(payload.boundaries.recovery_claim_requires_separate_exact_owner_review, true);
+
+  const head = await fetch(`${origin}/api/v1/external-route-intake-boundary`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/external-route-intake-boundary`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   const page = await fetch(`${origin}/arc-lab`);
   assert.equal(page.status, 200);
