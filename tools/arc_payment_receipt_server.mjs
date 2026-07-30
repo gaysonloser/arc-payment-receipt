@@ -531,6 +531,23 @@ export function buildOpeningBalanceReadinessView(erpInteraction) {
   return { mode: "read-only_opening_balance_readiness_gate", gate_id: "ARC-AAL-C1-OPENING-BALANCE-V1", status: failedChecks.length ? "c1_preconditions_incomplete" : "ready_for_separate_owner_approval", checks, failed_checks: failedChecks, required_owner_inputs: ["approved opening-balance fixture", "zero-difference trial-balance review"], boundaries: { creates_erp_document: false, writes_opening_balance: false, authorizes_wallet_or_chain_action: false } };
 }
 
+export function buildOpeningBalanceFixtureContractView(erpInteraction, fixture = null) {
+  const c0 = erpInteraction?.c0 ?? {};
+  const lines = Array.isArray(fixture?.lines) ? fixture.lines : [];
+  const debit = lines.reduce((sum, line) => sum + Number(line?.debit ?? 0), 0);
+  const credit = lines.reduce((sum, line) => sum + Number(line?.credit ?? 0), 0);
+  const checks = {
+    isolated_company_precondition: c0.company_created === true && c0.dedicated_service_identity_created === true,
+    approved_fixture_present: fixture?.approved === true,
+    fixture_has_lines: lines.length > 0,
+    currency_matches_aal_usd: fixture?.currency === "USD",
+    debit_credit_zero_difference: Number.isFinite(debit) && Number.isFinite(credit) && debit === credit,
+    no_write_requested: fixture?.write_requested === false
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return { mode: "read-only_opening_balance_fixture_contract", contract_id: "ARC-AAL-C1-OPENING-BALANCE-FIXTURE-V1", status: failedChecks.length ? "fixture_rejected_fail_closed" : "fixture_valid_for_separate_owner_review", checks, failed_checks: failedChecks, totals: { debit, credit, difference: debit - credit }, boundaries: { fixture_is_not_an_erp_document: true, erp_write_executed: false, wallet_or_chain_action: false } };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1595,6 +1612,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/opening-balance-readiness") {
         json(response, 200, buildOpeningBalanceReadinessView(await loadArcLabErp()), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/opening-balance-fixture-contract") {
+        json(response, 200, buildOpeningBalanceFixtureContractView(await loadArcLabErp()), request.method);
         return;
       }
 

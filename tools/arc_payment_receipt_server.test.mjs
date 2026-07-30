@@ -8,6 +8,7 @@ import {
   buildEnterpriseSettlementView,
   buildEvidenceFreshnessView,
   buildOpeningBalanceReadinessView,
+  buildOpeningBalanceFixtureContractView,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
@@ -500,6 +501,16 @@ test("keeps C1 opening-balance preparation read-only until separate owner approv
   assert.equal(payload.boundaries.writes_opening_balance, false);
   assert.equal(payload.required_owner_inputs.length, 2);
   assert.equal(buildOpeningBalanceReadinessView({ c0: { company_created: false } }).status, "c1_preconditions_incomplete");
+});
+
+test("rejects an absent opening-balance fixture and verifies an approved zero-difference fixture", async () => {
+  const response = await fetch(`${origin}/api/v1/opening-balance-fixture-contract`);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).status, "fixture_rejected_fail_closed");
+  const valid = buildOpeningBalanceFixtureContractView({ c0: { company_created: true, dedicated_service_identity_created: true } }, { approved: true, currency: "USD", write_requested: false, lines: [{ debit: 10, credit: 0 }, { debit: 0, credit: 10 }] });
+  assert.equal(valid.status, "fixture_valid_for_separate_owner_review");
+  assert.equal(valid.totals.difference, 0);
+  assert.equal(valid.boundaries.erp_write_executed, false);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {
