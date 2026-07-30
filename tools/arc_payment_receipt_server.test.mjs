@@ -7,6 +7,7 @@ import {
   buildEnterpriseEnvelopeView,
   buildEnterpriseSettlementView,
   buildEvidenceFreshnessView,
+  buildOpeningBalanceReadinessView,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
@@ -488,6 +489,17 @@ test("admits only a consistent set of public safety boundaries", async () => {
   });
   assert.equal(drifted.status, "boundary_inconsistency_review_required");
   assert.equal(drifted.failed_checks.includes("identity_never_enables_a_wallet"), true);
+});
+
+test("keeps C1 opening-balance preparation read-only until separate owner approval", async () => {
+  const response = await fetch(`${origin}/api/v1/opening-balance-readiness`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.mode, "read-only_opening_balance_readiness_gate");
+  assert.equal(payload.status, "ready_for_separate_owner_approval");
+  assert.equal(payload.boundaries.writes_opening_balance, false);
+  assert.equal(payload.required_owner_inputs.length, 2);
+  assert.equal(buildOpeningBalanceReadinessView({ c0: { company_created: false } }).status, "c1_preconditions_incomplete");
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {

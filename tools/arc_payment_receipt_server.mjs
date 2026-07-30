@@ -518,6 +518,19 @@ export function buildPublicBoundaryConsistencyView({ agentIdentity, externalRout
   };
 }
 
+export function buildOpeningBalanceReadinessView(erpInteraction) {
+  const c0 = erpInteraction?.c0 ?? {};
+  const checks = {
+    isolated_company_exists: c0.company_created === true,
+    draft_only_identity_exists: c0.dedicated_service_identity_created === true && c0.draft_only_role_assigned === true,
+    api_credential_absent: c0.api_credentials_generated === false,
+    no_opening_balance_written: c0.opening_balance_written === false,
+    no_business_document_written: c0.business_documents_created === 0
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  return { mode: "read-only_opening_balance_readiness_gate", gate_id: "ARC-AAL-C1-OPENING-BALANCE-V1", status: failedChecks.length ? "c1_preconditions_incomplete" : "ready_for_separate_owner_approval", checks, failed_checks: failedChecks, required_owner_inputs: ["approved opening-balance fixture", "zero-difference trial-balance review"], boundaries: { creates_erp_document: false, writes_opening_balance: false, authorizes_wallet_or_chain_action: false } };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1577,6 +1590,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/erp-interaction") {
         json(response, 200, await loadArcLabErp(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/opening-balance-readiness") {
+        json(response, 200, buildOpeningBalanceReadinessView(await loadArcLabErp()), request.method);
         return;
       }
 
