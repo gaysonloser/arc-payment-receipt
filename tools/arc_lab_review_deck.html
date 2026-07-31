@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arc Lab Review Deck</title>
+  <style>
+    :root { --ink:#eef3ff; --muted:#b8c4dc; --blue:#65a6ff; --teal:#5ce1d5; --line:rgba(211,225,255,.24); --surface:#101b37; --bg:#060b19; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:radial-gradient(circle at 15% 5%,#19376b 0,transparent 34%),radial-gradient(circle at 85% 35%,#114b50 0,transparent 30%),var(--bg); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    header { max-width:1120px; margin:0 auto; padding:32px 24px 14px; display:flex; justify-content:space-between; align-items:center; gap:20px; }
+    header a { color:var(--teal); text-decoration:none; font-weight:700; }
+    .label { color:var(--teal); font-size:12px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+    main { max-width:1120px; margin:0 auto; padding:0 24px 56px; display:grid; gap:18px; }
+    .slide { min-height:520px; padding:clamp(30px,6vw,72px); border:1px solid var(--line); border-radius:24px; background:linear-gradient(140deg,rgba(21,39,80,.96),rgba(9,17,37,.94)); box-shadow:0 24px 90px rgba(0,0,0,.24); display:flex; flex-direction:column; justify-content:center; }
+    .slide h1 { max-width:850px; margin:14px 0; font-size:clamp(42px,7vw,82px); line-height:.98; letter-spacing:-.055em; }
+    .slide h2 { margin:12px 0 24px; font-size:clamp(30px,4vw,50px); letter-spacing:-.035em; }
+    p { max-width:760px; color:var(--muted); line-height:1.6; font-size:clamp(17px,2vw,21px); }
+    .accent { color:var(--teal); }
+    .metric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:24px; }
+    .metric { border-top:1px solid var(--line); padding-top:16px; color:var(--muted); }
+    .metric strong { display:block; margin-bottom:7px; color:var(--ink); font-size:22px; }
+    .flow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:26px; }
+    .flow div { min-height:145px; padding:18px; border:1px solid var(--line); border-radius:14px; background:rgba(4,10,25,.32); }
+    .flow strong { display:block; color:var(--teal); margin-bottom:8px; }
+    .links { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+    .links a { padding:11px 14px; border:1px solid rgba(92,225,213,.45); border-radius:999px; color:var(--ink); text-decoration:none; font-weight:700; }
+    .links a:hover { background:rgba(92,225,213,.15); }
+    .boundary { margin-top:22px; padding:14px 16px; border-left:3px solid #f2bd68; background:rgba(156,101,18,.14); color:#ffe1ae; line-height:1.5; }
+    footer { color:#91a1c1; text-align:center; padding:5px 24px 28px; font-size:13px; }
+    @media (max-width:720px) { .metric-grid,.flow { grid-template-columns:1fr; } .slide { min-height:440px; border-radius:18px; } header { padding-top:22px; } }
+  </style>
+</head>
+<body>
+  <header><span class="label">Arc Testnet · reviewer candidate</span><a href="/arc-lab">Open the live Arc Lab shell →</a></header>
+  <main>
+    <section class="slide">
+      <span class="label">01 — The project</span>
+      <h1>Arc Lab Review Deck</h1>
+      <p>AOXPET Arc Lab makes a Testnet settlement component legible inside a <span class="accent">read-only enterprise control shell</span>: payment evidence, manufacturing controls, ERP-authoritative inventory facts and explicit human gates.</p>
+      <div class="boundary">Candidate review artifact only. This page is not a recorded video and does not claim that a final hackathon submission is complete.</div>
+    </section>
+    <section class="slide">
+      <span class="label">02 — The problem</span>
+      <h2>A payment event is not yet an enterprise control.</h2>
+      <p>Stablecoin settlement must preserve the immutable chain fact while keeping order references, accounting authority, manufacturing evidence and human review distinct. ArcPaymentReceipt is the D09 payment component—not the umbrella for the enterprise portfolio.</p>
+      <div class="metric-grid"><div class="metric"><strong>Arc Testnet</strong>Immutable settlement and event facts</div><div class="metric"><strong>Render</strong>Public, credential-free read-only proof</div><div class="metric"><strong>ERPNext</strong>Authority for ledger, SLE, valuation and close</div></div>
+    </section>
+    <section class="slide">
+      <span class="label">03 — What is live</span>
+      <h2>Evidence that a reviewer can inspect now.</h2>
+      <div class="flow"><div><strong>Payment receipt</strong>Verified Solidity contract, opaque receipt storage and structured settlement event.</div><div><strong>Cross-system view</strong>Manufacturing reconciliation, finality order and source-assurance exceptions are public but read-only.</div><div><strong>Review handoff</strong>GitHub and Render release evidence are visible alongside the remaining final-material gaps.</div></div>
+    </section>
+    <section class="slide">
+      <span class="label">04 — The control path</span>
+      <h2>Fact → evidence → human decision.</h2>
+      <div class="flow"><div><strong>1. Chain fact</strong>Arc Testnet anchors a payment or manufacturing state without silently rewriting history.</div><div><strong>2. Read-only evidence</strong>Render presents source-separated receipts and checks without a signer, credential or write endpoint.</div><div><strong>3. Human gate</strong>Any future ERP, Circle or wallet action stays action-time approved and independently evidenced.</div></div>
+      <div class="boundary">No public wallet connection, ERP write, Circle subscription, webhook receiver or secret is enabled by this product surface.</div>
+    </section>
+    <section class="slide">
+      <span class="label">05 — Reviewer path</span>
+      <h2>Follow the evidence, not a marketing claim.</h2>
+      <p>These live routes keep technical delivery, boundary checks and the proposed walkthrough separate. They point to the same existing public service and never request a transaction.</p>
+      <nav class="links"><a href="/arc-lab">Arc Lab shell</a><a href="/api/v1/reviewer-evidence-pack">Reviewer evidence pack</a><a href="/api/v1/final-submission-readiness">Submission readiness</a><a href="/api/v1/final-demo-plan">Three-minute plan</a></nav>
+    </section>
+    <section class="slide">
+      <span class="label">06 — Honest next material</span>
+      <h2>Live MVP: yes. Final materials: still incomplete.</h2>
+      <p>The final judging packet still needs a recorded three-minute pitch/demo and an owner-reviewed final deck/submission. This candidate deck makes the current system inspectable; it does not erase those requirements or create a new Arc transaction.</p>
+      <div class="boundary">The safe next step is to turn this reviewer narrative into the final recorded materials, then submit only after every platform requirement has a real, matching receipt.</div>
+    </section>
+  </main>
+  <footer>AOXPET Arc Lab · public, read-only reviewer candidate · no wallet or ERP action exposed</footer>
+</body>
+</html>

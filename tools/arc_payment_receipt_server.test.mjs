@@ -623,6 +623,10 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(page.status, 200);
   assert.match(await page.text(), /AOXPET Arc Lab Enterprise OS/);
 
+  const reviewDeck = await fetch(`${origin}/arc-lab/review-deck`);
+  assert.equal(reviewDeck.status, 200);
+  assert.match(await reviewDeck.text(), /Arc Lab Review Deck/);
+
   const alias = await fetch(`${origin}/enterprise-os`);
   assert.equal(alias.status, 200);
 
