@@ -134,6 +134,15 @@ const agentRegistration = {
   }],
   supportedTrust: []
 };
+const agentRegistrationReceipt = {
+  status: "confirmed_current_agent_registration",
+  network: { chain_id: 5042002 },
+  registration: {
+    agent_id: "851940",
+    transaction_hash: "0x8714168d40fc8fb9c6575a02f1a06dd040331671db5d0dea34d661fdd05677bb"
+  },
+  boundaries: { read_only_api: true, chain_transaction_enabled: false }
+};
 const enterpriseReport = {
   generated_at: "2026-07-20T12:02:28.246Z",
   fact: {
@@ -333,6 +342,7 @@ before(async () => {
     loadW4Dual: async () => w4DualSource,
     loadAppKit: async () => appKitBoundary,
     loadAgentRegistration: async () => agentRegistration,
+    loadAgentRegistrationReceipt: async () => agentRegistrationReceipt,
     loadDeliverySurfaces: async () => ({
       schema_version: "1.0",
       product: "CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab",
@@ -436,6 +446,25 @@ test("serves the confirmed ERC-8004 identity record as a bounded read-only API",
   assert.equal(await head.text(), "");
 
   const post = await fetch(`${origin}/api/v1/agent-identity`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
+test("serves the current ERC-8004 setAgentURI receipt without a wallet or chain write", async () => {
+  const response = await fetch(`${origin}/api/v1/agent-registration-receipt`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.status, "confirmed_current_agent_registration");
+  assert.equal(payload.network.chain_id, 5042002);
+  assert.equal(payload.registration.agent_id, "851940");
+  assert.equal(payload.registration.transaction_hash, "0x8714168d40fc8fb9c6575a02f1a06dd040331671db5d0dea34d661fdd05677bb");
+  assert.equal(payload.boundaries.read_only_api, true);
+  assert.equal(payload.boundaries.chain_transaction_enabled, false);
+
+  const head = await fetch(`${origin}/api/v1/agent-registration-receipt`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/api/v1/agent-registration-receipt`, { method: "POST" });
   assert.equal(post.status, 405);
 });
 
