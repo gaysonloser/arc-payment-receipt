@@ -1668,6 +1668,10 @@ export function createReceiptServer(options = {}) {
     try {
       const url = new URL(request.url, "http://localhost");
       if (url.pathname === "/.well-known/agent-registration.json") {
+        if (!["GET", "HEAD"].includes(request.method)) {
+          json(response, 405, { error: "method_not_allowed" }, request.method);
+          return;
+        }
         json(response, 200, await loadAgentRegistration(), request.method);
         return;
       }
