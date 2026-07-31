@@ -11,6 +11,7 @@ import {
   buildOpeningBalanceFixtureContractView,
   buildOpeningBalanceLineClassificationView,
   buildOpeningBalanceReviewPacket,
+  buildOpeningBalanceFixtureValidationView,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
@@ -530,6 +531,30 @@ test("assembles a fail-closed C1 review packet with a deterministic content dige
   const ready = buildOpeningBalanceReviewPacket({ c0: { company_created: true, dedicated_service_identity_created: true, draft_only_role_assigned: true, api_credentials_generated: false, opening_balance_written: false, business_documents_created: 0 } }, { approved: true, currency: "USD", write_requested: false, lines: [{ account_code: "1001", debit: 10, credit: 0 }, { account_code: "3001", debit: 0, credit: 10 }] });
   assert.equal(ready.status, "ready_for_separate_owner_review");
   assert.equal(ready.boundaries.erp_write_executed, false);
+});
+
+test("validates an ephemeral C1 fixture without persisting it or authorizing a write", async () => {
+  const fixture = {
+    approved: true,
+    currency: "USD",
+    write_requested: false,
+    lines: [
+      { account_code: "1001", debit: 10, credit: 0 },
+      { account_code: "3001", debit: 0, credit: 10 }
+    ]
+  };
+  const response = await fetch(`${origin}/api/v1/opening-balance-fixture-validate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ fixture })
+  });
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(payload.mode, "read-only_opening_balance_fixture_validation");
+  assert.equal(payload.accepted_for_separate_owner_review, true);
+  assert.equal(payload.boundaries.fixture_persisted, false);
+  assert.equal(payload.boundaries.erp_write_executed, false);
+  assert.equal(buildOpeningBalanceFixtureValidationView({ c0: { company_created: true, dedicated_service_identity_created: true } }).accepted_for_separate_owner_review, false);
 });
 
 test("serves the Arc Lab E1 shell and sanitized topology", async () => {

@@ -567,6 +567,24 @@ export function buildOpeningBalanceReviewPacket(erpInteraction, fixture = null) 
   return { mode: "read-only_opening_balance_review_packet", packet_id: "ARC-AAL-C1-OPENING-BALANCE-REVIEW-PACKET-V1", status: reviewReady ? "ready_for_separate_owner_review" : "blocked_fail_closed", review_ready: reviewReady, packet_sha256: createHash("sha256").update(JSON.stringify(payload)).digest("hex"), ...payload, boundaries: { erp_write_executed: false, wallet_or_chain_action: false } };
 }
 
+export function buildOpeningBalanceFixtureValidationView(erpInteraction, fixture = null) {
+  const packet = buildOpeningBalanceReviewPacket(erpInteraction, fixture);
+  return {
+    mode: "read-only_opening_balance_fixture_validation",
+    validator_id: "ARC-AAL-C1-FIXTURE-VALIDATOR-V1",
+    status: packet.status,
+    accepted_for_separate_owner_review: packet.review_ready,
+    packet,
+    boundaries: {
+      input_is_ephemeral: true,
+      fixture_persisted: false,
+      erp_write_executed: false,
+      wallet_or_chain_action: false,
+      owner_approval_bypassed: false
+    }
+  };
+}
+
 const FRESH_AFTER_MS = 6 * 60 * 60 * 1000;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const FUTURE_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -1495,6 +1513,16 @@ export function createReceiptServer(options = {}) {
         const { rawBody, payload } = await readJsonBody(request);
         const result = await circleWebhookProcessor({ rawBody, payload, headers: request.headers });
         json(response, result.status, result, request.method);
+        return;
+      }
+      if (request.method === "POST" && url.pathname === "/api/v1/opening-balance-fixture-validate") {
+        const { payload } = await readJsonBody(request);
+        const fixture = payload?.fixture ?? payload;
+        if (fixture === null || typeof fixture !== "object" || Array.isArray(fixture)) {
+          json(response, 400, { error: "fixture_object_required", boundaries: { fixture_persisted: false, erp_write_executed: false, wallet_or_chain_action: false } }, request.method);
+          return;
+        }
+        json(response, 200, buildOpeningBalanceFixtureValidationView(await loadArcLabErp(), fixture), request.method);
         return;
       }
       if (!["GET", "HEAD"].includes(request.method)) {
