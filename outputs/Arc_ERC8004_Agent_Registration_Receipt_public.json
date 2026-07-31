@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "evidence_id": "ARC-ERC8004-SETAGENTURI-DOMAIN-RECEIPT-20260731-8714168D",
+  "status": "confirmed_current_agent_registration",
+  "network": {
+    "name": "Arc Testnet",
+    "chain_id": 5042002,
+    "chain_id_hex": "0x4cef52",
+    "rpc_authority": "https://rpc.testnet.arc.network"
+  },
+  "registration": {
+    "action": "setAgentURI(uint256,string)",
+    "agent_id": "851940",
+    "registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "owner": "0x75F2c230F2bd6874306EA586f198a7D2f6CC7Cc6",
+    "agent_uri": "https://arc-payment-receipt.onrender.com/.well-known/agent-registration.json",
+    "transaction_hash": "0x8714168d40fc8fb9c6575a02f1a06dd040331671db5d0dea34d661fdd05677bb",
+    "receipt_status": "success",
+    "value_wei": "0",
+    "gas_used": "70006",
+    "effective_gas_price_wei": "25000000000"
+  },
+  "domain_document": {
+    "url": "https://arc-payment-receipt.onrender.com/.well-known/agent-registration.json",
+    "record_type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+    "matches_current_agent_uri": true
+  },
+  "verification": {
+    "method": "official Arc Testnet RPC transaction, receipt, setAgentURI calldata and ownerOf readback",
+    "observed_at": "2026-07-31",
+    "current_status_scope": "This is the current setAgentURI fact. The older agent-identity snapshot is historical and does not supersede this receipt."
+  },
+  "boundaries": {
+    "read_only_api": true,
+    "wallet_connection": false,
+    "signer_or_key_present": false,
+    "chain_transaction_enabled": false,
+    "uri_mutation_enabled": false,
+    "identity_is_not_authorization": true,
+    "identity_is_not_human_or_business_attestation": true
+  }
+}

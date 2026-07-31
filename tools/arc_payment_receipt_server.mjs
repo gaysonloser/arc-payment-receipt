@@ -36,10 +36,12 @@ export const DEFAULT_PUBLIC_TRACE_TRAIL_PATH = resolve(HERE, "../outputs/Arc_Pub
 export const DEFAULT_DELIVERY_SURFACES_PATH = resolve(HERE, "../config/public_delivery_surfaces_v1.json");
 export const DEFAULT_AGENT_IDENTITY_PATH = resolve(HERE, "../outputs/Arc_ERC8004_Agent_Identity_public.json");
 export const DEFAULT_AGENT_REGISTRATION_PATH = resolve(HERE, "../agent-registration.json");
+export const DEFAULT_AGENT_REGISTRATION_RECEIPT_PATH = resolve(HERE, "../outputs/Arc_ERC8004_Agent_Registration_Receipt_public.json");
 export const DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH = resolve(HERE, "../outputs/Arc_External_Route_Intake_Boundary_public.json");
 export const DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Evidence_Anchor_20260731.json");
 export const DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Delivery_Attestation_20260731.json");
 export const DEFAULT_ARC_LAB_RELEASE_DELIVERY_ATTESTATION_PATH = resolve(HERE, "arc_lab_release_delivery_attestation.html");
+export const DEFAULT_ARC_LAB_AGENT_REGISTRATION_RECEIPT_PATH = resolve(HERE, "arc_lab_agent_registration_receipt.html");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
@@ -1640,6 +1642,7 @@ export function createReceiptServer(options = {}) {
   const loadArcLabControlTimeline = options.loadArcLabControlTimeline ?? (() => readFile(options.arcLabControlTimelinePath ?? DEFAULT_ARC_LAB_CONTROL_TIMELINE_PATH, "utf8"));
   const loadArcLabReleaseEvidenceAnchor = options.loadArcLabReleaseEvidenceAnchor ?? (() => readFile(options.arcLabReleaseEvidenceAnchorPath ?? DEFAULT_ARC_LAB_RELEASE_EVIDENCE_ANCHOR_PATH, "utf8"));
   const loadArcLabReleaseDeliveryAttestation = options.loadArcLabReleaseDeliveryAttestation ?? (() => readFile(options.arcLabReleaseDeliveryAttestationPath ?? DEFAULT_ARC_LAB_RELEASE_DELIVERY_ATTESTATION_PATH, "utf8"));
+  const loadArcLabAgentRegistrationReceipt = options.loadArcLabAgentRegistrationReceipt ?? (() => readFile(options.arcLabAgentRegistrationReceiptPath ?? DEFAULT_ARC_LAB_AGENT_REGISTRATION_RECEIPT_PATH, "utf8"));
   const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
   const loadArcLabErp = options.loadArcLabErp ?? (() => loadArcLabErpInteraction(options.arcLabErpInteractionPath));
   const loadManufacturing = options.loadManufacturing ?? (() => loadManufacturingEvidence(options.manufacturingEvidencePath));
@@ -1651,6 +1654,7 @@ export function createReceiptServer(options = {}) {
   const loadDeliverySurfaces = options.loadDeliverySurfaces ?? (() => loadJson(options.deliverySurfacesPath ?? DEFAULT_DELIVERY_SURFACES_PATH));
   const loadAgentIdentity = options.loadAgentIdentity ?? (() => loadJson(options.agentIdentityPath ?? DEFAULT_AGENT_IDENTITY_PATH));
   const loadAgentRegistration = options.loadAgentRegistration ?? (() => loadJson(options.agentRegistrationPath ?? DEFAULT_AGENT_REGISTRATION_PATH));
+  const loadAgentRegistrationReceipt = options.loadAgentRegistrationReceipt ?? (() => loadJson(options.agentRegistrationReceiptPath ?? DEFAULT_AGENT_REGISTRATION_RECEIPT_PATH));
   const loadExternalRouteIntake = options.loadExternalRouteIntake ?? (() => loadJson(options.externalRouteIntakePath ?? DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH));
   const loadReleaseEvidenceAnchorPacket = options.loadReleaseEvidenceAnchorPacket ?? (() => loadJson(options.releaseEvidenceAnchorPacketPath ?? DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH));
   const loadReleaseDeliveryAttestation = options.loadReleaseDeliveryAttestation ?? (() => loadJson(options.releaseDeliveryAttestationPath ?? DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH));
@@ -1743,6 +1747,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/arc-lab/release-delivery-attestation") {
         text(response, 200, await loadArcLabReleaseDeliveryAttestation(), "text/html; charset=utf-8", request.method);
+        return;
+      }
+
+      if (url.pathname === "/arc-lab/agent-registration-receipt") {
+        text(response, 200, await loadArcLabAgentRegistrationReceipt(), "text/html; charset=utf-8", request.method);
         return;
       }
 
@@ -1966,6 +1975,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/agent-identity") {
         json(response, 200, await loadAgentIdentity(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/agent-registration-receipt") {
+        json(response, 200, await loadAgentRegistrationReceipt(), request.method);
         return;
       }
 

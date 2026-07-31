@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Current Agent Registration Receipt</title>
+  <style>
+    body{max-width:880px;margin:48px auto;padding:0 20px;background:#07111f;color:#e5eef8;font:16px/1.55 system-ui,sans-serif}h1{margin-bottom:0}small{color:#91a4ba}dl{display:grid;grid-template-columns:210px 1fr;gap:10px 18px;padding:20px;background:#101f33;border-radius:12px}dt{color:#9fb4cc}dd{margin:0;overflow-wrap:anywhere}code{color:#c5f2dc}.ok{color:#69d391}.boundary{border-left:4px solid #ffca6a;padding-left:14px}
+  </style>
+</head>
+<body>
+  <h1>Current Agent Registration Receipt</h1>
+  <p>Read-only verification of the current ERC-8004 <code>setAgentURI</code> fact on Arc Testnet.</p>
+  <small id="state">Loading bounded registration receipt…</small>
+  <dl id="facts"></dl>
+  <p class="boundary">This view cannot connect a wallet, sign, change an agent URI, submit to Encode, create a Circle resource, or write to ERP.</p>
+  <script>
+    const facts=document.querySelector('#facts'),state=document.querySelector('#state');
+    fetch('/api/v1/agent-registration-receipt').then(r=>r.json()).then(p=>{
+      const r=p.registration||{},n=p.network||{},d=p.domain_document||{};
+      const rows=[['Verification status',p.status],['Network',`${n.name} (${n.chain_id})`],['Action',r.action],['Agent ID',r.agent_id],['Registry',r.registry],['Owner',r.owner],['Transaction',r.transaction_hash],['Receipt status',r.receipt_status],['Current agent URI',r.agent_uri],['Domain document',d.url],['Domain URI match',String(d.matches_current_agent_uri)]];
+      facts.innerHTML=rows.map(([k,v])=>`<dt>${k}</dt><dd><code class="${v==='success'||v==='true'?'ok':''}">${String(v??'not recorded')}</code></dd>`).join('');
+      state.textContent='Bounded current registration receipt loaded.';
+    }).catch(e=>state.textContent=`Unavailable: ${e.message}`);
+  </script>
+</body>
+</html>

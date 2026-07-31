@@ -30,6 +30,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /arc-lab/control-timeline`
 - `GET /arc-lab/release-evidence-anchor`
 - `GET /arc-lab/release-delivery-attestation`
+- `GET /arc-lab/agent-registration-receipt`
 - `GET /healthz`
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
@@ -50,6 +51,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/public-trace-trail`
 - `GET /api/v1/delivery-surfaces`
 - `GET /api/v1/agent-identity`
+- `GET /api/v1/agent-registration-receipt`
 - `GET /api/v1/external-route-intake-boundary`
 - `GET /api/v1/release-evidence-anchor`
 - `GET /api/v1/release-delivery-attestation`
@@ -117,6 +119,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A W4-specific Circle Event Monitor / Arc RPC alignment artifact with seven checks passed and no unmatched event; this does not claim a new full-history RPC rescan.
 - A source-separated public delivery trail that distinguishes Arc evidence controls, ERP readback, Circle/RPC overlap, Git source and Render runtime. It excludes local checks, unsigned actions, duplicated facts and activity-only records.
 - A bounded ERC-8004 identity record that exposes the confirmed Arc Testnet registration, its public agent URI and explicit non-authorization controls. It is a read-only fact surface, not a wallet, signer, permission or business attestation.
+- A current ERC-8004 registration-receipt view that exposes the successful `setAgentURI` chain fact, the configured agent owner and the domain registration file it points to. It is read-only and cannot change the URI, sign, submit or authorize anything.
 - A fail-closed external-route intake boundary that keeps a recovery-only third-party Base-to-Arc page outside payment, chain, Circle and ERP evidence unless an independently proven prior deposit reaches a separate owner review.
 - A bounded public-disclosure auditor that hashes the selected reviewer-facing JSON documents and fails closed on potential secret, credential, bearer-token or local-path leakage without returning a detected value.
 - A public-boundary consistency gate that cross-checks identity, external-route, delivery and trace controls before admitting a reviewer to the read-only surface.
