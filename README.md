@@ -25,6 +25,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /arc-lab/review-deck`
 - `GET /arc-lab/evidence-explorer`
 - `GET /arc-lab/provenance-ledger`
+- `GET /arc-lab/reviewer-checklist`
 - `GET /healthz`
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
