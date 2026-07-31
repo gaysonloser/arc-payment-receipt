@@ -71,6 +71,8 @@
     .fine { margin-top: 18px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
     .evidence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 14px; margin-top: 14px; }
     .evidence-value { margin-top: 8px; font-size: 18px; font-weight: 750; color: var(--ink); overflow-wrap: anywhere; }
+    .handoff-link { display: inline-block; margin-top: 10px; color: var(--blue); font-weight: 700; text-decoration: none; }
+    .handoff-link:hover { text-decoration: underline; }
     @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -86,6 +88,11 @@
     <section class="status-row" id="status-row"></section>
   </header>
   <main>
+    <section class="panel">
+      <h2>Reviewer Submission Handoff</h2>
+      <p>Reviewer-facing release evidence and the proposed three-minute walkthrough are available here. This panel keeps missing final materials visible rather than treating a live MVP as a completed submission.</p>
+      <div class="evidence-grid" id="submission-handoff"></div>
+    </section>
     <section class="grid">
       <article class="panel">
         <h2>Four-Lane Delivery Gate</h2>
@@ -111,7 +118,7 @@
   </main>
   <script>
     async function main() {
-      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, replayGuardResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse] = await Promise.all([
+      const [portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, replayGuardResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse, finalReadinessResponse, finalDemoPlanResponse] = await Promise.all([
         fetch("/api/arc-lab-portfolio", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-evidence", { headers: { accept: "application/json" } }),
         fetch("/api/v1/manufacturing-progress", { headers: { accept: "application/json" } }),
@@ -125,13 +132,15 @@
         fetch("/api/v1/wallet-capability", { headers: { accept: "application/json" } }),
         fetch("/api/v1/w4-dual-source", { headers: { accept: "application/json" } }),
         fetch("/api/v1/app-kit-boundary", { headers: { accept: "application/json" } }),
-        fetch("/api/v1/public-trace-trail", { headers: { accept: "application/json" } })
+        fetch("/api/v1/public-trace-trail", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/final-submission-readiness", { headers: { accept: "application/json" } }),
+        fetch("/api/v1/final-demo-plan", { headers: { accept: "application/json" } })
       ]);
-      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, replayGuardResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse].every((response) => response.ok)) {
+      if (![portfolioResponse, manufacturingResponse, manufacturingProgressResponse, qualityReleaseResponse, reconciliationResponse, closeImpactResponse, finalityTimelineResponse, replayGuardResponse, exceptionQueueResponse, productionBoundaryResponse, walletResponse, w4DualResponse, appKitResponse, traceTrailResponse, finalReadinessResponse, finalDemoPlanResponse].every((response) => response.ok)) {
         throw new Error("Evidence API unavailable");
       }
-      const [data, manufacturing, manufacturingProgress, qualityRelease, reconciliation, closeImpact, finalityTimeline, replayGuard, exceptionQueue, productionBoundary, wallet, w4Dual, appKit, traceTrail] = await Promise.all([
-        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), reconciliationResponse.json(), closeImpactResponse.json(), finalityTimelineResponse.json(), replayGuardResponse.json(), exceptionQueueResponse.json(), productionBoundaryResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json()
+      const [data, manufacturing, manufacturingProgress, qualityRelease, reconciliation, closeImpact, finalityTimeline, replayGuard, exceptionQueue, productionBoundary, wallet, w4Dual, appKit, traceTrail, finalReadiness, finalDemoPlan] = await Promise.all([
+        portfolioResponse.json(), manufacturingResponse.json(), manufacturingProgressResponse.json(), qualityReleaseResponse.json(), reconciliationResponse.json(), closeImpactResponse.json(), finalityTimelineResponse.json(), replayGuardResponse.json(), exceptionQueueResponse.json(), productionBoundaryResponse.json(), walletResponse.json(), w4DualResponse.json(), appKitResponse.json(), traceTrailResponse.json(), finalReadinessResponse.json(), finalDemoPlanResponse.json()
       ]);
       const product = data.product || {};
       const coverage = data.coverage_summary || {};
@@ -175,6 +184,23 @@
       `).join("");
       document.querySelector("#controls").textContent =
         `Public runtime only: ERP credential absent ${!controls.erp_credential_present}; ERP write disabled ${!controls.erp_write_enabled}; wallet/chain executor absent ${!controls.wallet_connection_enabled && !controls.chain_transaction_enabled}.`;
+
+      const missingRequirements = (finalReadiness.remaining_requirements || []).map((item) => item.replaceAll("_", " "));
+      const walkthroughDuration = Number(finalDemoPlan.duration_seconds) || 0;
+      document.querySelector("#submission-handoff").innerHTML = `
+        <article class="domain">
+          <strong>Final submission readiness</strong>
+          <div class="evidence-value">${finalReadiness.status.replaceAll("_", " ")}</div>
+          <p class="fine">Live MVP and matched GitHub/Render evidence are shown separately from outstanding material: ${missingRequirements.length ? missingRequirements.join(", ") : "none"}.</p>
+          <a class="handoff-link" href="/api/v1/final-submission-readiness">Open readiness evidence</a>
+        </article>
+        <article class="domain">
+          <strong>Three-minute walkthrough</strong>
+          <div class="evidence-value">${Math.floor(walkthroughDuration / 60)}:${String(walkthroughDuration % 60).padStart(2, "0")}</div>
+          <p class="fine">${finalDemoPlan.steps.length} read-only evidence stops. This is a navigation plan, not a recorded video and not a final submission claim.</p>
+          <a class="handoff-link" href="/api/v1/final-demo-plan">Open walkthrough plan</a>
+        </article>
+      `;
 
       const receipt = wallet.actions.find((action) => action.type === "payment_receipt_canary");
       const release = manufacturingProgress.chain || {};
