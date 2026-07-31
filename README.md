@@ -46,6 +46,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/public-disclosure-audit`
 - `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/reviewer-evidence-pack`
+- `GET /api/v1/final-submission-readiness`
 - `GET /api/v1/circle-webhook-readiness`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.

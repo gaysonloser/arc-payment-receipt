@@ -12,6 +12,7 @@ import {
   buildOpeningBalanceLineClassificationView,
   buildOpeningBalanceReviewPacket,
   buildOpeningBalanceFixtureValidationView,
+  buildFinalSubmissionReadinessView,
   buildReviewerEvidencePack,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
@@ -518,6 +519,23 @@ test("assembles a content-addressed reviewer evidence pack without enabling a wr
   });
   assert.match(repeated.content_sha256, /^[0-9a-f]{64}$/);
   assert.equal(repeated.boundaries.creates_circle_subscription, false);
+});
+
+test("keeps final-submission readiness explicit about incomplete materials", async () => {
+  const response = await fetch(`${origin}/api/v1/final-submission-readiness`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.mode, "read-only_final_submission_readiness");
+  assert.equal(payload.status, "final_submission_materials_incomplete");
+  assert.equal(payload.checks.public_read_only_mvp_available, true);
+  assert.equal(payload.checks.final_demo_video_available, false);
+  assert.equal(payload.remaining_requirements.includes("final_pitch_deck_available"), true);
+  assert.equal(payload.boundaries.is_not_a_hackathon_submission, true);
+  assert.equal(payload.boundaries.wallet_or_chain_action, false);
+
+  const unavailable = buildFinalSubmissionReadinessView({ status: "reviewer_pack_review_required", evidence: { delivery: {} } });
+  assert.equal(unavailable.checks.public_read_only_mvp_available, false);
+  assert.equal(unavailable.remaining_requirements.includes("public_read_only_mvp_available"), true);
 });
 
 test("keeps C1 opening-balance preparation read-only until separate owner approval", async () => {

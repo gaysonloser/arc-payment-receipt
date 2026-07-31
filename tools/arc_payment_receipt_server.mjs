@@ -590,6 +590,43 @@ export function buildReviewerEvidencePack({ qualityHold, manufacturingProgress, 
   };
 }
 
+/**
+ * Makes the current hackathon handoff legible without claiming that missing
+ * materials, a new chain action, or a submission itself have been completed.
+ */
+export function buildFinalSubmissionReadinessView(reviewerEvidencePack) {
+  const checks = {
+    public_read_only_mvp_available: reviewerEvidencePack?.status === "reviewer_pack_ready",
+    github_and_render_release_evidence_available: reviewerEvidencePack?.evidence?.delivery?.github_render_same_release_required === true,
+    final_demo_video_available: false,
+    final_pitch_deck_available: false
+  };
+  const remainingRequirements = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+  return {
+    mode: "read-only_final_submission_readiness",
+    checklist_id: "ARC-ENCODE-FINAL-SUBMISSION-READINESS-V1",
+    status: remainingRequirements.length === 0 ? "final_submission_materials_ready" : "final_submission_materials_incomplete",
+    checks,
+    remaining_requirements: remainingRequirements,
+    current_evidence: {
+      reviewer_pack_status: reviewerEvidencePack?.status ?? "unavailable",
+      github: reviewerEvidencePack?.evidence?.delivery?.github ?? null,
+      render: reviewerEvidencePack?.evidence?.delivery?.render ?? null,
+      reviewer_pack_content_sha256: reviewerEvidencePack?.content_sha256 ?? null
+    },
+    boundaries: {
+      read_only: true,
+      is_not_a_hackathon_submission: true,
+      does_not_create_or_claim_a_new_arc_transaction: true,
+      does_not_replace_final_judging_requirements: true,
+      wallet_or_chain_action: false,
+      erp_or_circle_action: false
+    }
+  };
+}
+
 export function buildOpeningBalanceReadinessView(erpInteraction) {
   const c0 = erpInteraction?.c0 ?? {};
   const checks = {
@@ -1884,6 +1921,22 @@ export function createReceiptServer(options = {}) {
           loadPublicTrace()
         ]);
         json(response, 200, buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace }), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/final-submission-readiness") {
+        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
+          loadManufacturing(),
+          loadManufacturingProgressReport(),
+          loadWalletRecovery(),
+          loadAppKit(),
+          loadAgentIdentity(),
+          loadExternalRouteIntake(),
+          loadDeliverySurfaces(),
+          loadPublicTrace()
+        ]);
+        const reviewerEvidencePack = buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace });
+        json(response, 200, buildFinalSubmissionReadinessView(reviewerEvidencePack), request.method);
         return;
       }
 
