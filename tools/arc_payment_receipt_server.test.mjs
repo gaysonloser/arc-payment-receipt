@@ -651,6 +651,10 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(releaseAnchor.status, 200);
   assert.match(await releaseAnchor.text(), /Release Evidence Anchor/);
 
+  const releaseAttestation = await fetch(`${origin}/arc-lab/release-delivery-attestation`);
+  assert.equal(releaseAttestation.status, 200);
+  assert.match(await releaseAttestation.text(), /Release Delivery Attestation/);
+
   const alias = await fetch(`${origin}/enterprise-os`);
   assert.equal(alias.status, 200);
 
@@ -716,6 +720,22 @@ test("serves a release evidence packet without claiming incomplete platform rece
   assert.equal(packet.safety_boundary.wallet_executor_in_public_service, false);
 
   const head = await fetch(`${origin}/api/v1/release-evidence-anchor`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+});
+
+test("serves a read-only five-surface release delivery attestation", async () => {
+  const response = await fetch(`${origin}/api/v1/release-delivery-attestation`);
+  assert.equal(response.status, 200);
+  const packet = await response.json();
+  assert.equal(packet.attested_release.publication_unit_id, "ARC-PUBLICATION-RELEASE-EVIDENCE-PACK-20260731-48");
+  assert.deepEqual(packet.required_platforms, ["github", "render", "encode", "circle_console", "arc_testnet"]);
+  assert.equal(packet.verification.bundle_complete, true);
+  assert.equal(packet.boundaries.wallet_or_chain_action, false);
+  assert.equal(packet.boundaries.erp_write, false);
+  assert.equal(packet.boundaries.circle_webhook_or_subscription, false);
+
+  const head = await fetch(`${origin}/api/v1/release-delivery-attestation`, { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
 });

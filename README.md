@@ -29,6 +29,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /arc-lab/release-watch`
 - `GET /arc-lab/control-timeline`
 - `GET /arc-lab/release-evidence-anchor`
+- `GET /arc-lab/release-delivery-attestation`
 - `GET /healthz`
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
@@ -51,6 +52,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/agent-identity`
 - `GET /api/v1/external-route-intake-boundary`
 - `GET /api/v1/release-evidence-anchor`
+- `GET /api/v1/release-delivery-attestation`
 - `GET /api/v1/public-disclosure-audit`
 - `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/reviewer-evidence-pack`

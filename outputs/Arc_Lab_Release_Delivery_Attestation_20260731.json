@@ -1,0 +1,31 @@
+{
+  "schema_version": "arc-lab-release-delivery-attestation-v1",
+  "title": "Release Delivery Attestation",
+  "capability": "A reviewer-readable, read-only verifier for one completed five-surface Arc release bundle. It keeps source, runtime, reviewer, platform and chain receipts distinct while exposing whether the required receipt set is complete.",
+  "attested_release": {
+    "publication_unit_id": "ARC-PUBLICATION-RELEASE-EVIDENCE-PACK-20260731-48",
+    "release_fingerprint_sha256": "96c3b18bfd9335459135fe99b3e4f0d7f5a8e0c4305c7e3776463bc475ce3f48",
+    "release_unit_id_sha256": "8c30fa881e6d63091c01c9e6155a43b7cb3eabc883ba6db556074c58e1d7e744"
+  },
+  "required_platforms": ["github", "render", "encode", "circle_console", "arc_testnet"],
+  "receipts": {
+    "github": "https://github.com/gaysonloser/arc-payment-receipt/commit/0b1d8d4b5abbceae284e9b9162ae41fde69eae82",
+    "render": "https://arc-payment-receipt.onrender.com/api/v1/release-evidence-anchor#96c3b18bfd9335459135fe99b3e4f0d7f5a8e0c4305c7e3776463bc475ce3f48",
+    "encode": "Encode Arc project saved-description readback bound to release fingerprint 0x96c3b18bfd9335459135fe99b3e4f0d7f5a8e0c4305c7e3776463bc475ce3f48",
+    "circle_console": "Circle Console Testnet import Complete: ArcReleaseEvidenceAnchor 0x245124B73C598805D036d1f14A101ca2E3f0fBe0",
+    "arc_testnet": "0x4857487894223d458bacfb79d5d1e258c5e782e57006856a4e1b380952715b4a"
+  },
+  "verification": {
+    "github_render_same_release_fingerprint": true,
+    "all_required_receipts_present": true,
+    "bundle_complete": true,
+    "receipt_sources_are_not_interchangeable": true
+  },
+  "boundaries": {
+    "wallet_or_chain_action": false,
+    "erp_write": false,
+    "circle_webhook_or_subscription": false,
+    "credential_or_secret_exposed": false,
+    "attestation_is_not_a_wallet_or_platform_executor": true
+  }
+}
