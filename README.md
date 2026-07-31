@@ -45,6 +45,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/external-route-intake-boundary`
 - `GET /api/v1/public-disclosure-audit`
 - `GET /api/v1/public-boundary-consistency`
+- `GET /api/v1/reviewer-evidence-pack`
 - `GET /api/v1/circle-webhook-readiness`
 
 E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
@@ -107,6 +108,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A fail-closed external-route intake boundary that keeps a recovery-only third-party Base-to-Arc page outside payment, chain, Circle and ERP evidence unless an independently proven prior deposit reaches a separate owner review.
 - A bounded public-disclosure auditor that hashes the selected reviewer-facing JSON documents and fails closed on potential secret, credential, bearer-token or local-path leakage without returning a detected value.
 - A public-boundary consistency gate that cross-checks identity, external-route, delivery and trace controls before admitting a reviewer to the read-only surface.
+- A content-addressed Reviewer Evidence Pack that gathers the manufacturing reconciliation, delivery links, public-boundary controls and unresolved source-assurance items into one auditable, read-only handoff without exposing a wallet, ERP write path or Circle subscription action.
 
 ## Verified evidence
 

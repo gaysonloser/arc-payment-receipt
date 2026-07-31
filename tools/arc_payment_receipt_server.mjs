@@ -518,6 +518,71 @@ export function buildPublicBoundaryConsistencyView({ agentIdentity, externalRout
   };
 }
 
+/**
+ * Builds a content-addressed, reviewer-facing handoff from existing Arc,
+ * ERP, and delivery-boundary readbacks. It is a navigation surface only and
+ * never turns historical evidence into permission to write to any system.
+ */
+export function buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace }) {
+  const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, manufacturingProgress);
+  const qualityRelease = buildQualityReleaseEvidenceView(manufacturingProgress, { status: "historical_source_separated" });
+  const exceptions = buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, buildCircleWebhookPublicView());
+  const productionBoundary = buildProductionBoundaryView(wallet, appKit, exceptions);
+  const boundaryConsistency = buildPublicBoundaryConsistencyView({ agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace });
+  const disclosure = buildPublicDisclosureAuditView({
+    agent_identity: agentIdentity,
+    external_route_intake: externalRouteIntake,
+    delivery_surfaces: deliverySurfaces,
+    public_trace: publicTrace
+  });
+  const checks = {
+    manufacturing_evidence_reconciled: reconciliation.status === "cross_system_manufacturing_reconciled",
+    public_boundaries_consistent: boundaryConsistency.decision.reviewer_read_only_admission === true,
+    public_documents_clear: disclosure.status === "bounded_public_documents_clear",
+    production_write_paths_disabled: productionBoundary.decision?.production_write_authorized === false
+  };
+  const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
+  const payload = {
+    mode: "read-only_reviewer_evidence_pack",
+    pack_id: "ARC-AAL-REVIEWER-EVIDENCE-PACK-V1",
+    status: failedChecks.length === 0 ? "reviewer_pack_ready" : "reviewer_pack_review_required",
+    checks,
+    failed_checks: failedChecks,
+    evidence: {
+      manufacturing: {
+        status: reconciliation.status,
+        terminal_state: reconciliation.chain.terminal_state,
+        erp_quality_inspection_submitted: reconciliation.erp.quality_inspection_submitted,
+        erp_manufacture_submitted: reconciliation.erp.manufacture_submitted,
+        finished_goods_stock_value: reconciliation.erp.finished_goods_stock_value
+      },
+      delivery: {
+        github: deliverySurfaces?.surfaces?.find((surface) => surface.id === "github")?.url ?? null,
+        render: deliverySurfaces?.surfaces?.find((surface) => surface.id === "render")?.url ?? null,
+        github_render_same_release_required: deliverySurfaces?.cross_surface_rules?.github_render_same_release_fingerprint === true
+      },
+      controls: {
+        reviewer_read_only_admission: boundaryConsistency.decision.reviewer_read_only_admission,
+        disclosure_review_required: disclosure.summary.review_required,
+        unresolved_source_assurance_items: exceptions.summary?.total ?? 0,
+        production_write_authorized: productionBoundary.decision?.production_write_authorized ?? false
+      }
+    },
+    boundaries: {
+      read_only: true,
+      creates_erp_document: false,
+      creates_circle_subscription: false,
+      wallet_or_chain_action: false,
+      content_digest_is_not_a_signature: true,
+      historical_evidence_is_not_current_state_authorization: true
+    }
+  };
+  return {
+    ...payload,
+    content_sha256: createHash("sha256").update(JSON.stringify(canonicalizeJson(payload))).digest("hex")
+  };
+}
+
 export function buildOpeningBalanceReadinessView(erpInteraction) {
   const c0 = erpInteraction?.c0 ?? {};
   const checks = {
@@ -1797,6 +1862,21 @@ export function createReceiptServer(options = {}) {
           deliverySurfaces,
           publicTrace
         }), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/reviewer-evidence-pack") {
+        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
+          loadManufacturing(),
+          loadManufacturingProgressReport(),
+          loadWalletRecovery(),
+          loadAppKit(),
+          loadAgentIdentity(),
+          loadExternalRouteIntake(),
+          loadDeliverySurfaces(),
+          loadPublicTrace()
+        ]);
+        json(response, 200, buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace }), request.method);
         return;
       }
 

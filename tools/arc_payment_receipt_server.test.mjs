@@ -12,6 +12,7 @@ import {
   buildOpeningBalanceLineClassificationView,
   buildOpeningBalanceReviewPacket,
   buildOpeningBalanceFixtureValidationView,
+  buildReviewerEvidencePack,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
   buildQualityReleaseEvidenceView,
@@ -493,6 +494,30 @@ test("admits only a consistent set of public safety boundaries", async () => {
   });
   assert.equal(drifted.status, "boundary_inconsistency_review_required");
   assert.equal(drifted.failed_checks.includes("identity_never_enables_a_wallet"), true);
+});
+
+test("assembles a content-addressed reviewer evidence pack without enabling a write path", async () => {
+  const response = await fetch(`${origin}/api/v1/reviewer-evidence-pack`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.mode, "read-only_reviewer_evidence_pack");
+  assert.match(payload.content_sha256, /^[0-9a-f]{64}$/);
+  assert.equal(payload.boundaries.wallet_or_chain_action, false);
+  assert.equal(payload.boundaries.creates_erp_document, false);
+  assert.equal(payload.evidence.delivery.github_render_same_release_required, true);
+
+  const repeated = buildReviewerEvidencePack({
+    qualityHold: manufacturingEvidence,
+    manufacturingProgress,
+    wallet: walletCapability,
+    appKit: appKitBoundary,
+    agentIdentity: { boundaries: { wallet_connection: false, signer_or_key_present: false, chain_transaction_enabled: false } },
+    externalRouteIntake: { boundaries: { wallet_connection_or_signature_performed: false, new_base_deposit_performed: false, arc_transaction_performed: false }, product_decision: { accept_as_new_funding_route: false, accept_as_arc_chain_fact: false, accept_as_circle_or_erp_authority: false, accept_as_payment_receipt_evidence: false } },
+    deliverySurfaces: { rules: { github_render_same_release: true, one_lifecycle_one_outcome: true }, cross_surface_rules: { github_render_same_release_fingerprint: true }, surfaces: [] },
+    publicTrace: { boundaries: { duplicate_facts_collapsed: true, preflight_or_local_test_counted: false, public_claims_limited_to_verifiable_outcomes: true, wallet_executor_exposed: false, erp_raw_payload_exposed: false } }
+  });
+  assert.match(repeated.content_sha256, /^[0-9a-f]{64}$/);
+  assert.equal(repeated.boundaries.creates_circle_subscription, false);
 });
 
 test("keeps C1 opening-balance preparation read-only until separate owner approval", async () => {
