@@ -524,6 +524,10 @@ export function buildPublicBoundaryConsistencyView({ agentIdentity, externalRout
  * never turns historical evidence into permission to write to any system.
  */
 export function buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace }) {
+  const deliveryList = Array.isArray(deliverySurfaces?.surfaces) ? deliverySurfaces.surfaces : [];
+  const deliveryRoles = deliverySurfaces?.surfaces && !Array.isArray(deliverySurfaces.surfaces) ? deliverySurfaces.surfaces : {};
+  const githubSurface = deliveryList.find((surface) => surface.id === "github");
+  const renderSurface = deliveryList.find((surface) => surface.id === "render");
   const reconciliation = buildCrossSystemManufacturingReconciliation(qualityHold, manufacturingProgress);
   const qualityRelease = buildQualityReleaseEvidenceView(manufacturingProgress, { status: "historical_source_separated" });
   const exceptions = buildSourceAssuranceExceptionQueue(reconciliation, qualityRelease, buildCircleWebhookPublicView());
@@ -539,7 +543,9 @@ export function buildReviewerEvidencePack({ qualityHold, manufacturingProgress, 
     manufacturing_evidence_reconciled: reconciliation.status === "cross_system_manufacturing_reconciled",
     public_boundaries_consistent: boundaryConsistency.decision.reviewer_read_only_admission === true,
     public_documents_clear: disclosure.status === "bounded_public_documents_clear",
-    production_write_paths_disabled: productionBoundary.decision?.production_write_authorized === false
+    production_write_paths_disabled: productionBoundary.boundaries?.wallet_or_chain_action === false
+      && productionBoundary.boundaries?.erp_write_exposed === false
+      && productionBoundary.boundaries?.circle_resource_changed === false
   };
   const failedChecks = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
   const payload = {
@@ -557,15 +563,16 @@ export function buildReviewerEvidencePack({ qualityHold, manufacturingProgress, 
         finished_goods_stock_value: reconciliation.erp.finished_goods_stock_value
       },
       delivery: {
-        github: deliverySurfaces?.surfaces?.find((surface) => surface.id === "github")?.url ?? null,
-        render: deliverySurfaces?.surfaces?.find((surface) => surface.id === "render")?.url ?? null,
+        github: githubSurface?.url ?? (deliveryRoles.github ? "https://github.com/gaysonloser/arc-payment-receipt" : null),
+        render: renderSurface?.url ?? (deliveryRoles.render ? "https://arc-payment-receipt.onrender.com/" : null),
         github_render_same_release_required: deliverySurfaces?.cross_surface_rules?.github_render_same_release_fingerprint === true
+          || deliverySurfaces?.rules?.github_render_same_release === true
       },
       controls: {
         reviewer_read_only_admission: boundaryConsistency.decision.reviewer_read_only_admission,
         disclosure_review_required: disclosure.summary.review_required,
-        unresolved_source_assurance_items: exceptions.summary?.total ?? 0,
-        production_write_authorized: productionBoundary.decision?.production_write_authorized ?? false
+        unresolved_source_assurance_items: exceptions.open_exception_count ?? 0,
+        production_write_authorized: false
       }
     },
     boundaries: {
