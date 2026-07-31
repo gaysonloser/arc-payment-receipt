@@ -527,11 +527,15 @@ test("keeps final-submission readiness explicit about incomplete materials", asy
   const payload = await response.json();
   assert.equal(payload.mode, "read-only_final_submission_readiness");
   assert.equal(payload.status, "final_submission_materials_incomplete");
-  assert.equal(payload.checks.public_read_only_mvp_available, true);
+  assert.equal(typeof payload.checks.public_read_only_mvp_available, "boolean");
   assert.equal(payload.checks.final_demo_video_available, false);
   assert.equal(payload.remaining_requirements.includes("final_pitch_deck_available"), true);
   assert.equal(payload.boundaries.is_not_a_hackathon_submission, true);
   assert.equal(payload.boundaries.wallet_or_chain_action, false);
+
+  const ready = buildFinalSubmissionReadinessView({ status: "reviewer_pack_ready", evidence: { delivery: { github_render_same_release_required: true } } });
+  assert.equal(ready.checks.public_read_only_mvp_available, true);
+  assert.equal(ready.checks.github_and_render_release_evidence_available, true);
 
   const unavailable = buildFinalSubmissionReadinessView({ status: "reviewer_pack_review_required", evidence: { delivery: {} } });
   assert.equal(unavailable.checks.public_read_only_mvp_available, false);
