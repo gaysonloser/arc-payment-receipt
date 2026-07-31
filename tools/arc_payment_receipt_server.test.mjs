@@ -120,6 +120,20 @@ const appKitBoundary = {
   },
   public_safety: { allows_write: false }
 };
+const agentRegistration = {
+  type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  name: "Gayson Arc Evidence Operator",
+  description: "Read-only public evidence operator.",
+  image: "https://github.com/gaysonloser.png",
+  services: [{ name: "web", endpoint: "https://arc-payment-receipt.onrender.com/" }],
+  x402Support: false,
+  active: true,
+  registrations: [{
+    agentId: 851940,
+    agentRegistry: "eip155:5042002:0x8004A818BFB912233c491871b3d84c89A494BD9e"
+  }],
+  supportedTrust: []
+};
 const enterpriseReport = {
   generated_at: "2026-07-20T12:02:28.246Z",
   fact: {
@@ -318,6 +332,7 @@ before(async () => {
     loadWalletRecovery: async () => walletCapability,
     loadW4Dual: async () => w4DualSource,
     loadAppKit: async () => appKitBoundary,
+    loadAgentRegistration: async () => agentRegistration,
     loadDeliverySurfaces: async () => ({
       schema_version: "1.0",
       product: "CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab",
@@ -421,6 +436,20 @@ test("serves the confirmed ERC-8004 identity record as a bounded read-only API",
   assert.equal(await head.text(), "");
 
   const post = await fetch(`${origin}/api/v1/agent-identity`, { method: "POST" });
+  assert.equal(post.status, 405);
+});
+
+test("serves the ERC-8004 registration file from the product domain", async () => {
+  const response = await fetch(`${origin}/.well-known/agent-registration.json`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /application\/json/);
+  assert.deepEqual(await response.json(), agentRegistration);
+
+  const head = await fetch(`${origin}/.well-known/agent-registration.json`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const post = await fetch(`${origin}/.well-known/agent-registration.json`, { method: "POST" });
   assert.equal(post.status, 405);
 });
 
