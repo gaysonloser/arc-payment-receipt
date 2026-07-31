@@ -35,6 +35,7 @@ export const DEFAULT_APP_KIT_BOUNDARY_PATH = resolve(HERE, "../outputs/Arc_App_K
 export const DEFAULT_PUBLIC_TRACE_TRAIL_PATH = resolve(HERE, "../outputs/Arc_Public_Trace_Trail_v1.json");
 export const DEFAULT_DELIVERY_SURFACES_PATH = resolve(HERE, "../config/public_delivery_surfaces_v1.json");
 export const DEFAULT_AGENT_IDENTITY_PATH = resolve(HERE, "../outputs/Arc_ERC8004_Agent_Identity_public.json");
+export const DEFAULT_AGENT_REGISTRATION_PATH = resolve(HERE, "../agent-registration.json");
 export const DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH = resolve(HERE, "../outputs/Arc_External_Route_Intake_Boundary_public.json");
 export const DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Evidence_Anchor_20260731.json");
 export const DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Delivery_Attestation_20260731.json");
@@ -1649,6 +1650,7 @@ export function createReceiptServer(options = {}) {
   const loadPublicTrace = options.loadPublicTrace ?? (() => loadPublicTraceTrail(options.publicTraceTrailPath));
   const loadDeliverySurfaces = options.loadDeliverySurfaces ?? (() => loadJson(options.deliverySurfacesPath ?? DEFAULT_DELIVERY_SURFACES_PATH));
   const loadAgentIdentity = options.loadAgentIdentity ?? (() => loadJson(options.agentIdentityPath ?? DEFAULT_AGENT_IDENTITY_PATH));
+  const loadAgentRegistration = options.loadAgentRegistration ?? (() => loadJson(options.agentRegistrationPath ?? DEFAULT_AGENT_REGISTRATION_PATH));
   const loadExternalRouteIntake = options.loadExternalRouteIntake ?? (() => loadJson(options.externalRouteIntakePath ?? DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH));
   const loadReleaseEvidenceAnchorPacket = options.loadReleaseEvidenceAnchorPacket ?? (() => loadJson(options.releaseEvidenceAnchorPacketPath ?? DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH));
   const loadReleaseDeliveryAttestation = options.loadReleaseDeliveryAttestation ?? (() => loadJson(options.releaseDeliveryAttestationPath ?? DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH));
@@ -1665,6 +1667,14 @@ export function createReceiptServer(options = {}) {
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://localhost");
+      if (url.pathname === "/.well-known/agent-registration.json") {
+        if (!["GET", "HEAD"].includes(request.method)) {
+          json(response, 405, { error: "method_not_allowed" }, request.method);
+          return;
+        }
+        json(response, 200, await loadAgentRegistration(), request.method);
+        return;
+      }
       if (request.method === "POST" && url.pathname === "/api/v1/circle-webhook") {
         const { rawBody, payload } = await readJsonBody(request);
         const result = await circleWebhookProcessor({ rawBody, payload, headers: request.headers });
