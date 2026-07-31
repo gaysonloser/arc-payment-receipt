@@ -23,6 +23,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /arc-lab`
 - `GET /enterprise-os`
 - `GET /arc-lab/review-deck`
+- `GET /arc-lab/evidence-explorer`
 - `GET /healthz`
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
@@ -113,6 +114,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A public-boundary consistency gate that cross-checks identity, external-route, delivery and trace controls before admitting a reviewer to the read-only surface.
 - A content-addressed Reviewer Evidence Pack that gathers the manufacturing reconciliation, delivery links, public-boundary controls and unresolved source-assurance items into one auditable, read-only handoff without exposing a wallet, ERP write path or Circle subscription action.
 - A public Arc Lab Review Deck that turns the live product, evidence trail and remaining delivery boundaries into a reviewer-readable narrative. It is a candidate review artifact, not a recorded video or a declaration that the final hackathon submission has been completed.
+- A read-only Arc Lab Evidence Explorer that pulls the public evidence pack, delivery surfaces, final-submission readiness and public-boundary consistency into one live reviewer workspace. It never opens a wallet or an ERP write path.
 
 ## Verified evidence
 

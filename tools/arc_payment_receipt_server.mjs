@@ -19,6 +19,7 @@ export const DEFAULT_ENTERPRISE_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPay
 export const DEFAULT_VIEWER_PATH = resolve(HERE, "arc_payment_receipt_viewer.html");
 export const DEFAULT_ARC_LAB_VIEWER_PATH = resolve(HERE, "arc_lab_enterprise_os_viewer.html");
 export const DEFAULT_ARC_LAB_REVIEW_DECK_PATH = resolve(HERE, "arc_lab_review_deck.html");
+export const DEFAULT_ARC_LAB_EVIDENCE_EXPLORER_PATH = resolve(HERE, "arc_lab_evidence_explorer.html");
 export const DEFAULT_ARC_LAB_PORTFOLIO_PATH = resolve(HERE, "../config/arc_lab_enterprise_os_e1_read_only_shell_v1.json");
 export const DEFAULT_ARC_LAB_ERP_INTERACTION_PATH = resolve(HERE, "../config/arc_lab_erp_interaction_public_v1.json");
 export const DEFAULT_MANUFACTURING_EVIDENCE_PATH = resolve(HERE, "../outputs/Arc_XERP_MFG_01_local_evidence.json");
@@ -1623,6 +1624,7 @@ export function createReceiptServer(options = {}) {
   const loadViewer = options.loadViewer ?? (() => readFile(options.viewerPath ?? DEFAULT_VIEWER_PATH, "utf8"));
   const loadArcLabViewer = options.loadArcLabViewer ?? (() => readFile(options.arcLabViewerPath ?? DEFAULT_ARC_LAB_VIEWER_PATH, "utf8"));
   const loadArcLabReviewDeck = options.loadArcLabReviewDeck ?? (() => readFile(options.arcLabReviewDeckPath ?? DEFAULT_ARC_LAB_REVIEW_DECK_PATH, "utf8"));
+  const loadArcLabEvidenceExplorer = options.loadArcLabEvidenceExplorer ?? (() => readFile(options.arcLabEvidenceExplorerPath ?? DEFAULT_ARC_LAB_EVIDENCE_EXPLORER_PATH, "utf8"));
   const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
   const loadArcLabErp = options.loadArcLabErp ?? (() => loadArcLabErpInteraction(options.arcLabErpInteractionPath));
   const loadManufacturing = options.loadManufacturing ?? (() => loadManufacturingEvidence(options.manufacturingEvidencePath));
@@ -1680,6 +1682,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/arc-lab/review-deck") {
         text(response, 200, await loadArcLabReviewDeck(), "text/html; charset=utf-8", request.method);
+        return;
+      }
+
+      if (url.pathname === "/arc-lab/evidence-explorer") {
+        text(response, 200, await loadArcLabEvidenceExplorer(), "text/html; charset=utf-8", request.method);
         return;
       }
 

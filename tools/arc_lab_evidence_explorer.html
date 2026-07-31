@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arc Lab Evidence Explorer</title>
+  <style>
+    :root { --bg:#06101c; --panel:#0d2032; --ink:#ecf6ff; --muted:#afc5d8; --line:rgba(183,221,242,.24); --ok:#69e4bd; --warn:#ffd37c; --bad:#ff9e9e; }
+    * { box-sizing:border-box; } body { margin:0; color:var(--ink); background:radial-gradient(circle at 85% 4%,#164b60 0,transparent 30%),var(--bg); font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+    header, main { max-width:1180px; margin:auto; padding-left:24px; padding-right:24px; } header { padding-top:34px; display:flex; justify-content:space-between; gap:20px; align-items:flex-start; } a { color:#86e8d5; } h1 { margin:10px 0; font-size:clamp(38px,6vw,70px); letter-spacing:-.055em; } p { color:var(--muted); line-height:1.55; max-width:770px; } main { padding-top:26px; padding-bottom:56px; } .notice { padding:14px 16px; border-left:3px solid var(--warn); background:rgba(160,111,20,.18); color:#ffe8ba; line-height:1.5; } .grid { margin-top:20px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; } article { min-height:220px; padding:22px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(145deg,rgba(17,43,63,.96),rgba(9,25,40,.93)); } article h2 { margin:0 0 9px; font-size:21px; } .state { display:inline-block; padding:4px 9px; border-radius:999px; background:rgba(255,211,124,.14); color:var(--warn); font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; } pre { white-space:pre-wrap; overflow-wrap:anywhere; color:#cce1ef; font-size:13px; line-height:1.45; } footer { border-top:1px solid var(--line); padding:22px 24px; color:#91aabc; text-align:center; font-size:13px; } @media(max-width:720px){ header{display:block}.grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <header><div><div class="state">Live read-only workspace</div><h1>Arc Lab Evidence Explorer</h1><p>One reviewer-facing view of the current public evidence. Every card reads a bounded public route and makes an unavailable response visible instead of filling the gap with a claim.</p></div><a href="/arc-lab">Open Arc Lab shell →</a></header>
+  <main>
+    <div class="notice">No wallet connection, ERP write, Circle subscription or webhook receiver is available from this page. It is an inspection surface—not a final-submission claim or a recorded video.</div>
+    <section class="grid" id="cards" aria-live="polite"></section>
+  </main>
+  <footer>AOXPET Arc Lab · evidence explorer · public and read-only</footer>
+  <script>
+    const sources = [
+      ['Reviewer evidence pack', '/api/v1/reviewer-evidence-pack', 'Content-addressed reconciliation and boundary checks.'],
+      ['Delivery surfaces', '/api/v1/delivery-surfaces', 'Where source, runtime and independent authorities are separated.'],
+      ['Final-submission readiness', '/api/v1/final-submission-readiness', 'Current live evidence plus explicit final-material gaps.'],
+      ['Public-boundary consistency', '/api/v1/public-boundary-consistency', 'Whether the read-only surface continues to respect its safety boundary.']
+    ];
+    const clean = value => JSON.stringify(value, null, 2).slice(0, 1800);
+    const card = (title, route, detail) => { const node=document.createElement('article'); node.innerHTML=`<span class="state">Loading</span><h2>${title}</h2><p>${detail}</p><p><a href="${route}">${route}</a></p><pre>Reading public evidence…</pre>`; return node; };
+    const root = document.getElementById('cards');
+    sources.forEach(async ([title, route, detail]) => { const node=card(title,route,detail); root.append(node); try { const response=await fetch(route,{headers:{accept:'application/json'}}); const body=await response.json(); node.querySelector('.state').textContent=response.ok?'Read back':'Unavailable'; node.querySelector('.state').style.color=response.ok?'var(--ok)':'var(--bad)'; node.querySelector('pre').textContent=clean(body); } catch (error) { node.querySelector('.state').textContent='Unavailable'; node.querySelector('.state').style.color='var(--bad)'; node.querySelector('pre').textContent=`Public readback failed: ${error.message}`; } });
+  </script>
+</body>
+</html>
