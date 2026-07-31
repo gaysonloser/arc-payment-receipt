@@ -12,6 +12,7 @@ import {
   buildOpeningBalanceLineClassificationView,
   buildOpeningBalanceReviewPacket,
   buildOpeningBalanceFixtureValidationView,
+  buildFinalDemoPlanView,
   buildFinalSubmissionReadinessView,
   buildReviewerEvidencePack,
   buildPublicBoundaryConsistencyView,
@@ -540,6 +541,19 @@ test("keeps final-submission readiness explicit about incomplete materials", asy
   const unavailable = buildFinalSubmissionReadinessView({ status: "reviewer_pack_review_required", evidence: { delivery: {} } });
   assert.equal(unavailable.checks.public_read_only_mvp_available, false);
   assert.equal(unavailable.remaining_requirements.includes("public_read_only_mvp_available"), true);
+});
+
+test("serves a bounded three-minute final demo plan without claiming a recording", async () => {
+  const response = await fetch(`${origin}/api/v1/final-demo-plan`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.mode, "read-only_final_demo_plan");
+  assert.equal(payload.duration_seconds, 180);
+  assert.equal(payload.steps.length, 4);
+  assert.equal(payload.boundaries.is_a_demo_outline_not_a_recorded_video, true);
+  assert.equal(payload.boundaries.wallet_or_chain_action, false);
+  const ready = buildFinalDemoPlanView({ status: "final_submission_materials_ready", remaining_requirements: [] });
+  assert.equal(ready.status, "demo_plan_ready");
 });
 
 test("keeps C1 opening-balance preparation read-only until separate owner approval", async () => {

@@ -627,6 +627,33 @@ export function buildFinalSubmissionReadinessView(reviewerEvidencePack) {
   };
 }
 
+export function buildFinalDemoPlanView(readiness) {
+  const steps = [
+    { at_seconds: 0, focus: "scope", route: "/arc-lab", evidence: "read-only Arc enterprise control shell" },
+    { at_seconds: 35, focus: "reviewer evidence", route: "/api/v1/reviewer-evidence-pack", evidence: "content-addressed reconciliation and boundary checks" },
+    { at_seconds: 95, focus: "release proof", route: "/api/v1/final-submission-readiness", evidence: "matched GitHub and Render release evidence" },
+    { at_seconds: 145, focus: "remaining work", route: "/api/v1/final-submission-readiness", evidence: "explicit final-video and pitch-deck gaps" }
+  ];
+  return {
+    mode: "read-only_final_demo_plan",
+    plan_id: "ARC-ENCODE-FINAL-DEMO-PLAN-V1",
+    status: readiness?.status === "final_submission_materials_ready" ? "demo_plan_ready" : "demo_plan_ready_with_material_gaps",
+    duration_seconds: 180,
+    steps,
+    source_readiness: {
+      status: readiness?.status ?? "unavailable",
+      remaining_requirements: readiness?.remaining_requirements ?? []
+    },
+    boundaries: {
+      read_only: true,
+      is_a_demo_outline_not_a_recorded_video: true,
+      does_not_claim_final_submission_complete: true,
+      wallet_or_chain_action: false,
+      erp_or_circle_action: false
+    }
+  };
+}
+
 export function buildOpeningBalanceReadinessView(erpInteraction) {
   const c0 = erpInteraction?.c0 ?? {};
   const checks = {
@@ -1937,6 +1964,16 @@ export function createReceiptServer(options = {}) {
         ]);
         const reviewerEvidencePack = buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace });
         json(response, 200, buildFinalSubmissionReadinessView(reviewerEvidencePack), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/final-demo-plan") {
+        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
+          loadManufacturing(), loadManufacturingProgressReport(), loadWalletRecovery(), loadAppKit(), loadAgentIdentity(), loadExternalRouteIntake(), loadDeliverySurfaces(), loadPublicTrace()
+        ]);
+        const reviewerEvidencePack = buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace });
+        const readiness = buildFinalSubmissionReadinessView(reviewerEvidencePack);
+        json(response, 200, buildFinalDemoPlanView(readiness), request.method);
         return;
       }
 
