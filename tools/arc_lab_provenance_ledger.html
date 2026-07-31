@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arc Lab Provenance Ledger</title>
+  <style>
+    :root{--bg:#0a0b15;--panel:#16182a;--ink:#f1f2ff;--muted:#b8bad2;--line:rgba(203,207,255,.2);--accent:#bca7ff;--ok:#7ff0c4;--bad:#ffadad}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 78% 0,#352862 0,transparent 31%),var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif}main,header{max-width:1120px;margin:auto;padding-left:24px;padding-right:24px}header{padding-top:36px;display:flex;gap:24px;align-items:start;justify-content:space-between}h1{font-size:clamp(38px,6vw,70px);letter-spacing:-.06em;margin:10px 0}p{color:var(--muted);line-height:1.55;max-width:780px}a{color:#cbbdff}.boundary{margin-top:23px;padding:14px 16px;border-left:3px solid var(--accent);background:rgba(188,167,255,.12);color:#e5dfff;line-height:1.5}.tools{display:flex;gap:12px;align-items:center;margin:25px 0}.tools button{border:1px solid var(--accent);background:rgba(188,167,255,.16);color:var(--ink);padding:11px 14px;border-radius:10px;font-weight:800;cursor:pointer}.tools small{color:var(--muted)}table{width:100%;border-collapse:collapse;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:rgba(22,24,42,.92)}th,td{padding:16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{color:#d8d2ff;font-size:12px;text-transform:uppercase;letter-spacing:.08em}td{color:var(--muted)}code{display:block;max-width:340px;overflow-wrap:anywhere;color:#d9f7ed;font-size:12px}.state{font-weight:800;color:var(--accent)}.ok{color:var(--ok)}.bad{color:var(--bad)}footer{padding:28px;text-align:center;color:#9498b7;font-size:13px}@media(max-width:720px){header{display:block}table{font-size:13px}th,td{padding:10px}.route-col{display:none}}
+  </style>
+</head>
+<body>
+  <header><div><div class="state">Client-side verification</div><h1>Arc Lab Provenance Ledger</h1><p>Recompute an evidence digest in the reviewer’s own browser. This ledger fetches bounded public JSON routes, canonicalizes the response text as received, and reports a SHA-256 digest with a retrieval timestamp.</p></div><a href="/arc-lab/evidence-explorer">Open Evidence Explorer →</a></header>
+  <main><div class="boundary">This page persists nothing, sends no inspected payload to a third party, and does not expose a wallet, ERP write, Circle subscription, webhook receiver or final-submission claim.</div><div class="tools"><button id="refresh">Refresh ledger</button><small id="stamp">Awaiting first readback.</small></div><table><thead><tr><th>Evidence route</th><th class="route-col">Purpose</th><th>Readback</th><th>SHA-256</th></tr></thead><tbody id="rows"></tbody></table></main><footer>AOXPET Arc Lab · public provenance verification · read-only</footer>
+  <script>
+    const sources=[
+      ['/api/v1/reviewer-evidence-pack','Reviewer-facing reconciliation and safety checks'],
+      ['/api/v1/delivery-surfaces','Separated source, runtime and authority surfaces'],
+      ['/api/v1/final-submission-readiness','Live proof and stated final-material gaps'],
+      ['/api/v1/public-disclosure-audit','Bounded public-disclosure audit result']
+    ];
+    const bytesToHex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+    const digest=async text=>bytesToHex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)));
+    const tbody=document.querySelector('#rows'), stamp=document.querySelector('#stamp');
+    async function refresh(){tbody.innerHTML='';stamp.textContent='Reading bounded public routes…';await Promise.all(sources.map(async([route,purpose])=>{const row=document.createElement('tr');row.innerHTML=`<td><a href="${route}">${route}</a></td><td class="route-col">${purpose}</td><td class="state">Reading</td><td><code>—</code></td>`;tbody.append(row);try{const response=await fetch(route,{headers:{accept:'application/json'}});const text=await response.text();const hash=await digest(text);row.children[2].textContent=response.ok?`HTTP ${response.status}`:`HTTP ${response.status} (not accepted)`;row.children[2].className=response.ok?'state ok':'state bad';row.querySelector('code').textContent=hash;}catch(error){row.children[2].textContent='Unavailable';row.children[2].className='state bad';row.querySelector('code').textContent=error.message;}}));stamp.textContent=`Last client-side readback: ${new Date().toISOString()}`;}
+    document.querySelector('#refresh').addEventListener('click',refresh);refresh();
+  </script>
+</body>
+</html>
