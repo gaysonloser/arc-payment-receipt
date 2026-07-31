@@ -647,6 +647,10 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(controlTimeline.status, 200);
   assert.match(await controlTimeline.text(), /Arc Lab Control Timeline/);
 
+  const releaseAnchor = await fetch(`${origin}/arc-lab/release-evidence-anchor`);
+  assert.equal(releaseAnchor.status, 200);
+  assert.match(await releaseAnchor.text(), /Release Evidence Anchor/);
+
   const alias = await fetch(`${origin}/enterprise-os`);
   assert.equal(alias.status, 200);
 
@@ -699,6 +703,21 @@ test("serves sanitized AAL C0 and D09 ERP interaction mapping", async () => {
 
   const post = await fetch(`${origin}/api/v1/erp-interaction`, { method: "POST" });
   assert.equal(post.status, 405);
+});
+
+test("serves a release evidence packet without claiming incomplete platform receipts", async () => {
+  const response = await fetch(`${origin}/api/v1/release-evidence-anchor`);
+  assert.equal(response.status, 200);
+  const packet = await response.json();
+  assert.equal(packet.publication_unit_id, "ARC-PUBLICATION-RELEASE-EVIDENCE-PACK-20260731-48");
+  assert.match(packet.release_fingerprint_sha256, /^[0-9a-f]{64}$/);
+  assert.equal(packet.delivery_state.publication_complete, false);
+  assert.equal(packet.delivery_state.arc_testnet_receipt, null);
+  assert.equal(packet.safety_boundary.wallet_executor_in_public_service, false);
+
+  const head = await fetch(`${origin}/api/v1/release-evidence-anchor`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
 });
 
 test("serves E1 evidence with GET and HEAD only", async () => {

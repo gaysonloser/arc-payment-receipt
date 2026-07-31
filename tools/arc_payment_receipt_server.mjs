@@ -24,6 +24,7 @@ export const DEFAULT_ARC_LAB_PROVENANCE_LEDGER_PATH = resolve(HERE, "arc_lab_pro
 export const DEFAULT_ARC_LAB_REVIEWER_CHECKLIST_PATH = resolve(HERE, "arc_lab_reviewer_checklist.html");
 export const DEFAULT_ARC_LAB_RELEASE_WATCH_PATH = resolve(HERE, "arc_lab_release_watch.html");
 export const DEFAULT_ARC_LAB_CONTROL_TIMELINE_PATH = resolve(HERE, "arc_lab_control_timeline.html");
+export const DEFAULT_ARC_LAB_RELEASE_EVIDENCE_ANCHOR_PATH = resolve(HERE, "arc_lab_release_evidence_anchor.html");
 export const DEFAULT_ARC_LAB_PORTFOLIO_PATH = resolve(HERE, "../config/arc_lab_enterprise_os_e1_read_only_shell_v1.json");
 export const DEFAULT_ARC_LAB_ERP_INTERACTION_PATH = resolve(HERE, "../config/arc_lab_erp_interaction_public_v1.json");
 export const DEFAULT_MANUFACTURING_EVIDENCE_PATH = resolve(HERE, "../outputs/Arc_XERP_MFG_01_local_evidence.json");
@@ -35,6 +36,7 @@ export const DEFAULT_PUBLIC_TRACE_TRAIL_PATH = resolve(HERE, "../outputs/Arc_Pub
 export const DEFAULT_DELIVERY_SURFACES_PATH = resolve(HERE, "../config/public_delivery_surfaces_v1.json");
 export const DEFAULT_AGENT_IDENTITY_PATH = resolve(HERE, "../outputs/Arc_ERC8004_Agent_Identity_public.json");
 export const DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH = resolve(HERE, "../outputs/Arc_External_Route_Intake_Boundary_public.json");
+export const DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Evidence_Anchor_20260731.json");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 
@@ -1633,6 +1635,7 @@ export function createReceiptServer(options = {}) {
   const loadArcLabReviewerChecklist = options.loadArcLabReviewerChecklist ?? (() => readFile(options.arcLabReviewerChecklistPath ?? DEFAULT_ARC_LAB_REVIEWER_CHECKLIST_PATH, "utf8"));
   const loadArcLabReleaseWatch = options.loadArcLabReleaseWatch ?? (() => readFile(options.arcLabReleaseWatchPath ?? DEFAULT_ARC_LAB_RELEASE_WATCH_PATH, "utf8"));
   const loadArcLabControlTimeline = options.loadArcLabControlTimeline ?? (() => readFile(options.arcLabControlTimelinePath ?? DEFAULT_ARC_LAB_CONTROL_TIMELINE_PATH, "utf8"));
+  const loadArcLabReleaseEvidenceAnchor = options.loadArcLabReleaseEvidenceAnchor ?? (() => readFile(options.arcLabReleaseEvidenceAnchorPath ?? DEFAULT_ARC_LAB_RELEASE_EVIDENCE_ANCHOR_PATH, "utf8"));
   const loadArcLab = options.loadArcLab ?? (() => loadArcLabPortfolio(options.arcLabPortfolioPath));
   const loadArcLabErp = options.loadArcLabErp ?? (() => loadArcLabErpInteraction(options.arcLabErpInteractionPath));
   const loadManufacturing = options.loadManufacturing ?? (() => loadManufacturingEvidence(options.manufacturingEvidencePath));
@@ -1644,6 +1647,7 @@ export function createReceiptServer(options = {}) {
   const loadDeliverySurfaces = options.loadDeliverySurfaces ?? (() => loadJson(options.deliverySurfacesPath ?? DEFAULT_DELIVERY_SURFACES_PATH));
   const loadAgentIdentity = options.loadAgentIdentity ?? (() => loadJson(options.agentIdentityPath ?? DEFAULT_AGENT_IDENTITY_PATH));
   const loadExternalRouteIntake = options.loadExternalRouteIntake ?? (() => loadJson(options.externalRouteIntakePath ?? DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH));
+  const loadReleaseEvidenceAnchorPacket = options.loadReleaseEvidenceAnchorPacket ?? (() => loadJson(options.releaseEvidenceAnchorPacketPath ?? DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
@@ -1715,6 +1719,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/arc-lab/control-timeline") {
         text(response, 200, await loadArcLabControlTimeline(), "text/html; charset=utf-8", request.method);
+        return;
+      }
+
+      if (url.pathname === "/arc-lab/release-evidence-anchor") {
+        text(response, 200, await loadArcLabReleaseEvidenceAnchor(), "text/html; charset=utf-8", request.method);
         return;
       }
 
@@ -1943,6 +1952,11 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/external-route-intake-boundary") {
         json(response, 200, await loadExternalRouteIntake(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/release-evidence-anchor") {
+        json(response, 200, await loadReleaseEvidenceAnchorPacket(), request.method);
         return;
       }
 

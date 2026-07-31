@@ -1,0 +1,48 @@
+{
+  "schema_version": "arc-lab-release-evidence-anchor-v1",
+  "publication_unit_id": "ARC-PUBLICATION-RELEASE-EVIDENCE-PACK-20260731-48",
+  "anchor_action_id": "ARC-ONCHAIN-RELEASE-EVIDENCE-ANCHOR-20260731-47",
+  "product": "AOXPET Arc Lab",
+  "title": "Release Evidence Anchor",
+  "capability": "A reviewer-readable release packet paired with a one-time immutable Arc Testnet deployment that binds the same release fingerprint.",
+  "release_fingerprint_sha256": "96c3b18bfd9335459135fe99b3e4f0d7f5a8e0c4305c7e3776463bc475ce3f48",
+  "release_unit_id_sha256": "8c30fa881e6d63091c01c9e6155a43b7cb3eabc883ba6db556074c58e1d7e744",
+  "canonical_release_payload": {
+    "schema_version": "arc-lab-release-evidence-anchor-v1",
+    "publication_unit_id": "ARC-PUBLICATION-RELEASE-EVIDENCE-PACK-20260731-48",
+    "anchor_action_id": "ARC-ONCHAIN-RELEASE-EVIDENCE-ANCHOR-20260731-47",
+    "product": "AOXPET Arc Lab",
+    "capability": "immutable release-evidence anchor with public verification packet",
+    "network": {
+      "name": "Arc Testnet",
+      "chain_id": 5042002
+    },
+    "contract": "ArcReleaseEvidenceAnchor",
+    "constructor": ["releaseFingerprint", "releaseUnitId"],
+    "boundaries": [
+      "zero native value",
+      "no payment",
+      "no ERC-20 approval",
+      "no ERP write",
+      "no Circle webhook",
+      "one owner-reviewed deployment"
+    ]
+  },
+  "delivery_state": {
+    "github_commit": null,
+    "render_deploy": null,
+    "encode_receipt": null,
+    "circle_console_receipt": null,
+    "arc_testnet_receipt": null,
+    "publication_complete": false
+  },
+  "safety_boundary": {
+    "wallet_executor_in_public_service": false,
+    "native_value": "0",
+    "payment": false,
+    "erc20_approval": false,
+    "erp_write": false,
+    "circle_webhook_or_subscription": false,
+    "secrets_or_raw_credentials": false
+  }
+}

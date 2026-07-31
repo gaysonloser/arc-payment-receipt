@@ -28,6 +28,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /arc-lab/reviewer-checklist`
 - `GET /arc-lab/release-watch`
 - `GET /arc-lab/control-timeline`
+- `GET /arc-lab/release-evidence-anchor`
 - `GET /healthz`
 - `GET /api/arc-lab-portfolio`
 - `GET /api/v1/topology`
@@ -49,6 +50,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/delivery-surfaces`
 - `GET /api/v1/agent-identity`
 - `GET /api/v1/external-route-intake-boundary`
+- `GET /api/v1/release-evidence-anchor`
 - `GET /api/v1/public-disclosure-audit`
 - `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/reviewer-evidence-pack`
@@ -120,6 +122,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 - A public Arc Lab Review Deck that turns the live product, evidence trail and remaining delivery boundaries into a reviewer-readable narrative. It is a candidate review artifact, not a recorded video or a declaration that the final hackathon submission has been completed.
 - A read-only Arc Lab Evidence Explorer that pulls the public evidence pack, delivery surfaces, final-submission readiness and public-boundary consistency into one live reviewer workspace. It never opens a wallet or an ERP write path.
 - A browser-side Arc Lab Provenance Ledger that reads bounded public evidence documents and exposes each response's SHA-256 digest, route and retrieval time for repeatable reviewer verification; it does not upload or persist the inspected data.
+- A Release Evidence Anchor packet that exposes one canonical public release fingerprint, makes missing GitHub/Render/Encode/Circle/Arc receipts explicit, and pairs the material release with a separately owner-reviewed zero-value Arc Testnet deployment. The public service cannot deploy it or submit any platform action.
 
 ## Verified evidence
 
