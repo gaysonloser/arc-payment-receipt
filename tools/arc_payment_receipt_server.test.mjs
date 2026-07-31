@@ -639,6 +639,10 @@ test("serves the Arc Lab E1 shell and sanitized topology", async () => {
   assert.equal(reviewerChecklist.status, 200);
   assert.match(await reviewerChecklist.text(), /Arc Lab Reviewer Checklist/);
 
+  const releaseWatch = await fetch(`${origin}/arc-lab/release-watch`);
+  assert.equal(releaseWatch.status, 200);
+  assert.match(await releaseWatch.text(), /Arc Lab Release Watch/);
+
   const alias = await fetch(`${origin}/enterprise-os`);
   assert.equal(alias.status, 200);
 
