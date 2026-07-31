@@ -1,0 +1,29 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Gayson Arc Evidence Operator",
+  "description": "A read-only public evidence operator for the AOXPET Arc Lab payment-receipt and settlement-evidence product. It exposes verifiable public evidence only; it does not connect wallets, request transaction signatures, execute payments, accept credentials, write ERP records, or receive webhooks.",
+  "image": "https://github.com/gaysonloser.png",
+  "services": [
+    {
+      "name": "web",
+      "endpoint": "https://arc-payment-receipt.onrender.com/"
+    },
+    {
+      "name": "evidence-api",
+      "endpoint": "https://arc-payment-receipt.onrender.com/api/arc-lab-portfolio"
+    },
+    {
+      "name": "identity-evidence-api",
+      "endpoint": "https://arc-payment-receipt.onrender.com/api/v1/agent-identity"
+    }
+  ],
+  "x402Support": false,
+  "active": true,
+  "registrations": [
+    {
+      "agentId": 851940,
+      "agentRegistry": "eip155:5042002:0x8004A818BFB912233c491871b3d84c89A494BD9e"
+    }
+  ],
+  "supportedTrust": []
+}
