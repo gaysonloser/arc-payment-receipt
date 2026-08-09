@@ -88,6 +88,24 @@ GitHub is the engineering proof and technical source of truth. Render is the run
 
 Stablecoin settlement alone does not give an application a privacy-aware order reference, a durable receipt record, or a clean reconciliation surface. This prototype keeps custody out of the contract while making settlement evidence independently verifiable.
 
+## Programmable Money Hackathon delta — local candidate
+
+`ArcPaymentReceipt` remains the historical payment-receipt and reconciliation
+component. The current hackathon work adds a separate, local **Programmable
+Settlement Policy Preview** for a treasury reviewer deciding whether a supplier
+USDC settlement is eligible on Arc Testnet. It requires three explicit
+predecessors: quality acceptance, confirmed settlement evidence and human
+approval. When all are present it emits a deterministic, unsigned review
+instruction; otherwise it fails closed with a specific reason.
+
+This preview is not a wallet, relayer, custody service, automated payment,
+App Kit integration or ERP writer. It does not prepare calldata or broadcast a
+transaction. Its source and tests are present locally in
+`tools/programmable_settlement_policy.mjs` and
+`tools/programmable_settlement_policy.test.mjs`. The candidate needs a
+separately approved public-source release and destination review before it is
+represented as a public or deployed feature.
+
 ## What is implemented
 
 - Native Arc Testnet USDC payment with no ERC-20 approval.
