@@ -1,0 +1,200 @@
+{
+  "schema_version": "mvp-publication-staging-manifest-v1",
+  "spec_id": "verified-milestone-close-mvp-publication-staging-rc1",
+  "product_identity": "Verified Milestone Close",
+  "status": "local_static_bundle_not_deployed",
+  "source_staging_manifest": "artifacts/public-repo-staging-rc1-manifest.json",
+  "bundle_root": "artifacts/mvp-publication-staging-rc1",
+  "deployment_contract": {
+    "document_fallback": "Serve index.html with 200 only for extensionless application routes; missing assets remain 404.",
+    "headers": {
+      "content_security_policy": "default-src 'self'; connect-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+      "referrer_policy": "no-referrer",
+      "nosniff": "X-Content-Type-Options: nosniff"
+    },
+    "cache_policy": {
+      "html": "no-store",
+      "modules": "no-cache",
+      "assets": "public, max-age=3600"
+    },
+    "boundaries": [
+      "no_wallet",
+      "no_network_rpc",
+      "no_external_analytics",
+      "no_external_navigation",
+      "no_internal_runtime_or_submission_material"
+    ]
+  },
+  "entries": [
+    {
+      "id": "arc_icon",
+      "path": "web/assets/brand/arc-icon-navy-official.svg",
+      "role": "official_arc_asset",
+      "sha256": "eb03f8cac4bcb23fae4ee04429daf29a9bd60269fc9293eccc4119913b81213d",
+      "bytes": 974
+    },
+    {
+      "id": "arc_logo",
+      "path": "web/assets/brand/arc-logo-navy-official.svg",
+      "role": "official_arc_asset",
+      "sha256": "84d9b3b7ca11a0b19956a0622440e646c188907ffe8fa6598a5553d00e1890db",
+      "bytes": 2666
+    },
+    {
+      "id": "fixture_engine",
+      "path": "web/fixture-engine.mjs",
+      "role": "application_state",
+      "sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
+      "bytes": 37367
+    },
+    {
+      "id": "gayson_assistant",
+      "path": "web/assets/gayson-receipt-assistant-reference.png",
+      "role": "product_brand_asset",
+      "sha256": "44f0459a9f8344e09f7f48e0f6eba1b5d9abffec7f84ec50a28de52e131b67ee",
+      "bytes": 641975
+    },
+    {
+      "id": "gayson_lion",
+      "path": "web/assets/gayson-lion-brand-reference.png",
+      "role": "product_brand_asset",
+      "sha256": "09f227bc92e0aa6af3089303791894d6ff96d5d6a58d903f0a3ea8aab46c0805",
+      "bytes": 1661602
+    },
+    {
+      "id": "icon_attachment",
+      "path": "web/assets/icons/paperclip.svg",
+      "role": "ui_asset",
+      "sha256": "830be1674aa37b63e36cee237f1b8c84d6e38544ddc447104f2b97bb063c5cfe",
+      "bytes": 734
+    },
+    {
+      "id": "icon_book",
+      "path": "web/assets/icons/book-open.svg",
+      "role": "ui_asset",
+      "sha256": "bbd0f7a90fe63750bcbacadde63e76a6a6a4b731a7ab34a20fc28f0c49f4131c",
+      "bytes": 755
+    },
+    {
+      "id": "icon_calendar",
+      "path": "web/assets/icons/calendar-check.svg",
+      "role": "ui_asset",
+      "sha256": "0ab35737c368203ad832b5af0fee81505b1784a45c8c69d7997ebb1ef0c271a6",
+      "bytes": 687
+    },
+    {
+      "id": "icon_chart",
+      "path": "web/assets/icons/chart-line.svg",
+      "role": "ui_asset",
+      "sha256": "9100c634433b9983696c6f2e270b1e4220d9d2b1c1fa15b8a9833fee2bd8c972",
+      "bytes": 648
+    },
+    {
+      "id": "icon_check",
+      "path": "web/assets/icons/circle-check.svg",
+      "role": "ui_asset",
+      "sha256": "c2c10f625e45e8a918a6d74a063670394ad0a5078b6dd88d92f9a5ac7cb6d612",
+      "bytes": 484
+    },
+    {
+      "id": "icon_contract",
+      "path": "web/assets/icons/file-contract.svg",
+      "role": "ui_asset",
+      "sha256": "8516915385c9d28d156d97ee55e97a3d6ec9de6ae2fe8f886c92ef7d7249c0d4",
+      "bytes": 1041
+    },
+    {
+      "id": "icon_home",
+      "path": "web/assets/icons/house.svg",
+      "role": "ui_asset",
+      "sha256": "a2f39593246f7bd7dfcecbe8cf4a0b93926756bbabdd6089b1326545d9389391",
+      "bytes": 775
+    },
+    {
+      "id": "icon_invoice",
+      "path": "web/assets/icons/file-invoice-dollar.svg",
+      "role": "ui_asset",
+      "sha256": "f3fdb653742fef71b88b40fe21ad58038c9b9b50b8ac06940f2f0fce527f9d68",
+      "bytes": 1472
+    },
+    {
+      "id": "icon_journal",
+      "path": "web/assets/icons/scale-balanced.svg",
+      "role": "ui_asset",
+      "sha256": "205521372c7997ec2778900f033877660a673a6dcfa79f98bc40f6f5a8beeef0",
+      "bytes": 1046
+    },
+    {
+      "id": "icon_link",
+      "path": "web/assets/icons/link.svg",
+      "role": "ui_asset",
+      "sha256": "457e42a7322ec454c3ae81e07d998e7521726a805b61515c6b29443f0f0bbc21",
+      "bytes": 1069
+    },
+    {
+      "id": "icon_parties",
+      "path": "web/assets/icons/users.svg",
+      "role": "ui_asset",
+      "sha256": "54748bc3c0b2da7a65e982e0ff14fed16ec959bb42aeaa137862a97d16a95a57",
+      "bytes": 908
+    },
+    {
+      "id": "icon_policy",
+      "path": "web/assets/icons/shield-halved.svg",
+      "role": "ui_asset",
+      "sha256": "047f2d9eda8a9a2758eb5465ff6da85eaf91ffa3013d419331b7ff1338ef932e",
+      "bytes": 562
+    },
+    {
+      "id": "icon_receipt",
+      "path": "web/assets/icons/receipt.svg",
+      "role": "ui_asset",
+      "sha256": "21abd1cc3c0d95e67bc5aa80520fe1f9214589476b0227d9556abdc325ae34aa",
+      "bytes": 958
+    },
+    {
+      "id": "icon_transfer",
+      "path": "web/assets/icons/money-bill-transfer.svg",
+      "role": "ui_asset",
+      "sha256": "c9dc33106599970d28fba86471c7c5da1f615b3df0d085c0979f4525111d839b",
+      "bytes": 1133
+    },
+    {
+      "id": "icon_usdc",
+      "path": "web/assets/icons/circle-dollar-to-slot.svg",
+      "role": "ui_asset",
+      "sha256": "435c1b49cfb546c1f9a8843ab0a83a424feda41166ad7c4d2bbfc7d68dc9f439",
+      "bytes": 1639
+    },
+    {
+      "id": "mvp_html",
+      "path": "web/index.html",
+      "role": "application_shell",
+      "sha256": "c06819266a08bef7a3541921b43a235e0968c048bd2c533ab85b74fac2d0646a",
+      "bytes": 67534
+    },
+    {
+      "id": "usdc_token",
+      "path": "web/assets/brand/usdc-token-official.svg",
+      "role": "official_usdc_asset",
+      "sha256": "fe4f9d5f34ef4ebeb5d80e1f5ff63dcaf5a0d5495f4adf206e4c3011d1f5c57d",
+      "bytes": 1309
+    },
+    {
+      "id": "workspace_controller",
+      "path": "web/navigation-workspace.mjs",
+      "role": "application_navigation",
+      "sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
+      "bytes": 61407
+    }
+  ],
+  "excluded_classes": [
+    "readme_and_repository_material",
+    "tests_and_source_contracts",
+    "runtime_queue_owner_files",
+    "submission_copy_and_internal_mapping",
+    "WIP_and_formal_capture_probes",
+    "cache_build_info_and_generated_artifacts",
+    "wallet_rpc_and_external_analytics"
+  ]
+}
