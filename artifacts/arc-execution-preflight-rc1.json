@@ -1,0 +1,212 @@
+{
+  "schema_version": "arc-execution-preflight-rc1",
+  "status": "safe_local_preflight_ready_owner_readback_required_external_execution_unperformed",
+  "product_identity": "Verified Milestone Close",
+  "execution_boundary": {
+    "local_only": true,
+    "external_actions": 0,
+    "prohibited_now": [
+      "wallet connection",
+      "Arc RPC",
+      "broadcast",
+      "deployment",
+      "transaction",
+      "publication",
+      "upload",
+      "form mutation",
+      "submission"
+    ],
+    "nonclaim": "This package freezes schemas and local-VM expectations. It does not supply an address, transaction hash, receipt, allowance, deployment, or Arc evidence."
+  },
+  "frozen_inputs": {
+    "contract_source": {
+      "path": "src/PolicySettlementV1.sol",
+      "sha256": "96f3e6a4c2a374ee8f3a47187c4c3258b82b4acb5c87097aecf3471e4ec1a506",
+      "bytes": 11357
+    },
+    "compiled_artifact": {
+      "path": "artifacts/PolicySettlementV1.sol/PolicySettlementV1.json",
+      "sha256": "4620eb0f720d4611f9fcaebf0173d0a76fca8cea0a01f6b42e857fd8239c0d3d",
+      "bytes": 77206,
+      "compiler": "solc 0.8.24 / optimizer 200",
+      "creation_bytecode_sha256": "964f6ec7c12e5d3901efe22b4add26139b8f1511a6cf528fa8662dac586191c1",
+      "deployed_bytecode_sha256": "442236e5107377ba40a70fda9bcbb54f43f86cf231533e32392165e40fc9c70a"
+    },
+    "abi_selectors": {
+      "createPolicy": {
+        "signature": "createPolicy(address,address,uint256,bytes32,bytes32,uint64,uint64)",
+        "selector": "0x3ad09a05"
+      },
+      "approveTransfer": {
+        "signature": "approveTransfer(bytes32,(bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint64,uint256,address),bytes,uint256,uint64,uint64)",
+        "selector": "0xc1ccbd27"
+      },
+      "settle": {
+        "signature": "settle(bytes32,(bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint64,uint256,address),bytes)",
+        "selector": "0xdea9317d"
+      },
+      "cancelPolicy": {
+        "signature": "cancelPolicy(bytes32)",
+        "selector": "0xa86146d0"
+      }
+    }
+  },
+  "owner_readback_injection": {
+    "status": "unset_owner_readback_required",
+    "required_fields": {
+      "chain_id": {
+        "actual_value": null,
+        "expected_value": "5042002",
+        "type": "uint256 decimal string",
+        "gate": "must equal frozen Arc Testnet ID"
+      },
+      "configured_wallet": {
+        "actual_value": null,
+        "type": "address",
+        "gate": "must be non-zero and is the only permitted transaction.from"
+      },
+      "usdc_contract": {
+        "actual_value": null,
+        "type": "address",
+        "gate": "must be non-zero and equals constructor token_ / receipt ERC20 emitter"
+      },
+      "recipient": {
+        "actual_value": null,
+        "type": "address",
+        "gate": "must be non-zero and distinct from configured_wallet"
+      }
+    }
+  },
+  "actions": {
+    "deployment": {
+      "semantic_action": "Deploy PolicySettlementV1 with the owner-readback USDC contract as constructor token_",
+      "constructor_schema": [
+        {
+          "name": "token_",
+          "type": "address",
+          "source": "owner_readback_injection.required_fields.usdc_contract.actual_value"
+        }
+      ],
+      "transaction_template": {
+        "from": "owner_readback.configured_wallet",
+        "nonce": "owner supplied exact pending nonce",
+        "gas": "native18 template",
+        "max_spend": "native18 gas only; no principal is transferred in constructor"
+      },
+      "stop_conditions": [
+        "chain/wallet/USDC readback mismatch",
+        "nonce or gas cap unavailable",
+        "owner approval absent"
+      ]
+    },
+    "create_policy": {
+      "semantic_action": "Configured payer creates a capped, TTL-bound policy for the owner-readback recipient and reviewer attestation model.",
+      "selector": {
+        "signature": "createPolicy(address,address,uint256,bytes32,bytes32,uint64,uint64)",
+        "selector": "0x3ad09a05"
+      },
+      "calldata_schema": [
+        "recipient: address",
+        "reviewer: address",
+        "cap6: uint256 amount6",
+        "milestoneId: bytes32",
+        "policyVersion: bytes32",
+        "policyExpiry: uint64",
+        "maxAttestationTtl: uint64"
+      ],
+      "stop_conditions": [
+        "recipient/reviewer invalid",
+        "cap6=0",
+        "policy expiry/TTL invalid",
+        "wallet or chain mismatch"
+      ]
+    },
+    "approve_exact_amount": {
+      "semantic_action": "Configured payer separately approves one exact amount6 after a valid reviewer attestation. Exact allowance is required; local UI cannot claim a signature or broadcast.",
+      "selector": {
+        "signature": "approveTransfer(bytes32,(bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint64,uint256,address),bytes,uint256,uint64,uint64)",
+        "selector": "0xc1ccbd27"
+      },
+      "calldata_schema": [
+        "policyId",
+        "MilestoneAttestationV1",
+        "reviewerSignature",
+        "amount6",
+        "approvalExpiry",
+        "approvalNonce"
+      ],
+      "stop_conditions": [
+        "invalid attestation/signature/TTL",
+        "allowance != amount6",
+        "cap exceeded",
+        "nonce replay",
+        "owner approval absent"
+      ]
+    },
+    "settle_and_readback": {
+      "semantic_action": "An executor may settle only the approved, unexpired, unconsumed policy; business close stays contingent on receipt and getter readback matching.",
+      "selector": {
+        "signature": "settle(bytes32,(bytes32,bytes32,bytes32,bytes32,uint64,uint64,uint64,uint256,address),bytes)",
+        "selector": "0xdea9317d"
+      },
+      "calldata_schema": [
+        "policyId",
+        "MilestoneAttestationV1",
+        "reviewerSignature"
+      ],
+      "stop_conditions": [
+        "policy cancelled/expired",
+        "receipt.from/log mismatch",
+        "status=0 or RPC drop",
+        "getter/readback mismatch",
+        "allowance race"
+      ]
+    }
+  },
+  "execution_template": {
+    "amount6": "owner supplied positive decimal micro-USDC; must be <= cap6",
+    "cap6": "owner supplied positive decimal micro-USDC",
+    "policy_nonce": "owner supplied positive decimal",
+    "approval_nonce": "owner supplied positive decimal",
+    "gas": {
+      "unit": "native18",
+      "gas_limit": "owner supplied positive decimal",
+      "max_fee_per_gas_native18": "owner supplied positive decimal",
+      "max_native_spend_native18": "owner supplied positive decimal and >= gas_limit × max_fee_per_gas_native18"
+    }
+  },
+  "expected_local_vm": {
+    "success": {
+      "sequence": [
+        "deploy mock USDC and PolicySettlementV1",
+        "createPolicy",
+        "read getPolicy",
+        "set exact allowance",
+        "approveTransfer",
+        "settle",
+        "read getApproval / usedTransferId / allowance / getPolicy"
+      ],
+      "receipt_layout": {
+        "logical_payment": "3 records = 1 logical payment",
+        "records": [
+          "PolicySettlementV1.SettlementExecuted",
+          "ERC20 Transfer",
+          "Arc-system Transfer when supplied by a real Arc execution context"
+        ],
+        "ordering": "strict transaction-local logIndex order",
+        "transaction_from": "configured_wallet"
+      },
+      "business_boundary": "Only a matched receipt and matching getter readback can produce a local close proposal; this VM fixture never posts ERP or calls Arc."
+    },
+    "fail_closed": {
+      "branches": [
+        "wrong chain/wallet/USDC/recipient",
+        "amount6/nonce/gas template invalid",
+        "non-exact allowance",
+        "cancelled/expired policy",
+        "receipt.from/log/readback mismatch"
+      ],
+      "expected": "principal stays unmoved or business open item remains open; no wallet, chain, ERP or external side effect"
+    }
+  }
+}
