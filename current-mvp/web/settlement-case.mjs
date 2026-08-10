@@ -47,7 +47,7 @@ export const SETTLEMENT_ACTIONS = Object.freeze([
   "SET_ALLOCATION", "RECORD_REVIEWER_ATTESTATION", "REVIEW_PAYER_APPROVAL", "CONFIRM_TIER_C",
   "READ_ARC_RECEIPT", "PREPARE_ERP_PROPOSAL", "SUBMIT_ERP_REVIEW", "RECONCILE_BANK",
   "GENERATE_LEDGER", "CLOSE_OPERATIONAL", "CLOSE_ACCOUNTING_PERIOD", "CLOSE_BUSINESS",
-  "RECOVER", "REVISE", "SET_ROUTE", "SET_EVIDENCE", "RESET_DEPENDENTS"
+  "REVOKE", "REVERSAL", "RECOVER", "REVISE", "SET_ROUTE", "SET_EVIDENCE", "RESET_DEPENDENTS"
 ]);
 
 const clone = (value) => structuredClone(value);
@@ -140,6 +140,8 @@ export function createSettlementCase(seed = {}) {
     receipt: emptyReceipt(),
     erp: emptyErp(),
     close: { business: "OPEN", operational: "OPEN", accountingPeriod: "OPEN", periodClosingVoucher: "NOT_APPLICABLE" },
+    lifecycleOperations: {},
+    lastLifecycleResult: null,
     outcome: "not_evaluated",
     unresolvedReason: "Evidence tier D requires a typed observation before allocation.",
     recovery: "Select a source case, attach typed server evidence, then run the raw receipt matcher; no ERP object or close can be inferred.",
@@ -172,13 +174,13 @@ export function projectSettlementCase(caseState) {
   const refund = p.refund;
   const payer = incoming ? profile.partyId : "company-treasury-fixture";
   const recipient = incoming ? "company-treasury-fixture" : profile.partyId;
-  const key = c.matcherState === "matched" ? "matched" : c.matcherState === "stale" ? "stale" : c.matcherState === "mismatch" ? "mismatch" : "pending";
+  const key = c.matcherState === "matched" ? "matched" : c.matcherState === "stale" ? "stale" : c.matcherState === "mismatch" ? "mismatch" : c.matcherState === "weak_evidence" ? "weak_evidence" : c.matcherState === "tier_c_unconfirmed" ? "tier_c_unconfirmed" : "pending";
   const evaluated = key !== "pending";
-  const label = key === "matched" ? "Matched" : key === "stale" ? "Stale attestation" : key === "mismatch" ? "Receipt mismatch" : "Not evaluated";
+  const label = key === "matched" ? "Matched" : key === "stale" ? "Stale attestation" : key === "mismatch" ? "Receipt mismatch" : key === "weak_evidence" ? "Weak evidence" : key === "tier_c_unconfirmed" ? "Tier C unconfirmed" : "Not evaluated";
   const openItem = key === "matched" && !refund && c.profileId !== "payment_advance" && c.profileId !== "receipt_customer_advance" ? `${profile.noun} close proposal eligible after readback.` : refund ? `Original ${profile.source} remains OPEN; refund recovery only.` : `${profile.noun} remains OPEN until a typed matcher result.`;
   const proposal = key === "matched" ? refund ? `${profile.label} recovery proposal` : c.profileId === "payment_advance" || c.profileId === "receipt_customer_advance" ? `${profile.label} proposal` : `${profile.label} close proposal` : "No Payment Entry proposal";
-  const exception = key === "stale" ? "validUntil / TTL is stale; refresh evidence and retain the open item." : key === "mismatch" ? "Receipt/readback identity or ordered log evidence mismatches the locked case; prepare recovery." : !evaluated ? c.unresolvedReason : "No exception; local proposal remains non-postable.";
-  const guidance = key === "matched" ? refund ? `Review recovery against original ${profile.source}; this is not a new close.` : `Review ${profile.label} local proposal; Arc finality does not post ERP.` : key === "stale" ? "Refresh validUntil / TTL before re-running the matcher." : key === "mismatch" ? "Inspect receipt/readback identity and preserve the original open item." : "Select a typed source candidate and attach evidence; no receipt or ERP outcome is assumed.";
+  const exception = key === "stale" ? "validUntil / TTL is stale; refresh evidence and retain the open item." : key === "mismatch" ? "Receipt/readback identity or ordered log evidence mismatches the locked case; prepare recovery." : key === "weak_evidence" ? "Evidence tier D or incomplete provenance cannot authorize matching; retain OPEN." : key === "tier_c_unconfirmed" ? "Tier C evidence requires named reviewer confirmation before matching; retain OPEN." : !evaluated ? c.unresolvedReason : "No exception; local proposal remains non-postable.";
+  const guidance = key === "matched" ? refund ? `Review recovery against original ${profile.source}; this is not a new close.` : `Review ${profile.label} local proposal; Arc finality does not post ERP.` : key === "stale" ? "Refresh validUntil / TTL before re-running the matcher." : key === "mismatch" ? "Inspect receipt/readback identity and preserve the original open item." : key === "weak_evidence" ? "Attach stronger typed evidence; caller assertions cannot promote this case." : key === "tier_c_unconfirmed" ? "Record a named Tier C reviewer confirmation with reason and timestamp." : "Select a typed source candidate and attach evidence; no receipt or ERP outcome is assumed.";
   const journalReady = key === "matched" && c.erp?.gl?.totals?.balanced === true;
   const journal = journalReady ? { status: "proposal_ready", source: profile.source, rows: [{ account: profile.debit, object: profile.source, debit: amount, credit: "—", kind: "principal" }, { account: profile.credit, object: profile.number, debit: "—", credit: amount, kind: "principal" }], totals: { debit: amount, credit: amount, amount6, balanced: true }, fee: { account: "Network fee expense (separate)", amount: "estimate only · native18", status: "separate from principal" }, recovery: "Local proposal only; no ERP mutation.", postingBoundary: "Preview/readback required — no ERP post from this desk." } : { status: "not_postable", source: profile.source, rows: [{ account: "No principal posting", object: exception, debit: "—", credit: "—", kind: "exception" }], totals: { debit: "—", credit: "—", amount6: "0", balanced: false }, fee: { account: "Network fee expense (separate)", amount: "not available", status: "native18 only" }, recovery: exception, postingBoundary: "Matcher, Payment Entry readback and close checks are incomplete." };
   const document = { noun: profile.noun, title: `${profile.label} · ${profile.number}`, identity: `${p.counterparty} · ${profile.party}`, source: profile.source, amount6, amount, payer, recipient, purpose: profile.purpose, railStatus: key === "matched" ? (refund ? "RECOVERY PROPOSAL" : "PROPOSAL REVIEW") : "OPEN", proposal, openItem, guidance, guideTarget: key === "stale" ? 1 : key === "mismatch" ? 2 : key === "matched" ? 3 : 0, guideAction: key === "matched" ? (refund ? "Review recovery against original" : "Review local ERP proposal") : key === "stale" ? "Inspect freshness / validUntil" : key === "mismatch" ? "Inspect receipt/readback mismatch" : "Inspect source evidence", tray: { document: profile.number, counterparty: `${p.counterparty} · ${profile.party}`, openItem: profile.noun, amount }, receiptDetail: evaluated ? `${key === "matched" ? "status: 1" : "receipt held"} · typed receipt/readback is ${key}` : "No observed receipt or readback.", readback: evaluated ? `${payer} → ${recipient} · amount6 ${amount6}` : "No chain request; expected readback is not evidence.", closeAllowed: key === "matched" && !refund && c.profileId !== "payment_advance" && c.profileId !== "receipt_customer_advance" };
@@ -241,11 +243,11 @@ export function settlementCaseReducer(input, action) {
   }
   if (action.type === "SET_EVIDENCE") {
     const evidence = action.evidence;
-    if (evidence.tier === "D") return failure(state, "EVIDENCE_TIER_D_BLOCKED", "Tier D remains unresolved and cannot be allocated or posted.");
+    if (evidence?.tier === "D") return { ...failure(state, "WEAK_EVIDENCE", "Tier D remains unresolved and cannot be allocated or posted.", "weak_evidence"), outcome: "weak_evidence" };
     if (Object.prototype.hasOwnProperty.call(evidence ?? {}, "rolesVerified")) return failure(state, "EVIDENCE_RECORD_INVALID", "Caller-provided role booleans are not evidence; attach the typed server record.");
     if (!evidence || !["A", "B", "C"].includes(evidence.tier) || !evidence.observationId || !evidence.source || !evidence.roles || typeof evidence.roles !== "object" || !evidence.roles.reviewer || !evidence.roles.payer || evidence.roles.distinct !== true || !typedServerEvidence(evidence, state)) return failure(state, "EVIDENCE_SERVER_AUTHORITY_REQUIRED", "Attach server-derived case/company/role evidence; caller booleans and self-reported Tier C authority cannot promote a case.");
     const next = invalidateDownstream({ ...state, evidenceTier: evidence.tier, originObservation: clone(evidence), unresolvedReason: evidence.tier === "C" ? "Tier C requires explicit operator confirmation before ERP proposal." : "Typed server evidence attached; candidate and receipt still require matching.", revision: state.revision + 1 }, "Evidence changed; receipt, ERP and close projections were invalidated.");
-    return next;
+    return evidence.tier === "C" ? { ...next, matcherState: "tier_c_unconfirmed", outcome: "tier_c_unconfirmed", unresolvedReason: "TIER_C_UNCONFIRMED" } : next;
   }
   if (action.type === "RESET_DEPENDENTS") return invalidateDownstream({ ...state, candidates: [], candidate: null, allocation: { ...state.allocation, allocatedAmount6: "0" }, revision: state.revision + 1 }, "Dependent evidence reset; source facts remain the only case authority.");
   if (action.type === "SET_SEARCH") return invalidateDownstream({ ...state, search: { party: String(action.party ?? ""), document: String(action.document ?? "") }, stage: "work-queue", route: { ...state.route, stage: "work-queue", view: "search" }, revision: state.revision + 1 }, "Search changed; candidate, receipt and ERP projections were invalidated.");
@@ -271,7 +273,7 @@ export function settlementCaseReducer(input, action) {
   }
   if (action.type === "RECORD_REVIEWER_ATTESTATION") return { ...state, reviewerAttested: true, revision: state.revision + 1 };
   if (action.type === "REVIEW_PAYER_APPROVAL") return state.reviewerAttested ? { ...state, payerApproved: true, revision: state.revision + 1 } : failure(state, "REVIEWER_REQUIRED", "Record reviewer attestation before payer approval.");
-  if (action.type === "CONFIRM_TIER_C") return state.evidenceTier === "C" && action.confirmation?.operatorId && action.confirmation?.role === "reviewer" && action.confirmation?.reason && action.confirmation?.confirmedAt ? { ...state, originObservation: { ...state.originObservation, tierCConfirmed: true, confirmation: clone(action.confirmation) }, unresolvedReason: "Tier C operator confirmation recorded; receipt still required.", revision: state.revision + 1 } : failure(state, "TIER_C_CONFIRMATION_REQUIRED", "Tier C needs a named reviewer confirmation, reason and timestamp; caller booleans are not accepted.");
+  if (action.type === "CONFIRM_TIER_C") return state.evidenceTier === "C" && action.confirmation?.operatorId && action.confirmation?.role === "reviewer" && action.confirmation?.reason && action.confirmation?.confirmedAt ? { ...state, originObservation: { ...state.originObservation, tierCConfirmed: true, confirmation: clone(action.confirmation) }, matcherState: "not_evaluated", outcome: "not_evaluated", unresolvedReason: "Tier C operator confirmation recorded; receipt still required.", revision: state.revision + 1 } : failure(state, "TIER_C_CONFIRMATION_REQUIRED", "Tier C needs a named reviewer confirmation, reason and timestamp; caller booleans are not accepted.", "tier_c_unconfirmed");
   if (action.type === "READ_ARC_RECEIPT") {
     const amount6 = state.allocation.allocatedAmount6 && state.allocation.allocatedAmount6 !== "0" ? state.allocation.allocatedAmount6 : "0";
     if (amount6 === "0") return failure(state, "ZERO_ALLOCATION_FORBIDDEN", "Set a positive typed allocation before reading a receipt or creating accounting objects.");
@@ -320,6 +322,22 @@ export function settlementCaseReducer(input, action) {
     const check = validateSettlementCloseReadback(action.readback, { id: "business_close", company: state.companyId, state });
     if (!check.valid) return failure(state, check.code, "Business close requires an independent typed readback bound to the accepted PCV, Accounting Period and remaining PLED/outstanding state.");
     return { ...state, close: { ...state.close, business: "CLOSED", businessReadback: clone(action.readback) }, revision: state.revision + 1 };
+  }
+  if (action.type === "REVOKE" || action.type === "REVERSAL") {
+    const operationKey = String(action.operationKey ?? "").trim();
+    const authority = action.authority;
+    if (!operationKey || !action.reason || !authority?.operatorId || !["reviewer", "finance_operator"].includes(authority.role)) return failure(state, "LIFECYCLE_OPERATION_AUTHORITY_REQUIRED", "REVOKE/REVERSAL requires a stable operation key, reason and named reviewer or finance operator.");
+    const prior = state.lifecycleOperations?.[operationKey];
+    if (prior) {
+      if (prior.type !== action.type) return { ...state, outcome: "blocked", unresolvedReason: "IDEMPOTENCY_KEY_CONFLICT", lastLifecycleResult: { state: "CONFLICT_REJECT", operationKey, existingType: prior.type, requestedType: action.type } };
+      return { ...state, lastLifecycleResult: { state: "DUPLICATE_NOOP", operationKey, type: action.type } };
+    }
+    if (action.type === "REVERSAL" && !state.receipt?.logicalPaymentId && !state.erp?.paymentEntry) return failure(state, "REVERSAL_SOURCE_REQUIRED", "A reversal must bind an existing logical payment or ERP Payment Entry; retain the open item.");
+    const priorOpenItem = projectSettlementCase(state).document.openItem;
+    const priorLogicalPaymentId = state.receipt?.logicalPaymentId ?? null;
+    const next = invalidateDownstream({ ...state, revision: state.revision + 1 }, `${action.type} ${operationKey} retained the original open item and invalidated downstream consequences.`);
+    const entry = { type: action.type, operationKey, reason: String(action.reason), operatorId: authority.operatorId, priorLogicalPaymentId, openItem: priorOpenItem, revision: next.revision };
+    return { ...next, matcherState: "not_evaluated", outcome: action.type === "REVOKE" ? "revoked" : "reversal_recorded", lifecycleOperations: { ...(state.lifecycleOperations ?? {}), [operationKey]: entry }, lastLifecycleResult: { state: "APPLIED", operationKey, type: action.type }, caseHistory: [...next.caseHistory, entry] };
   }
   if (action.type === "RECOVER") return { ...invalidateDownstream({ ...state, matcherState: action.matcherState === "stale" || action.matcherState === "mismatch" ? action.matcherState : "not_evaluated", outcome: action.matcherState === "stale" || action.matcherState === "mismatch" ? action.matcherState : "not_evaluated", revision: state.revision + 1 }, String(action.reason ?? "Named recovery retained the open item.")), recovery: String(action.recovery ?? "Refresh the typed source and re-run the matcher; no accounting close is inferred.") };
   if (action.type === "REVISE") return { ...state, stage: "evidence", outcome: "revision_required", revision: state.revision + 1, recovery: String(action.reason ?? "Review the linked evidence and revise the case.") };

@@ -278,8 +278,8 @@
     },
     {
       "path": "web/settlement-case.mjs",
-      "bytes": 53217,
-      "sha256": "6d03258c436936df63ffd1384e349b383401022356cb5c76162cbe1e740ce0de",
+      "bytes": 56237,
+      "sha256": "a6d19296be63b6a30d3e44d4e69fd577ee9f475158317247b387c9746e3151f7",
       "source_reference": "programme/verified-milestone-close/web/settlement-case.mjs"
     },
     {
