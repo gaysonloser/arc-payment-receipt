@@ -1,0 +1,293 @@
+{
+  "schema": "arc-erp.current-release-workbench-manifest.v1",
+  "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
+  "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
+  "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
+  "accepted_request": {
+    "id": "programme-current-release-product-completion-sprint-14-owner-09-domain-bridge-negative-test-request-v1",
+    "packet_object_sha256": "70a29799ff77011278b3aafdc72e6bb59a5f2dccc12a55c19a250f4a356923c7",
+    "exchange_sha256": "37c1acfcd035ee56b39167b93a069e866b32010dadac84fe818c4c169d1e3c4a"
+  },
+  "source_request": {
+    "id": "programme-current-release-product-completion-sprint-root-correction-request-v1",
+    "packet_object_sha256": "577762814fd25363649a6b50c0733a5aef9e354093778981a8d84abbee095e50",
+    "exchange_sha256": "6eea4843ef52f4035c3a6ad5a3bfa87530e1cd9bf1c83ef5696a3d4d7ac78a6f"
+  },
+  "external_actions": 0,
+  "live_arc": false,
+  "live_erp": false,
+  "html_css_write": false,
+  "direct_erp_mutation": false,
+  "stable_terminal_freeze": true,
+  "writer_idle": true,
+  "acceptance_state": "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING",
+  "current_release_surface_status": {
+    "github": {
+      "status": "NOT_PUBLISHED",
+      "historical_lineage_only": true
+    },
+    "render": {
+      "status": "NOT_PROVEN",
+      "historical_lineage_only": true
+    },
+    "encode": {
+      "status": "NOT_PROVEN",
+      "historical_lineage_only": true
+    },
+    "circle_console": {
+      "status": "NOT_PROVEN",
+      "historical_lineage_only": true
+    },
+    "arc_testnet": {
+      "status": "NOT_PROVEN",
+      "historical_lineage_only": true
+    }
+  },
+  "verification_inputs": [
+    {
+      "path": "tools/current_release_workbench.test.mjs",
+      "role": "test",
+      "bytes": 14661,
+      "sha256": "01ff022e0ee5bb1d0119e1844f2d645611e559abde9e92379c193fbe3f0740da"
+    },
+    {
+      "path": "tools/build_current_release_workbench_manifest.mjs",
+      "role": "verifier",
+      "bytes": 10405,
+      "sha256": "f4772383ab6c9b3574d33379b897d6094fd9dc5816943097ca420f5e370e6a9c"
+    },
+    {
+      "path": "tools/current_mvp_source_binding.mjs",
+      "role": "verifier",
+      "bytes": 7611,
+      "sha256": "53926f864319e62c63d05f9fdbb9bdfa9753f33fb5112547dbc77150be089b42"
+    },
+    {
+      "path": "tools/current_mvp_source_binding.test.mjs",
+      "role": "test",
+      "bytes": 4944,
+      "sha256": "101c2eba75cb33fa6683a96fec7199f2ffd5ff0c9da443e15fad5694d07a379d"
+    }
+  ],
+  "independent_audit": {
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "read_only": true,
+    "independent": true,
+    "status": "PENDING",
+    "self_acceptance": false
+  },
+  "entry_count": 27,
+  "manifest_sha256_self_excluded": true,
+  "entries": [
+    {
+      "path": "web/assets/brand/arc-icon-navy-official.svg",
+      "bytes": 974,
+      "sha256": "eb03f8cac4bcb23fae4ee04429daf29a9bd60269fc9293eccc4119913b81213d",
+      "historical_sha256": "eb03f8cac4bcb23fae4ee04429daf29a9bd60269fc9293eccc4119913b81213d",
+      "historical_bytes": 974,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/brand/arc-logo-navy-official.svg",
+      "bytes": 2666,
+      "sha256": "84d9b3b7ca11a0b19956a0622440e646c188907ffe8fa6598a5553d00e1890db",
+      "historical_sha256": "84d9b3b7ca11a0b19956a0622440e646c188907ffe8fa6598a5553d00e1890db",
+      "historical_bytes": 2666,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/brand/usdc-token-official.svg",
+      "bytes": 1309,
+      "sha256": "fe4f9d5f34ef4ebeb5d80e1f5ff63dcaf5a0d5495f4adf206e4c3011d1f5c57d",
+      "historical_sha256": "fe4f9d5f34ef4ebeb5d80e1f5ff63dcaf5a0d5495f4adf206e4c3011d1f5c57d",
+      "historical_bytes": 1309,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/gayson-lion-brand-reference.png",
+      "bytes": 1661602,
+      "sha256": "09f227bc92e0aa6af3089303791894d6ff96d5d6a58d903f0a3ea8aab46c0805",
+      "historical_sha256": "09f227bc92e0aa6af3089303791894d6ff96d5d6a58d903f0a3ea8aab46c0805",
+      "historical_bytes": 1661602,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/gayson-receipt-assistant-reference.png",
+      "bytes": 641975,
+      "sha256": "44f0459a9f8344e09f7f48e0f6eba1b5d9abffec7f84ec50a28de52e131b67ee",
+      "historical_sha256": "44f0459a9f8344e09f7f48e0f6eba1b5d9abffec7f84ec50a28de52e131b67ee",
+      "historical_bytes": 641975,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/book-open.svg",
+      "bytes": 755,
+      "sha256": "bbd0f7a90fe63750bcbacadde63e76a6a6a4b731a7ab34a20fc28f0c49f4131c",
+      "historical_sha256": "bbd0f7a90fe63750bcbacadde63e76a6a6a4b731a7ab34a20fc28f0c49f4131c",
+      "historical_bytes": 755,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/calendar-check.svg",
+      "bytes": 687,
+      "sha256": "0ab35737c368203ad832b5af0fee81505b1784a45c8c69d7997ebb1ef0c271a6",
+      "historical_sha256": "0ab35737c368203ad832b5af0fee81505b1784a45c8c69d7997ebb1ef0c271a6",
+      "historical_bytes": 687,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/chart-line.svg",
+      "bytes": 648,
+      "sha256": "9100c634433b9983696c6f2e270b1e4220d9d2b1c1fa15b8a9833fee2bd8c972",
+      "historical_sha256": "9100c634433b9983696c6f2e270b1e4220d9d2b1c1fa15b8a9833fee2bd8c972",
+      "historical_bytes": 648,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/circle-check.svg",
+      "bytes": 484,
+      "sha256": "c2c10f625e45e8a918a6d74a063670394ad0a5078b6dd88d92f9a5ac7cb6d612",
+      "historical_sha256": "c2c10f625e45e8a918a6d74a063670394ad0a5078b6dd88d92f9a5ac7cb6d612",
+      "historical_bytes": 484,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/circle-dollar-to-slot.svg",
+      "bytes": 1639,
+      "sha256": "435c1b49cfb546c1f9a8843ab0a83a424feda41166ad7c4d2bbfc7d68dc9f439",
+      "historical_sha256": "435c1b49cfb546c1f9a8843ab0a83a424feda41166ad7c4d2bbfc7d68dc9f439",
+      "historical_bytes": 1639,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/file-contract.svg",
+      "bytes": 1041,
+      "sha256": "8516915385c9d28d156d97ee55e97a3d6ec9de6ae2fe8f886c92ef7d7249c0d4",
+      "historical_sha256": "8516915385c9d28d156d97ee55e97a3d6ec9de6ae2fe8f886c92ef7d7249c0d4",
+      "historical_bytes": 1041,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/file-invoice-dollar.svg",
+      "bytes": 1472,
+      "sha256": "f3fdb653742fef71b88b40fe21ad58038c9b9b50b8ac06940f2f0fce527f9d68",
+      "historical_sha256": "f3fdb653742fef71b88b40fe21ad58038c9b9b50b8ac06940f2f0fce527f9d68",
+      "historical_bytes": 1472,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/house.svg",
+      "bytes": 775,
+      "sha256": "a2f39593246f7bd7dfcecbe8cf4a0b93926756bbabdd6089b1326545d9389391",
+      "historical_sha256": "a2f39593246f7bd7dfcecbe8cf4a0b93926756bbabdd6089b1326545d9389391",
+      "historical_bytes": 775,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/link.svg",
+      "bytes": 1069,
+      "sha256": "457e42a7322ec454c3ae81e07d998e7521726a805b61515c6b29443f0f0bbc21",
+      "historical_sha256": "457e42a7322ec454c3ae81e07d998e7521726a805b61515c6b29443f0f0bbc21",
+      "historical_bytes": 1069,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/money-bill-transfer.svg",
+      "bytes": 1133,
+      "sha256": "c9dc33106599970d28fba86471c7c5da1f615b3df0d085c0979f4525111d839b",
+      "historical_sha256": "c9dc33106599970d28fba86471c7c5da1f615b3df0d085c0979f4525111d839b",
+      "historical_bytes": 1133,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/paperclip.svg",
+      "bytes": 734,
+      "sha256": "830be1674aa37b63e36cee237f1b8c84d6e38544ddc447104f2b97bb063c5cfe",
+      "historical_sha256": "830be1674aa37b63e36cee237f1b8c84d6e38544ddc447104f2b97bb063c5cfe",
+      "historical_bytes": 734,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/receipt.svg",
+      "bytes": 958,
+      "sha256": "21abd1cc3c0d95e67bc5aa80520fe1f9214589476b0227d9556abdc325ae34aa",
+      "historical_sha256": "21abd1cc3c0d95e67bc5aa80520fe1f9214589476b0227d9556abdc325ae34aa",
+      "historical_bytes": 958,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/scale-balanced.svg",
+      "bytes": 1046,
+      "sha256": "205521372c7997ec2778900f033877660a673a6dcfa79f98bc40f6f5a8beeef0",
+      "historical_sha256": "205521372c7997ec2778900f033877660a673a6dcfa79f98bc40f6f5a8beeef0",
+      "historical_bytes": 1046,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/shield-halved.svg",
+      "bytes": 562,
+      "sha256": "047f2d9eda8a9a2758eb5465ff6da85eaf91ffa3013d419331b7ff1338ef932e",
+      "historical_sha256": "047f2d9eda8a9a2758eb5465ff6da85eaf91ffa3013d419331b7ff1338ef932e",
+      "historical_bytes": 562,
+      "current_release_override": false
+    },
+    {
+      "path": "web/assets/icons/users.svg",
+      "bytes": 908,
+      "sha256": "54748bc3c0b2da7a65e982e0ff14fed16ec959bb42aeaa137862a97d16a95a57",
+      "historical_sha256": "54748bc3c0b2da7a65e982e0ff14fed16ec959bb42aeaa137862a97d16a95a57",
+      "historical_bytes": 908,
+      "current_release_override": false
+    },
+    {
+      "path": "web/c15-contract.mjs",
+      "bytes": 48574,
+      "sha256": "a88190f48814222f447f8f375a813ddfec9ce1056cf1373b80fa7c762bd4c3c8",
+      "source_reference": "programme/verified-milestone-close/web/c15-contract.mjs"
+    },
+    {
+      "path": "web/c15-upstream-authority.mjs",
+      "bytes": 610268,
+      "sha256": "d0c793a5eab893fdcd21ff08562cc58a5fc38d6fa289c769f0e8f7fee43308c1",
+      "source_reference": "programme/verified-milestone-close/web/c15-upstream-authority.mjs"
+    },
+    {
+      "path": "web/fixture-engine.mjs",
+      "bytes": 148307,
+      "sha256": "6394365263c4dd26c7f84ce56d5f319def7323def0813814745dad9db7d809ca",
+      "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
+      "historical_bytes": 37367,
+      "current_release_override": true
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 24749,
+      "sha256": "459d9d8d506e4100cb719b1ce6f56e019d753f340f581b88e50f20736c6dc0bf",
+      "historical_sha256": "c06819266a08bef7a3541921b43a235e0968c048bd2c533ab85b74fac2d0646a",
+      "historical_bytes": 67534,
+      "current_release_override": true
+    },
+    {
+      "path": "web/navigation-workspace.mjs",
+      "bytes": 122766,
+      "sha256": "47a1063694ab3b06cbddecb0b71d0ca1921d305fcffe2b3bb1f26a7c8b7e5d88",
+      "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
+      "historical_bytes": 61407,
+      "current_release_override": true
+    },
+    {
+      "path": "web/settlement-case.mjs",
+      "bytes": 48981,
+      "sha256": "ae65aeb20ba486d4d1a23a6a54fd8822e388104cc56c09ba8c9c0b3c4eb71ed8",
+      "source_reference": "programme/verified-milestone-close/web/settlement-case.mjs"
+    },
+    {
+      "path": "web/workbench/workbench-projection.mjs",
+      "bytes": 27673,
+      "sha256": "f14ff72642f5265ef3e78c9eb65ec21cf0c2eaab3052094d49b04133661c3236",
+      "source_reference": "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs",
+      "source_is_candidate": true
+    }
+  ]
+}

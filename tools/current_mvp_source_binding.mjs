@@ -16,6 +16,26 @@ export const CURRENT_MVP_REPOSITORY_ROOT = resolve(HERE, "../current-mvp");
 export const CURRENT_MVP_WEB_ROOT = resolve(CURRENT_MVP_REPOSITORY_ROOT, "web");
 export const CURRENT_MVP_BUNDLED_MANIFEST_PATH = resolve(CURRENT_MVP_REPOSITORY_ROOT, "mvp-publication-staging-rc1-manifest.json");
 export const CURRENT_MVP_MANIFEST_BASENAME = "mvp-publication-staging-rc1-manifest.json";
+export const CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME = "current-release-workbench-manifest.json";
+export const CURRENT_MVP_ALLOWED_CURRENT_RELEASE_OVERRIDES = Object.freeze([
+  "web/index.html",
+  "web/navigation-workspace.mjs",
+  "web/fixture-engine.mjs"
+]);
+// The 23-file 8/3 visual bundle remains hash-locked.  The current-release
+// workbench adds only these 09-owned, non-visual domain dependencies; they are
+// validated by the workbench manifest/test rather than silently folded into
+// the historical 23-file staging manifest.
+export const CURRENT_MVP_WORKBENCH_EXTENSION_PREFIXES = Object.freeze([
+  "web/c15-contract.mjs",
+  "web/c15-upstream-authority.mjs",
+  "web/settlement-case.mjs",
+  "web/workbench/"
+]);
+
+function isAllowedWorkbenchExtension(path) {
+  return CURRENT_MVP_WORKBENCH_EXTENSION_PREFIXES.some((prefix) => prefix.endsWith("/") ? path.startsWith(prefix) : path === prefix);
+}
 
 const MIME_TYPES = Object.freeze({
   ".html": "text/html; charset=utf-8",
@@ -72,6 +92,7 @@ export async function verifyCurrentMvpBundle({
   destinationRoot = CURRENT_MVP_REPOSITORY_ROOT
 } = {}) {
   const issues = [];
+  const currentReleaseOverrides = [];
   let manifest;
   let manifestBytes;
   let bundledManifestBytes;
@@ -109,8 +130,15 @@ export async function verifyCurrentMvpBundle({
     try {
       const bytes = await readFile(destination);
       const actualSha = sha256(bytes);
-      if (bytes.length !== entry.bytes) issues.push(`bytes_mismatch:${path}`);
-      if (actualSha !== entry.sha256) issues.push(`sha256_mismatch:${path}`);
+      if (bytes.length !== entry.bytes || actualSha !== entry.sha256) {
+        if (CURRENT_MVP_ALLOWED_CURRENT_RELEASE_OVERRIDES.includes(path)) {
+          currentReleaseOverrides.push({ path, historical_bytes: entry.bytes, historical_sha256: entry.sha256, current_bytes: bytes.length, current_sha256: actualSha });
+          issues.push(`historical_manifest_stale:${path}`);
+        } else {
+          if (bytes.length !== entry.bytes) issues.push(`bytes_mismatch:${path}`);
+          if (actualSha !== entry.sha256) issues.push(`sha256_mismatch:${path}`);
+        }
+      }
     } catch (error) {
       issues.push(`missing_destination:${path}:${error.code ?? error.message}`);
     }
@@ -118,7 +146,7 @@ export async function verifyCurrentMvpBundle({
   try {
     const actual = await listFiles(destinationRoot);
     const expected = [...entries.map((entry) => entry.path), CURRENT_MVP_MANIFEST_BASENAME].sort();
-    for (const extra of actual.filter((path) => !expected.includes(path))) issues.push(`extra_destination:${extra}`);
+    for (const extra of actual.filter((path) => !expected.includes(path) && path !== CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME && !isAllowedWorkbenchExtension(path))) issues.push(`extra_destination:${extra}`);
     for (const missing of expected.filter((path) => !actual.includes(path))) issues.push(`missing_destination:${missing}`);
   } catch (error) {
     issues.push(`destination_unreadable:${error.code ?? error.message}`);
@@ -130,6 +158,8 @@ export async function verifyCurrentMvpBundle({
     entry_count: entries.length,
     manifest_in_candidate: bundledManifestBytes !== undefined,
     candidate_file_count: entries.length + 1,
+    allowed_workbench_extensions: CURRENT_MVP_WORKBENCH_EXTENSION_PREFIXES,
+    current_release_override_paths: currentReleaseOverrides,
     destination_root: destinationRoot,
     issues
   };

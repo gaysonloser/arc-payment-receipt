@@ -34,16 +34,17 @@ after(async () => {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
-test("binds the current MVP candidate to the exact 23-file manifest", async () => {
+test("reports the historical 23-file manifest as stale after the deep workbench replacement", async () => {
   const result = await verifyCurrentMvpBundle();
-  assert.equal(result.valid, true);
+  assert.equal(result.valid, false);
   assert.equal(result.release_id, CURRENT_MVP_RELEASE_ID);
   assert.equal(result.manifest_sha256, CURRENT_MVP_MANIFEST_SHA256);
   assert.equal(result.entry_count, 23);
   assert.equal(result.manifest_in_candidate, true);
   assert.equal(result.candidate_file_count, 24);
   assert.equal((await readFile(CURRENT_MVP_BUNDLED_MANIFEST_PATH)).length > 0, true);
-  assert.deepEqual(result.issues, []);
+  assert.deepEqual(result.current_release_override_paths.map((item) => item.path).sort(), ["web/fixture-engine.mjs", "web/index.html", "web/navigation-workspace.mjs"]);
+  assert.equal(result.issues.filter((issue) => issue.startsWith("historical_manifest_stale:")).length, 3);
 });
 
 test("kills a changed bundle file and an extra destination file without touching the source staging root", async () => {
@@ -51,14 +52,14 @@ test("kills a changed bundle file and an extra destination file without touching
   try {
     const candidateRoot = join(temporaryRoot, "current-mvp");
     await cp(CURRENT_MVP_REPOSITORY_ROOT, candidateRoot, { recursive: true });
-    const indexPath = join(candidateRoot, "web/index.html");
-    const original = await readFile(indexPath);
-    await writeFile(indexPath, Buffer.concat([original, Buffer.from("\n")]))
+    const immutableAssetPath = join(candidateRoot, "web/assets/icons/paperclip.svg");
+    const original = await readFile(immutableAssetPath);
+    await writeFile(immutableAssetPath, Buffer.concat([original, Buffer.from("\n")]))
     await writeFile(join(candidateRoot, "unexpected.txt"), "not in the 23-file bundle\n");
     const result = await verifyCurrentMvpBundle({ destinationRoot: candidateRoot });
     assert.equal(result.valid, false);
-    assert.equal(result.issues.some((issue) => issue === "sha256_mismatch:web/index.html"), true);
-    assert.equal(result.issues.some((issue) => issue === "bytes_mismatch:web/index.html"), true);
+    assert.equal(result.issues.some((issue) => issue === "sha256_mismatch:web/assets/icons/paperclip.svg"), true);
+    assert.equal(result.issues.some((issue) => issue === "bytes_mismatch:web/assets/icons/paperclip.svg"), true);
     assert.equal(result.issues.some((issue) => issue === "extra_destination:unexpected.txt"), true);
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
