@@ -80,6 +80,40 @@ const failure = (state, code, recovery, matcherState = state.matcherState ?? "no
   close: { ...state.close, business: "OPEN", operational: "OPEN" }
 });
 
+const typedLocalReadback = (readback, id, company) => Boolean(
+  readback && readback.id === id && readback.company === company &&
+  readback.source === "typed_local_erp_readback" && readback.local_fixture_only === true &&
+  readback.live_erp === false && readback.external_actions === 0
+);
+
+export function validateSettlementCloseReadback(readback, { id, company, state } = {}) {
+  if (!typedLocalReadback(readback, id, company)) return { valid: false, code: `TYPED_CLOSE_READBACK_REQUIRED:${id}` };
+  if (id === "accounting_period") {
+    const valid = readback.doctype === "Accounting Period" && readback.status === "ended" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(String(readback.start_date ?? "")) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(String(readback.end_date ?? "")) &&
+      String(readback.start_date) <= String(readback.end_date) &&
+      Array.isArray(readback.closed_documents) && readback.closed_documents.length > 0;
+    return { valid, code: valid ? null : "ACCOUNTING_PERIOD_READBACK_INVALID" };
+  }
+  if (id === "pcv_operational_close") {
+    const valid = readback.doctype === "Period Closing Voucher" && readback.docstatus === 1 &&
+      readback.status === "submitted" && readback.gl_balanced === true &&
+      readback.payment_ledger_status === "OPEN" &&
+      String(readback.outstanding_before6 ?? "") === String(state?.erp?.outstanding?.before ?? "") &&
+      String(readback.outstanding_after6 ?? "") === String(state?.erp?.outstanding?.after ?? "");
+    return { valid, code: valid ? null : "PCV_OPERATIONAL_CLOSE_READBACK_INVALID" };
+  }
+  if (id === "business_close") {
+    const valid = readback.status === "CLOSED" && readback.operational_readback_id === state?.close?.operationalReadback?.name &&
+      readback.accounting_period_readback_id === state?.close?.accountingPeriodReadback?.name &&
+      readback.payment_ledger_status === "OPEN" &&
+      String(readback.outstanding_after6 ?? "") === String(state?.erp?.outstanding?.after ?? "");
+    return { valid, code: valid ? null : "BUSINESS_CLOSE_READBACK_INVALID" };
+  }
+  return { valid: false, code: `TYPED_CLOSE_READBACK_UNKNOWN:${id}` };
+}
+
 export function createSettlementCase(seed = {}) {
   const profileId = SETTLEMENT_PROFILES[seed.profileId] ? seed.profileId : "payment_corporate_payable";
   const route = seed.route ?? { workspace: "milestone-desk", stage: "work-queue", view: "document" };
@@ -229,7 +263,11 @@ export function settlementCaseReducer(input, action) {
     if (!/^\d+$/.test(amount) || BigInt(amount) <= 0n) return failure(state, "ALLOCATION_INVALID", "Allocation must be a positive amount6 integer.");
     if (BigInt(amount) > BigInt(state.allocation.requestedAmount6)) return failure(state, "ALLOCATION_OVERPAY", "Allocation cannot exceed the requested amount6; retain the open remainder.");
     if (state.profileId.endsWith("refund") && (!state.allocation.ceilingAmount6 || BigInt(amount) > BigInt(state.allocation.ceilingAmount6))) return failure(state, "REFUND_OVER_CEILING", "Reduce the refund to the remaining refundable ceiling and retain the original reference.");
-    return invalidateDownstream({ ...state, allocation: { ...state.allocation, allocatedAmount6: amount, remainingAmount6: String(BigInt(state.allocation.requestedAmount6) - BigInt(amount)), originalReference: allocation.originalReference ?? state.allocation.originalReference }, stage: "match-funds", route: { ...state.route, stage: "match-funds", view: "allocation" }, revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "ALLOCATION_SET", amount6: amount, revision: state.revision + 1 }] }, "Allocation changed; raw receipt and ERP projections were invalidated.");
+    const exchangeRate = String(allocation.exchangeRate ?? "");
+    const differenceAmount6 = String(allocation.differenceAmount6 ?? "");
+    if (SETTLEMENT_PROFILES[state.profileId].refund && (!/^\d+(?:\.\d+)?$/.test(exchangeRate) || Number(exchangeRate) <= 0)) return failure(state, "REFUND_EXCHANGE_RATE_REQUIRED", "Refund allocation requires an explicit positive exchange rate; no implicit 1:1 rate is accepted.");
+    if (SETTLEMENT_PROFILES[state.profileId].refund && (!/^-?\d+$/.test(differenceAmount6) || (differenceAmount6 !== "0" && !allocation.differenceAccount))) return failure(state, "REFUND_DIFFERENCE_UNRESOLVED", "Refund difference must be an explicit amount6; any non-zero difference requires a named company account.");
+    return invalidateDownstream({ ...state, allocation: { ...state.allocation, allocatedAmount6: amount, remainingAmount6: String(BigInt(state.allocation.requestedAmount6) - BigInt(amount)), originalReference: allocation.originalReference ?? state.allocation.originalReference, exchangeRate: SETTLEMENT_PROFILES[state.profileId].refund ? exchangeRate : null, differenceAmount6: SETTLEMENT_PROFILES[state.profileId].refund ? differenceAmount6 : "0", differenceAccount: allocation.differenceAccount ?? null }, stage: "match-funds", route: { ...state.route, stage: "match-funds", view: "allocation" }, revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "ALLOCATION_SET", amount6: amount, revision: state.revision + 1 }] }, "Allocation changed; raw receipt and ERP projections were invalidated.");
   }
   if (action.type === "RECORD_REVIEWER_ATTESTATION") return { ...state, reviewerAttested: true, revision: state.revision + 1 };
   if (action.type === "REVIEW_PAYER_APPROVAL") return state.reviewerAttested ? { ...state, payerApproved: true, revision: state.revision + 1 } : failure(state, "REVIEWER_REQUIRED", "Record reviewer attestation before payer approval.");
@@ -267,15 +305,21 @@ export function settlementCaseReducer(input, action) {
   }
   if (action.type === "CLOSE_OPERATIONAL") {
     if (state.erp.gl?.readback?.balanced !== true) return failure(state, "OPERATIONAL_CLOSE_READBACK_REQUIRED", "Generate and read back a balanced GL/PLED projection before operational close.");
-    return { ...state, close: { ...state.close, operational: "CLOSED" }, revision: state.revision + 1 };
+    const check = validateSettlementCloseReadback(action.readback, { id: "pcv_operational_close", company: state.companyId, state });
+    if (!check.valid) return failure(state, check.code, "Operational close requires a typed Period Closing Voucher readback bound to company, GL, PLED and outstanding amounts.");
+    return { ...state, close: { ...state.close, operational: "CLOSED", periodClosingVoucher: "READBACK_VERIFIED", operationalReadback: clone(action.readback) }, revision: state.revision + 1 };
   }
   if (action.type === "CLOSE_ACCOUNTING_PERIOD") {
-    if (action.periodStatus !== "ended") return failure(state, "ACCOUNTING_PERIOD_OPEN", "Accounting Period remains OPEN until a typed ended-period readback is present.");
-    return { ...state, close: { ...state.close, accountingPeriod: "CLOSED" }, revision: state.revision + 1 };
+    if (Object.prototype.hasOwnProperty.call(action, "periodStatus")) return failure(state, "ACCOUNTING_PERIOD_CALLER_STATUS_FORBIDDEN", "Caller-provided periodStatus is not evidence; attach the typed Accounting Period readback.");
+    const check = validateSettlementCloseReadback(action.readback, { id: "accounting_period", company: state.companyId, state });
+    if (!check.valid) return failure(state, check.code, "Accounting Period remains OPEN until a typed ended-period readback is present.");
+    return { ...state, close: { ...state.close, accountingPeriod: "CLOSED", accountingPeriodReadback: clone(action.readback) }, revision: state.revision + 1 };
   }
   if (action.type === "CLOSE_BUSINESS") {
     if (state.close.operational !== "CLOSED" || state.close.accountingPeriod !== "CLOSED" || state.erp.pled?.status !== "OPEN") return failure(state, "BUSINESS_CLOSE_BOUNDARY", "Business close requires the operational and accounting-period controls plus an OPEN PLED/outstanding readback; technical receipt match alone is insufficient.");
-    return { ...state, close: { ...state.close, business: "CLOSED" }, revision: state.revision + 1 };
+    const check = validateSettlementCloseReadback(action.readback, { id: "business_close", company: state.companyId, state });
+    if (!check.valid) return failure(state, check.code, "Business close requires an independent typed readback bound to the accepted PCV, Accounting Period and remaining PLED/outstanding state.");
+    return { ...state, close: { ...state.close, business: "CLOSED", businessReadback: clone(action.readback) }, revision: state.revision + 1 };
   }
   if (action.type === "RECOVER") return { ...invalidateDownstream({ ...state, matcherState: action.matcherState === "stale" || action.matcherState === "mismatch" ? action.matcherState : "not_evaluated", outcome: action.matcherState === "stale" || action.matcherState === "mismatch" ? action.matcherState : "not_evaluated", revision: state.revision + 1 }, String(action.reason ?? "Named recovery retained the open item.")), recovery: String(action.recovery ?? "Refresh the typed source and re-run the matcher; no accounting close is inferred.") };
   if (action.type === "REVISE") return { ...state, stage: "evidence", outcome: "revision_required", revision: state.revision + 1, recovery: String(action.reason ?? "Review the linked evidence and revise the case.") };

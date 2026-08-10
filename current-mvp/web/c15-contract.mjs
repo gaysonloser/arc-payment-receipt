@@ -918,6 +918,30 @@ export const A12_C15_ACCEPTED_SCENARIO_PROJECTION_MATRIX = deepFreeze({
         ]
       },
       {
+        "field_id": "exchange_rate",
+        "type": "decimal",
+        "source": "erpnext",
+        "editability": "read_only",
+        "requiredness": "required",
+        "validator": "positive_explicit_no_implicit_parity",
+        "reset_dependencies": [
+          "original_voucher",
+          "refund_amount6"
+        ]
+      },
+      {
+        "field_id": "difference_amount6",
+        "type": "signed_amount6",
+        "source": "erp_projection",
+        "editability": "computed",
+        "requiredness": "required",
+        "validator": "zero_or_named_company_difference_account",
+        "reset_dependencies": [
+          "exchange_rate",
+          "refund_amount6"
+        ]
+      },
+      {
         "field_id": "refund_posting_mode",
         "type": "enum",
         "source": "projection_resolver",
@@ -1057,6 +1081,30 @@ export const A12_C15_ACCEPTED_SCENARIO_PROJECTION_MATRIX = deepFreeze({
         "validator": "positive_lte_obligation_and_ceiling",
         "reset_dependencies": [
           "original_voucher"
+        ]
+      },
+      {
+        "field_id": "exchange_rate",
+        "type": "decimal",
+        "source": "erpnext",
+        "editability": "read_only",
+        "requiredness": "required",
+        "validator": "positive_explicit_no_implicit_parity",
+        "reset_dependencies": [
+          "original_voucher",
+          "approved_refund_amount6"
+        ]
+      },
+      {
+        "field_id": "difference_amount6",
+        "type": "signed_amount6",
+        "source": "erp_projection",
+        "editability": "computed",
+        "requiredness": "required",
+        "validator": "zero_or_named_company_difference_account",
+        "reset_dependencies": [
+          "exchange_rate",
+          "approved_refund_amount6"
         ]
       },
       {
@@ -1630,4 +1678,3 @@ export const A12_C15_ACCEPTED_ACTION_STATE_MACHINE = deepFreeze({
   },
   "identity_assertion": "resolved.action_id === scenario_projection_matrix[resolved.scenario].primary_action; unknown_or_mismatch_is_non_executable"
 });
-

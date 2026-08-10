@@ -242,8 +242,8 @@
     },
     {
       "path": "web/c15-contract.mjs",
-      "bytes": 48574,
-      "sha256": "a88190f48814222f447f8f375a813ddfec9ce1056cf1373b80fa7c762bd4c3c8",
+      "bytes": 49997,
+      "sha256": "c77b926c70f2a6d3e1643bde88605b27b91d0095fc2b9dab742d2eb485de5a9d",
       "source_reference": "programme/verified-milestone-close/web/c15-contract.mjs"
     },
     {
@@ -270,16 +270,16 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 122766,
-      "sha256": "47a1063694ab3b06cbddecb0b71d0ca1921d305fcffe2b3bb1f26a7c8b7e5d88",
+      "bytes": 125916,
+      "sha256": "a089c14437a148848aa66f7564e23c38445bddad8e9229f3a7e6d675f0f96c18",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,
       "current_release_override": true
     },
     {
       "path": "web/settlement-case.mjs",
-      "bytes": 48981,
-      "sha256": "ae65aeb20ba486d4d1a23a6a54fd8822e388104cc56c09ba8c9c0b3c4eb71ed8",
+      "bytes": 53217,
+      "sha256": "6d03258c436936df63ffd1384e349b383401022356cb5c76162cbe1e740ce0de",
       "source_reference": "programme/verified-milestone-close/web/settlement-case.mjs"
     },
     {
