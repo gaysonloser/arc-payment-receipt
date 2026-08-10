@@ -10,6 +10,10 @@ import {
   buildCircleWebhookReadiness,
   createCircleWebhookProcessor
 } from "./circle_contract_webhook_gate.mjs";
+import {
+  currentMvpContentType,
+  resolveCurrentMvpRequest
+} from "./current_mvp_source_binding.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt_event_monitor_latest.json");
@@ -1697,6 +1701,33 @@ export function createReceiptServer(options = {}) {
       }
       if (!["GET", "HEAD"].includes(request.method)) {
         json(response, 405, { error: "method_not_allowed" }, request.method);
+        return;
+      }
+
+      if (url.pathname === "/current-mvp" || url.pathname.startsWith("/current-mvp/")) {
+        const currentMvpRequest = resolveCurrentMvpRequest(url.pathname);
+        if (!currentMvpRequest) {
+          json(response, 404, { error: "current_mvp_route_invalid" }, request.method);
+          return;
+        }
+        try {
+          const body = await readFile(currentMvpRequest.file_path);
+          const isHtml = currentMvpRequest.file_path.endsWith(".html");
+          const isModule = currentMvpRequest.file_path.endsWith(".mjs");
+          response.writeHead(200, {
+            "content-type": currentMvpContentType(currentMvpRequest.file_path),
+            "cache-control": isHtml ? "no-store" : isModule ? "no-cache" : "public, max-age=3600",
+            "content-security-policy": "default-src 'self'; connect-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+            ...SECURITY_HEADERS
+          });
+          response.end(request.method === "HEAD" ? "" : body);
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            json(response, 404, { error: "current_mvp_asset_not_found", path: currentMvpRequest.relative_path }, request.method);
+          } else {
+            throw error;
+          }
+        }
         return;
       }
 
