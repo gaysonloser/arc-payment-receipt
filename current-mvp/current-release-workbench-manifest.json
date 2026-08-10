@@ -71,8 +71,8 @@
     {
       "path": "tools/circle_contract_webhook_gate.mjs",
       "role": "verifier",
-      "bytes": 14416,
-      "sha256": "8c16dbae6012d707d6c97fe94ca4946ae5f49b0df526f7804f4e119cba9eb904"
+      "bytes": 14445,
+      "sha256": "eecd1415adf02454bae7538811545d2dabd2d2bf70813442f093584cfb72d35a"
     },
     {
       "path": "tools/circle_console_receipt.test.mjs",
@@ -83,14 +83,14 @@
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 113104,
-      "sha256": "010567c773979e5c975ea0d9b35c301a5da9041537687967a7818de1be7a0e6b"
+      "bytes": 114060,
+      "sha256": "a39ebb67b32e4ff870b1febb20c009974eb7f27ae9bede3b88aa3f1ce53613cb"
     },
     {
       "path": "tools/circle_console_server.test.mjs",
       "role": "test",
-      "bytes": 4236,
-      "sha256": "0eea894fe03d3b46e3d4d92df90dff0222e5ed2f7dedddc64886a7039e9e5e5b"
+      "bytes": 5227,
+      "sha256": "d18813da7e31e24343fa6d162daebb4a0d541f93884ef62475ad343264e5f302"
     },
     {
       "path": "tools/current_mvp_erp_readiness.mjs",

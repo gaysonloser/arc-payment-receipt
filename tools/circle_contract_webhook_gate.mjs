@@ -165,7 +165,7 @@ export function buildCircleConsoleReceiptPolicy(options = {}) {
   return {
     chainId: Number(options.chainId ?? 5042002),
     contractAddress: normalizeAddress(options.contractAddress),
-    eventSignature: options.eventSignature ?? "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)",
+    eventSignature: options.eventSignature ?? "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)",
     eventTopic: String(options.eventTopic ?? "").toLowerCase(),
     subscriptionId: String(options.subscriptionId ?? ""),
     releaseCommit: normalizeReleaseCommit(options.releaseCommit),

@@ -48,6 +48,8 @@ export const DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH = resolve(HERE, "../outputs/Arc_
 export const DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Evidence_Anchor_20260731.json");
 export const DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH = resolve(HERE, "../outputs/Arc_Lab_Release_Delivery_Attestation_20260731.json");
 export const DEFAULT_ARC_LAB_RELEASE_DELIVERY_ATTESTATION_PATH = resolve(HERE, "arc_lab_release_delivery_attestation.html");
+export const CURRENT_POLICY_SETTLEMENT_CONTRACT = "0xc7682649a1aa60d0f74825ad2b812ee062178047";
+export const CURRENT_POLICY_CREATED_EVENT = "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)";
 export const DEFAULT_ARC_LAB_AGENT_REGISTRATION_RECEIPT_PATH = resolve(HERE, "arc_lab_agent_registration_receipt.html");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
@@ -1684,6 +1686,7 @@ export function buildQualityReleaseEvidenceView(progress, w4Dual) {
 }
 
 export function createReceiptServer(options = {}) {
+  const runtimeEnvironment = options.environment ?? process.env;
   const loadReport = options.loadReport ?? (() => loadEvidence(options.evidencePath));
   const loadDualReport = options.loadDualReport ?? (() => loadDualEvidence(options.dualEvidencePath));
   const loadCircleReport = options.loadCircleReport ?? (() => loadCircleSnapshot(options.circleSnapshotPath));
@@ -1716,7 +1719,14 @@ export function createReceiptServer(options = {}) {
   const loadReleaseDeliveryAttestation = options.loadReleaseDeliveryAttestation ?? (() => loadJson(options.releaseDeliveryAttestationPath ?? DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
-  const circleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy();
+  const circleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy({
+    chainId: 5042002,
+    contractAddress: options.circleConsoleContractAddress ?? runtimeEnvironment.CIRCLE_CONSOLE_CONTRACT_ADDRESS ?? CURRENT_POLICY_SETTLEMENT_CONTRACT,
+    eventSignature: options.circleConsoleEventSignature ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_SIGNATURE ?? CURRENT_POLICY_CREATED_EVENT,
+    eventTopic: options.circleConsoleEventTopic ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_TOPIC ?? "",
+    subscriptionId: options.circleConsoleSubscriptionId ?? runtimeEnvironment.CIRCLE_CONSOLE_SUBSCRIPTION_ID ?? "",
+    releaseCommit: options.currentReleaseCommit ?? runtimeEnvironment.RENDER_GIT_COMMIT ?? runtimeEnvironment.CURRENT_RELEASE_COMMIT ?? ""
+  });
   const loadCircleConsoleReadback = typeof options.loadCircleConsoleReadback === "function"
     ? options.loadCircleConsoleReadback
     : null;
@@ -1724,7 +1734,7 @@ export function createReceiptServer(options = {}) {
     trustedReadbackLoaderAvailable: loadCircleConsoleReadback !== null
   });
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
-    environment: options.environment ?? process.env,
+    environment: runtimeEnvironment,
     policy: { ...CIRCLE_WEBHOOK_READINESS_POLICY, enabled: true, durableQueueAvailable: true },
     durableQueue: options.circleWebhookDurableQueue,
     idempotencyStore: options.circleWebhookIdempotencyStore

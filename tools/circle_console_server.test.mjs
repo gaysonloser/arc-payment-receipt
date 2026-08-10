@@ -4,7 +4,9 @@ import { test } from "node:test";
 import { buildCircleConsoleReceiptPolicy } from "./circle_contract_webhook_gate.mjs";
 import {
   buildCircleConsoleReceiptReadinessView,
-  createReceiptServer
+  createReceiptServer,
+  CURRENT_POLICY_CREATED_EVENT,
+  CURRENT_POLICY_SETTLEMENT_CONTRACT
 } from "./arc_payment_receipt_server.mjs";
 
 const CONTRACT = "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7";
@@ -13,6 +15,24 @@ const EVENT_TOPIC = `0x${"cd".repeat(32)}`;
 const SUBSCRIPTION = "Subscription_evt_current_release";
 const RELEASE_COMMIT = "d".repeat(40);
 const NOW = Date.parse("2026-08-10T12:00:00.000Z");
+
+test("current server defaults bind Console evidence to PolicySettlementV1 and the deployed release", () => {
+  const server = createReceiptServer({
+    environment: { RENDER_GIT_COMMIT: RELEASE_COMMIT }
+  });
+  server.close();
+  const currentPolicy = buildCircleConsoleReceiptPolicy({
+    contractAddress: CURRENT_POLICY_SETTLEMENT_CONTRACT,
+    eventSignature: CURRENT_POLICY_CREATED_EVENT,
+    releaseCommit: RELEASE_COMMIT
+  });
+  const readiness = buildCircleConsoleReceiptReadinessView(currentPolicy);
+  assert.equal(readiness.policy_binding.contract_address, CURRENT_POLICY_SETTLEMENT_CONTRACT);
+  assert.equal(readiness.policy_binding.event_signature, CURRENT_POLICY_CREATED_EVENT);
+  assert.equal(readiness.policy_binding.release_commit, RELEASE_COMMIT);
+  assert.ok(readiness.blockers.includes("subscription_id_missing"));
+  assert.ok(readiness.blockers.includes("trusted_readback_loader_not_configured"));
+});
 
 function policy() {
   return buildCircleConsoleReceiptPolicy({
