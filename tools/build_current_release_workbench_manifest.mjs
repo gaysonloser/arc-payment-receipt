@@ -75,7 +75,13 @@ export async function buildManifest() {
     supportInput("tools/current_release_workbench.test.mjs", "test"),
     supportInput("tools/build_current_release_workbench_manifest.mjs", "verifier"),
     supportInput("tools/current_mvp_source_binding.mjs", "verifier"),
-    supportInput("tools/current_mvp_source_binding.test.mjs", "test")
+    supportInput("tools/current_mvp_source_binding.test.mjs", "test"),
+    supportInput("tools/circle_contract_webhook_gate.mjs", "verifier"),
+    supportInput("tools/circle_console_receipt.test.mjs", "test"),
+    supportInput("tools/arc_payment_receipt_server.mjs", "runtime"),
+    supportInput("tools/circle_console_server.test.mjs", "test"),
+    supportInput("tools/current_mvp_erp_readiness.mjs", "verifier"),
+    supportInput("tools/current_mvp_erp_readiness.test.mjs", "test")
   ]);
   return {
     schema: "arc-erp.current-release-workbench-manifest.v1",
@@ -136,7 +142,13 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     ["tools/current_release_workbench.test.mjs", "test"],
     ["tools/build_current_release_workbench_manifest.mjs", "verifier"],
     ["tools/current_mvp_source_binding.mjs", "verifier"],
-    ["tools/current_mvp_source_binding.test.mjs", "test"]
+    ["tools/current_mvp_source_binding.test.mjs", "test"],
+    ["tools/circle_contract_webhook_gate.mjs", "verifier"],
+    ["tools/circle_console_receipt.test.mjs", "test"],
+    ["tools/arc_payment_receipt_server.mjs", "runtime"],
+    ["tools/circle_console_server.test.mjs", "test"],
+    ["tools/current_mvp_erp_readiness.mjs", "verifier"],
+    ["tools/current_mvp_erp_readiness.test.mjs", "test"]
   ];
   if (!Array.isArray(manifest.verification_inputs) || manifest.verification_inputs.length !== expectedInputs.length) issues.push("verification_inputs_missing");
   for (const [path, role] of expectedInputs) {

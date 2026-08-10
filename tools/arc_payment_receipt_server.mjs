@@ -6,6 +6,9 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  buildCircleConsoleReceipt,
+  buildCircleConsoleReceiptPolicy,
+  buildCircleConsoleReceiptReadiness,
   buildCircleWebhookPolicy,
   buildCircleWebhookReadiness,
   createCircleWebhookProcessor
@@ -87,6 +90,55 @@ export function buildCircleWebhookPublicView() {
       wallet_or_chain_action: false,
       secret_exposed: false
     }
+  };
+}
+
+export function buildCircleConsoleReceiptReadinessView(policy, { trustedReadbackLoaderAvailable = false } = {}) {
+  const validatorReadiness = buildCircleConsoleReceiptReadiness(policy ?? buildCircleConsoleReceiptPolicy());
+  const blockers = [...validatorReadiness.blockers];
+  if (!trustedReadbackLoaderAvailable) blockers.push("trusted_readback_loader_not_configured");
+  return {
+    schema: "arc.circle-console-receipt-readiness.v1",
+    surface: "circle_console",
+    status: blockers.length === 0 ? "ready_for_trusted_circle_console_readback" : "not_ready_fail_closed",
+    blockers,
+    policy_binding: {
+      chain_id: Number(policy?.chainId ?? 5042002),
+      contract_address: policy?.contractAddress || null,
+      event_signature: policy?.eventSignature || null,
+      event_topic_required: Boolean(policy?.eventTopic),
+      subscription_id_present: Boolean(policy?.subscriptionId),
+      release_commit: policy?.releaseCommit || null
+    },
+    boundaries: {
+      read_only: true,
+      accepts_caller_supplied_receipt: false,
+      trusted_server_readback_required: true,
+      historical_evidence_can_satisfy_current_release: false,
+      creates_circle_resource: false,
+      persists_receipt: false,
+      wallet_or_chain_write: false,
+      erp_write: false
+    }
+  };
+}
+
+export function buildCircleConsoleReceiptVerificationView(input, policy, readiness) {
+  const effectiveReadiness = readiness ?? buildCircleConsoleReceiptReadinessView(policy);
+  if (effectiveReadiness.status !== "ready_for_trusted_circle_console_readback") {
+    return {
+      accepted: false,
+      errors: ["circle_console_receipt_verifier_not_ready", ...effectiveReadiness.blockers],
+      receipt: null,
+      readiness: effectiveReadiness,
+      boundaries: effectiveReadiness.boundaries
+    };
+  }
+  const verification = buildCircleConsoleReceipt(input, policy);
+  return {
+    ...verification,
+    readiness: effectiveReadiness,
+    boundaries: effectiveReadiness.boundaries
   };
 }
 
@@ -1664,6 +1716,13 @@ export function createReceiptServer(options = {}) {
   const loadReleaseDeliveryAttestation = options.loadReleaseDeliveryAttestation ?? (() => loadJson(options.releaseDeliveryAttestationPath ?? DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
+  const circleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy();
+  const loadCircleConsoleReadback = typeof options.loadCircleConsoleReadback === "function"
+    ? options.loadCircleConsoleReadback
+    : null;
+  const circleConsoleReceiptReadiness = () => buildCircleConsoleReceiptReadinessView(circleConsoleReceiptPolicy, {
+    trustedReadbackLoaderAvailable: loadCircleConsoleReadback !== null
+  });
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
     environment: options.environment ?? process.env,
     policy: { ...CIRCLE_WEBHOOK_READINESS_POLICY, enabled: true, durableQueueAvailable: true },
@@ -2104,6 +2163,35 @@ export function createReceiptServer(options = {}) {
 
       if (url.pathname === "/api/v1/circle-webhook-readiness") {
         json(response, 200, buildCircleWebhookPublicView(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/circle-console-receipt-readiness") {
+        json(response, 200, circleConsoleReceiptReadiness(), request.method);
+        return;
+      }
+
+      if (url.pathname === "/api/v1/circle-console-receipt") {
+        const readiness = circleConsoleReceiptReadiness();
+        if (readiness.status !== "ready_for_trusted_circle_console_readback") {
+          json(response, 503, buildCircleConsoleReceiptVerificationView(null, circleConsoleReceiptPolicy, readiness), request.method);
+          return;
+        }
+        let readback;
+        try {
+          readback = await loadCircleConsoleReadback();
+        } catch {
+          json(response, 503, {
+            accepted: false,
+            errors: ["trusted_circle_console_readback_unavailable"],
+            receipt: null,
+            readiness,
+            boundaries: readiness.boundaries
+          }, request.method);
+          return;
+        }
+        const verification = buildCircleConsoleReceiptVerificationView(readback, circleConsoleReceiptPolicy, readiness);
+        json(response, verification.accepted ? 200 : 422, verification, request.method);
         return;
       }
 

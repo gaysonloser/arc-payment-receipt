@@ -239,7 +239,16 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     circle_console: "NOT_PROVEN",
     arc_testnet: "NOT_PROVEN"
   });
-  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 2);
-  assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 2);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 5);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 4);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "runtime").length, 1);
+  for (const path of [
+    "tools/circle_contract_webhook_gate.mjs",
+    "tools/circle_console_receipt.test.mjs",
+    "tools/arc_payment_receipt_server.mjs",
+    "tools/circle_console_server.test.mjs",
+    "tools/current_mvp_erp_readiness.mjs",
+    "tools/current_mvp_erp_readiness.test.mjs"
+  ]) assert.equal(manifest.verification_inputs.some((item) => item.path === path), true, path);
   assert.equal(manifest.accepted_request.id, "programme-current-release-product-completion-sprint-14-owner-09-domain-bridge-negative-test-request-v1");
 });

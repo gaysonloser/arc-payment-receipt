@@ -47,14 +47,14 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 14661,
-      "sha256": "01ff022e0ee5bb1d0119e1844f2d645611e559abde9e92379c193fbe3f0740da"
+      "bytes": 15147,
+      "sha256": "d6d1b405f3856ce21848f5a4cb77d12ea4f31c621c0af89342e95d3908bce4ad"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 10405,
-      "sha256": "f4772383ab6c9b3574d33379b897d6094fd9dc5816943097ca420f5e370e6a9c"
+      "bytes": 11159,
+      "sha256": "26d83edab18d287e59579377d66f53855ee2898de9fe52cdaf087b8237bad53e"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -67,6 +67,42 @@
       "role": "test",
       "bytes": 4944,
       "sha256": "101c2eba75cb33fa6683a96fec7199f2ffd5ff0c9da443e15fad5694d07a379d"
+    },
+    {
+      "path": "tools/circle_contract_webhook_gate.mjs",
+      "role": "verifier",
+      "bytes": 14416,
+      "sha256": "8c16dbae6012d707d6c97fe94ca4946ae5f49b0df526f7804f4e119cba9eb904"
+    },
+    {
+      "path": "tools/circle_console_receipt.test.mjs",
+      "role": "test",
+      "bytes": 10915,
+      "sha256": "78c27882b3c9e9cdc2feee85f1f1630255e1f829d7973889d558eb51c84e69bc"
+    },
+    {
+      "path": "tools/arc_payment_receipt_server.mjs",
+      "role": "runtime",
+      "bytes": 113104,
+      "sha256": "010567c773979e5c975ea0d9b35c301a5da9041537687967a7818de1be7a0e6b"
+    },
+    {
+      "path": "tools/circle_console_server.test.mjs",
+      "role": "test",
+      "bytes": 4236,
+      "sha256": "0eea894fe03d3b46e3d4d92df90dff0222e5ed2f7dedddc64886a7039e9e5e5b"
+    },
+    {
+      "path": "tools/current_mvp_erp_readiness.mjs",
+      "role": "verifier",
+      "bytes": 9427,
+      "sha256": "5ea6432aef3306f8da1103a7b3f95715488a3f0919337a53688de861388c3f69"
+    },
+    {
+      "path": "tools/current_mvp_erp_readiness.test.mjs",
+      "role": "test",
+      "bytes": 8015,
+      "sha256": "ad47635d803eebd892633fe95f9296a83bfefd085da10dffdda1ba7e97864253"
     }
   ],
   "independent_audit": {
