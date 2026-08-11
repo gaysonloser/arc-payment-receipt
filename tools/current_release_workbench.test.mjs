@@ -34,8 +34,88 @@ import {
   OUTPUT_PATH,
   verifyCurrentReleaseWorkbenchManifest
 } from "./build_current_release_workbench_manifest.mjs";
+import {
+  buildCanonicalArcReceipt,
+  decodeRawArcReceipt,
+  validateCanonicalArcReceipt
+} from "../current-mvp/web/settlement-case.mjs";
 
 const zeroCounts = { bank_transaction: 0, close: 0, gl: 0, payment_entry: 0, payment_ledger: 0 };
+
+test("canonical Arc receipt decoder round-trips and fails closed on every raw/typed guard", () => {
+  const caseBinding = {
+    caseId: "case-001",
+    companyId: "company-001",
+    profileId: "customer_receipt_inbound",
+    origin: "chain_observed",
+    sourceDocument: "invoice-001",
+    treasuryId: "treasury-001",
+    policyId: `0x${"11".repeat(32)}`,
+    transferId: `0x${"22".repeat(32)}`
+  };
+  const valid = buildCanonicalArcReceipt({
+    policyContract: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    payer: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    recipient: "0xcccccccccccccccccccccccccccccccccccccccc",
+    policyId: `0x${"11".repeat(32)}`,
+    transferId: `0x${"22".repeat(32)}`,
+    attestationDigest: `0x${"33".repeat(32)}`,
+    attestationNonce: 7,
+    amount6: 100,
+    caseBinding
+  });
+  const decoded = decodeRawArcReceipt(valid);
+  assert.deepEqual(decoded.map(({ variant, logIndex }) => ({ variant, logIndex })), [
+    { variant: "ERC20_USDC", logIndex: 2 },
+    { variant: "ARC_SYSTEM", logIndex: 5 },
+    { variant: "SettlementExecuted", logIndex: 9 }
+  ]);
+  assert.equal(validateCanonicalArcReceipt(valid, { amount6: 100, caseBinding }).valid, true);
+
+  const rawMutations = [
+    ["RAW_RECEIPT_NOT_SUCCESS", (receipt) => { receipt.status = 0; }],
+    ["RAW_MALFORMED_LOG", (receipt) => { delete receipt.rawLogs[0].data; }],
+    ["RAW_TRANSFER_LAYOUT", (receipt) => { receipt.rawLogs[0].topics.pop(); }],
+    ["RAW_TRANSFER_EMITTER", (receipt) => { receipt.rawLogs[0].emitter = "0xdddddddddddddddddddddddddddddddddddddddd"; }],
+    ["RAW_POLICY_LAYOUT", (receipt) => { receipt.rawLogs[2].topics.pop(); }]
+  ];
+  for (const [expected, mutate] of rawMutations) {
+    const candidate = structuredClone(valid);
+    mutate(candidate);
+    assert.throws(() => decodeRawArcReceipt(candidate), new RegExp(expected), expected);
+    const checked = validateCanonicalArcReceipt(candidate, { amount6: 100, caseBinding });
+    assert.equal(checked.valid, false, expected);
+    const expectedCode = expected === "RAW_TRANSFER_EMITTER"
+      ? "ARC_IDENTITY_PROVENANCE"
+      : expected === "RAW_RECEIPT_NOT_SUCCESS"
+        ? "ARC_RECEIPT_NOT_SUCCESS"
+        : `ARC_${expected}`;
+    assert.equal(checked.code, expectedCode, expected);
+  }
+
+  const typed = structuredClone(valid);
+  delete typed.rawLogs;
+  typed.logs = decoded;
+  const typedMutations = [
+    ["ARC_RECEIPT_IDENTITY", (receipt) => { receipt.transactionHash = "0x01"; }],
+    ["ARC_CASE_BINDING", (receipt) => { receipt.caseBinding = { caseId: "wrong" }; }],
+    ["ARC_LOG_CARDINALITY", (receipt) => { receipt.logs.pop(); }],
+    ["ARC_LOG_ORDER", (receipt) => { receipt.logs[1].logIndex = 1; }],
+    ["ARC_LOG_VARIANT", (receipt) => { receipt.logs[0].variant = "UNKNOWN"; }],
+    ["ARC_IDENTITY_PROVENANCE", (receipt) => { receipt.logs[0].from = receipt.from.replace(/.$/, "1"); }],
+    ["ARC_SYSTEM_UNIT", (receipt) => { receipt.logs[1].amount = 1n; }],
+    ["ARC_GETTER_READBACK_MISMATCH", (receipt) => { receipt.getterReadback.amount6 = "101"; }],
+    ["ARC_REORG_UNRESOLVED", (receipt) => { receipt.reorg = "reorg_detected"; }],
+    ["ARC_REORG_STATE_INVALID", (receipt) => { receipt.reorg = "pending"; }]
+  ];
+  for (const [expected, mutate] of typedMutations) {
+    const candidate = structuredClone(typed);
+    mutate(candidate);
+    const checked = validateCanonicalArcReceipt(candidate, { amount6: 100, caseBinding });
+    assert.equal(checked.valid, false, expected);
+    assert.equal(checked.code, expected, expected);
+  }
+});
 
 test("current release keeps the 23-file public entry and exposes the domain workbench entry", async () => {
   const base = await verifyCurrentMvpBundle();
@@ -51,7 +131,7 @@ test("current release keeps the 23-file public entry and exposes the domain work
 test("full current-release workbench manifest binds every shipped file and rejects drift", async () => {
   const result = await verifyCurrentReleaseWorkbenchManifest();
   assert.equal(result.valid, true);
-  assert.equal(result.entry_count, 27);
+  assert.equal(result.entry_count, 28);
   assert.equal(result.issues.length, 0);
   const manifest = JSON.parse(await readFile(OUTPUT_PATH, "utf8"));
   assert.equal(manifest.stable_terminal_freeze, true);
@@ -233,12 +313,18 @@ test("browser measurement contract rejects overflow, focus loss and console erro
 test("manifest freezes current five-surface status and verifier/test byte inputs", async () => {
   const manifest = JSON.parse(await readFile(OUTPUT_PATH, "utf8"));
   assert.deepEqual(Object.fromEntries(Object.entries(manifest.current_release_surface_status).map(([id, value]) => [id, value.status])), {
-    github: "NOT_PUBLISHED",
-    render: "NOT_PROVEN",
-    encode: "NOT_PROVEN",
-    circle_console: "NOT_PROVEN",
-    arc_testnet: "NOT_PROVEN"
+    github: "TRUE_RECEIPT_HISTORICAL",
+    render: "TRUE_RECEIPT",
+    deck: "TRUE_RECEIPT",
+    video: "TRUE_RECEIPT",
+    circle_console: "BLOCKED",
+    encode: "UNPROVEN",
+    final: "UNPROVEN",
+    arc_testnet: "UNPROVEN",
+    erp: "UNPROVEN"
   });
+  assert.deepEqual(manifest.current_release_surface_status.circle_console.blockers.sort(), ["subscription_id_missing", "trusted_readback_loader_not_configured"].sort());
+  assert.equal(manifest.entries.some((item) => item.path === "current-release-final-assets-evidence.json"), true);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 5);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 4);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "runtime").length, 1);

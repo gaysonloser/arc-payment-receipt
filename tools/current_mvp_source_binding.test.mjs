@@ -79,7 +79,7 @@ test("serves current MVP routes without replacing the historical root and preser
   const current = await fetch(`${origin}/current-mvp`);
   const currentBody = await current.text();
   assert.equal(current.status, 200);
-  assert.match(currentBody, /Verified Milestone Close/);
+  assert.match(currentBody, /Arc Enterprise · Settlement Workbench/);
   assert.notEqual(currentBody, rootBody);
 
   const deepLink = await fetch(`${origin}/current-mvp/reconciliation`);

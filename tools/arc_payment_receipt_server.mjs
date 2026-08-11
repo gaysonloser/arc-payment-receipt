@@ -53,6 +53,11 @@ export const CURRENT_POLICY_CREATED_EVENT = "PolicyCreated(bytes32,address,addre
 export const DEFAULT_ARC_LAB_AGENT_REGISTRATION_RECEIPT_PATH = resolve(HERE, "arc_lab_agent_registration_receipt.html");
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
+export const DEFAULT_FINAL_ASSETS_EVIDENCE_PATH = resolve(HERE, "../current-mvp/current-release-final-assets-evidence.json");
+export const PUBLIC_POST_ROUTES = Object.freeze([
+  "/api/v1/circle-webhook",
+  "/api/v1/opening-balance-fixture-validate"
+]);
 
 async function loadJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
@@ -665,12 +670,47 @@ export function buildReviewerEvidencePack({ qualityHold, manufacturingProgress, 
  * Makes the current hackathon handoff legible without claiming that missing
  * materials, a new chain action, or a submission itself have been completed.
  */
-export function buildFinalSubmissionReadinessView(reviewerEvidencePack) {
+const FINAL_ASSET_EXPECTATIONS = Object.freeze({
+  final_demo_video: { format: "mp4", name: "arc-enterprise-settlement-control-programme-final-3min.mp4" },
+  final_deck_pdf: { format: "pdf", name: "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf" },
+  final_deck_pptx: { format: "pptx", name: "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx" }
+});
+
+function isSha256(value) { return typeof value === "string" && /^[0-9a-f]{64}$/.test(value); }
+
+export function validateFinalAssetsEvidence(evidence) {
+  const errors = [];
+  if (evidence?.schema !== "arc-erp.current-release-final-assets-evidence.v1") errors.push("schema_invalid");
+  if (evidence?.source !== "public_github_release_readback") errors.push("source_not_public_release_readback");
+  if (evidence?.release_id !== "verified-milestone-close-current-mvp-workbench-rc1") errors.push("release_id_invalid");
+  if (evidence?.tag !== "programme-final-20260810") errors.push("tag_invalid");
+  const releaseUrl = "https://github.com/gaysonloser/arc-payment-receipt/releases/tag/programme-final-20260810";
+  if (evidence?.release_url !== releaseUrl) errors.push("release_url_invalid");
+  if (!Array.isArray(evidence?.assets)) errors.push("assets_array_required");
+  const byKind = new Map((evidence?.assets ?? []).map((asset) => [asset?.kind, asset]));
+  for (const [kind, expected] of Object.entries(FINAL_ASSET_EXPECTATIONS)) {
+    const asset = byKind.get(kind);
+    if (!asset) { errors.push(`asset_missing:${kind}`); continue; }
+    if (asset.format !== expected.format || asset.name !== expected.name) errors.push(`asset_identity_invalid:${kind}`);
+    const expectedUrl = `https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/${expected.name}`;
+    if (asset.url !== expectedUrl) errors.push(`asset_url_invalid:${kind}`);
+    if (!isSha256(asset.sha256) || asset.github_digest !== `sha256:${asset.sha256}`) errors.push(`asset_hash_invalid:${kind}`);
+    if (!Number.isSafeInteger(asset.bytes) || asset.bytes <= 0 || asset.http_status !== 200) errors.push(`asset_readback_invalid:${kind}`);
+  }
+  if (evidence?.final_submission_receipt !== null) errors.push("final_submission_receipt_must_remain_unproven");
+  if (evidence?.external_actions !== 0 || evidence?.local_fixture_only !== false || evidence?.live_arc !== false || evidence?.live_erp !== false) errors.push("boundary_invalid");
+  return { valid: errors.length === 0, errors, video: byKind.get("final_demo_video") ?? null, deckPdf: byKind.get("final_deck_pdf") ?? null, deckPptx: byKind.get("final_deck_pptx") ?? null };
+}
+
+export function buildFinalSubmissionReadinessView(reviewerEvidencePack, finalAssetsEvidence = null) {
+  const finalAssets = validateFinalAssetsEvidence(finalAssetsEvidence);
   const checks = {
     public_read_only_mvp_available: reviewerEvidencePack?.status === "reviewer_pack_ready",
     github_and_render_release_evidence_available: reviewerEvidencePack?.evidence?.delivery?.github_render_same_release_required === true,
-    final_demo_video_available: false,
-    final_pitch_deck_available: false
+    final_assets_evidence_valid: finalAssets.valid,
+    final_demo_video_available: finalAssets.valid && finalAssets.video !== null,
+    final_pitch_deck_available: finalAssets.valid && finalAssets.deckPdf !== null && finalAssets.deckPptx !== null,
+    final_submission_receipt_available: finalAssets.valid && finalAssetsEvidence?.final_submission_receipt !== null
   };
   const remainingRequirements = Object.entries(checks)
     .filter(([, passed]) => !passed)
@@ -685,7 +725,14 @@ export function buildFinalSubmissionReadinessView(reviewerEvidencePack) {
       reviewer_pack_status: reviewerEvidencePack?.status ?? "unavailable",
       github: reviewerEvidencePack?.evidence?.delivery?.github ?? null,
       render: reviewerEvidencePack?.evidence?.delivery?.render ?? null,
-      reviewer_pack_content_sha256: reviewerEvidencePack?.content_sha256 ?? null
+      reviewer_pack_content_sha256: reviewerEvidencePack?.content_sha256 ?? null,
+      final_assets: finalAssets.valid ? {
+        source: finalAssetsEvidence.source,
+        tag: finalAssetsEvidence.tag,
+        release_url: finalAssetsEvidence.release_url,
+        assets: finalAssetsEvidence.assets
+      } : null,
+      final_assets_errors: finalAssets.errors
     },
     boundaries: {
       read_only: true,
@@ -703,7 +750,7 @@ export function buildFinalDemoPlanView(readiness) {
     { at_seconds: 0, focus: "scope", route: "/arc-lab", evidence: "read-only Arc enterprise control shell" },
     { at_seconds: 35, focus: "reviewer evidence", route: "/api/v1/reviewer-evidence-pack", evidence: "content-addressed reconciliation and boundary checks" },
     { at_seconds: 95, focus: "release proof", route: "/api/v1/final-submission-readiness", evidence: "matched GitHub and Render release evidence" },
-    { at_seconds: 145, focus: "remaining work", route: "/api/v1/final-submission-readiness", evidence: "explicit final-video and pitch-deck gaps" }
+    { at_seconds: 145, focus: "remaining work", route: "/api/v1/final-submission-readiness", evidence: "content-addressed video/deck assets are present; Final submission receipt remains unproven" }
   ];
   return {
     mode: "read-only_final_demo_plan",
@@ -1717,6 +1764,7 @@ export function createReceiptServer(options = {}) {
   const loadExternalRouteIntake = options.loadExternalRouteIntake ?? (() => loadJson(options.externalRouteIntakePath ?? DEFAULT_EXTERNAL_ROUTE_INTAKE_PATH));
   const loadReleaseEvidenceAnchorPacket = options.loadReleaseEvidenceAnchorPacket ?? (() => loadJson(options.releaseEvidenceAnchorPacketPath ?? DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH));
   const loadReleaseDeliveryAttestation = options.loadReleaseDeliveryAttestation ?? (() => loadJson(options.releaseDeliveryAttestationPath ?? DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH));
+  const loadFinalAssetsEvidence = options.loadFinalAssetsEvidence ?? (() => loadJson(options.finalAssetsEvidencePath ?? DEFAULT_FINAL_ASSETS_EVIDENCE_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const circleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy({
@@ -1752,13 +1800,13 @@ export function createReceiptServer(options = {}) {
         json(response, 200, await loadAgentRegistration(), request.method);
         return;
       }
-      if (request.method === "POST" && url.pathname === "/api/v1/circle-webhook") {
+      if (request.method === "POST" && url.pathname === PUBLIC_POST_ROUTES[0]) {
         const { rawBody, payload } = await readJsonBody(request);
         const result = await circleWebhookProcessor({ rawBody, payload, headers: request.headers });
         json(response, result.status, result, request.method);
         return;
       }
-      if (request.method === "POST" && url.pathname === "/api/v1/opening-balance-fixture-validate") {
+      if (request.method === "POST" && url.pathname === PUBLIC_POST_ROUTES[1]) {
         const { payload } = await readJsonBody(request);
         const fixture = payload?.fixture ?? payload;
         if (fixture === null || typeof fixture !== "object" || Array.isArray(fixture)) {
@@ -2146,7 +2194,7 @@ export function createReceiptServer(options = {}) {
       }
 
       if (url.pathname === "/api/v1/final-submission-readiness") {
-        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
+        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace, finalAssetsEvidence] = await Promise.all([
           loadManufacturing(),
           loadManufacturingProgressReport(),
           loadWalletRecovery(),
@@ -2154,19 +2202,20 @@ export function createReceiptServer(options = {}) {
           loadAgentIdentity(),
           loadExternalRouteIntake(),
           loadDeliverySurfaces(),
-          loadPublicTrace()
+          loadPublicTrace(),
+          loadFinalAssetsEvidence()
         ]);
         const reviewerEvidencePack = buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace });
-        json(response, 200, buildFinalSubmissionReadinessView(reviewerEvidencePack), request.method);
+        json(response, 200, buildFinalSubmissionReadinessView(reviewerEvidencePack, finalAssetsEvidence), request.method);
         return;
       }
 
       if (url.pathname === "/api/v1/final-demo-plan") {
-        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace] = await Promise.all([
-          loadManufacturing(), loadManufacturingProgressReport(), loadWalletRecovery(), loadAppKit(), loadAgentIdentity(), loadExternalRouteIntake(), loadDeliverySurfaces(), loadPublicTrace()
+        const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace, finalAssetsEvidence] = await Promise.all([
+          loadManufacturing(), loadManufacturingProgressReport(), loadWalletRecovery(), loadAppKit(), loadAgentIdentity(), loadExternalRouteIntake(), loadDeliverySurfaces(), loadPublicTrace(), loadFinalAssetsEvidence()
         ]);
         const reviewerEvidencePack = buildReviewerEvidencePack({ qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace });
-        const readiness = buildFinalSubmissionReadinessView(reviewerEvidencePack);
+        const readiness = buildFinalSubmissionReadinessView(reviewerEvidencePack, finalAssetsEvidence);
         json(response, 200, buildFinalDemoPlanView(readiness), request.method);
         return;
       }

@@ -62,7 +62,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/final-demo-plan`
 - `GET /api/v1/circle-webhook-readiness`
 
-E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The only POST route is a deliberately disabled Circle webhook ingress boundary; it returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
+E1 includes no ERP credential, ERP write, wallet connection, signer, database, chain transaction, enabled webhook, or Circle subscription. The service exposes exactly two POST routes, both fail-closed: the deliberately disabled Circle webhook ingress (normally `503`) and the ephemeral `/api/v1/opening-balance-fixture-validate` validator. The latter validates a supplied fixture in memory, never persists it, never mutates ERP, and does not authorize a posting. The webhook returns `503` until a separately provisioned durable queue, idempotency store, signature-verification key, and Circle subscription are all present.
 
 The sanitized ERP interaction route shows that the isolated AAL Company and dedicated draft-only identity have completed C0, while API credentials, master data, opening balances and business-document writes remain separately gated. It also exposes D09's read-only mapping across Payment Entry, Journal Entry, Bank Transaction, GL Entry and Payment Ledger Entry without publishing raw ERP payloads or identity values.
 
@@ -282,7 +282,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/circle-webhook-readiness`
 
-All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP.
+All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP. `POST /api/v1/opening-balance-fixture-validate` is a separate in-memory, fail-closed fixture check and never persists or posts anything.
 
 ## Safety and limitations
 

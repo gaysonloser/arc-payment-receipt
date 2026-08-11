@@ -14,6 +14,7 @@ import {
   buildOpeningBalanceFixtureValidationView,
   buildFinalDemoPlanView,
   buildFinalSubmissionReadinessView,
+  validateFinalAssetsEvidence,
   buildReviewerEvidencePack,
   buildPublicBoundaryConsistencyView,
   buildPublicDisclosureAuditView,
@@ -25,8 +26,17 @@ import {
   buildSettlementLedgerView,
   classifyEvidenceFreshness,
   createReceiptServer,
-  verifySettlementEvidenceManifest
+  verifySettlementEvidenceManifest,
+  PUBLIC_POST_ROUTES
 } from "./arc_payment_receipt_server.mjs";
+
+test("public POST route inventory is explicit and bounded", () => {
+  assert.deepEqual([...PUBLIC_POST_ROUTES].sort(), [
+    "/api/v1/circle-webhook",
+    "/api/v1/opening-balance-fixture-validate"
+  ]);
+  assert.equal(new Set(PUBLIC_POST_ROUTES).size, 2);
+});
 
 const orderId = `0x${"12".repeat(32)}`;
 const report = {
@@ -587,18 +597,65 @@ test("keeps final-submission readiness explicit about incomplete materials", asy
   assert.equal(payload.mode, "read-only_final_submission_readiness");
   assert.equal(payload.status, "final_submission_materials_incomplete");
   assert.equal(typeof payload.checks.public_read_only_mvp_available, "boolean");
-  assert.equal(payload.checks.final_demo_video_available, false);
-  assert.equal(payload.remaining_requirements.includes("final_pitch_deck_available"), true);
+  assert.equal(payload.checks.final_demo_video_available, true);
+  assert.equal(payload.checks.final_pitch_deck_available, true);
+  assert.equal(payload.checks.final_submission_receipt_available, false);
+  assert.equal(payload.remaining_requirements.includes("final_submission_receipt_available"), true);
   assert.equal(payload.boundaries.is_not_a_hackathon_submission, true);
   assert.equal(payload.boundaries.wallet_or_chain_action, false);
 
-  const ready = buildFinalSubmissionReadinessView({ status: "reviewer_pack_ready", evidence: { delivery: { github_render_same_release_required: true } } });
+  const finalAssets = {
+    schema: "arc-erp.current-release-final-assets-evidence.v1",
+    release_id: "verified-milestone-close-current-mvp-workbench-rc1",
+    source: "public_github_release_readback",
+    tag: "programme-final-20260810",
+    release_url: "https://github.com/gaysonloser/arc-payment-receipt/releases/tag/programme-final-20260810",
+    assets: [
+      { kind: "final_demo_video", format: "mp4", name: "arc-enterprise-settlement-control-programme-final-3min.mp4", url: "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4", sha256: "a".repeat(64), bytes: 1, http_status: 200, github_digest: `sha256:${"a".repeat(64)}` },
+      { kind: "final_deck_pdf", format: "pdf", name: "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf", url: "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf", sha256: "b".repeat(64), bytes: 1, http_status: 200, github_digest: `sha256:${"b".repeat(64)}` },
+      { kind: "final_deck_pptx", format: "pptx", name: "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx", url: "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx", sha256: "c".repeat(64), bytes: 1, http_status: 200, github_digest: `sha256:${"c".repeat(64)}` }
+    ],
+    final_submission_receipt: null,
+    external_actions: 0,
+    local_fixture_only: false,
+    live_arc: false,
+    live_erp: false
+  };
+  assert.equal(validateFinalAssetsEvidence(finalAssets).valid, true);
+  const ready = buildFinalSubmissionReadinessView({ status: "reviewer_pack_ready", evidence: { delivery: { github_render_same_release_required: true } } }, finalAssets);
   assert.equal(ready.checks.public_read_only_mvp_available, true);
   assert.equal(ready.checks.github_and_render_release_evidence_available, true);
+  assert.equal(ready.checks.final_demo_video_available, true);
+  assert.equal(ready.checks.final_pitch_deck_available, true);
+  assert.equal(ready.checks.final_submission_receipt_available, false);
 
-  const unavailable = buildFinalSubmissionReadinessView({ status: "reviewer_pack_review_required", evidence: { delivery: {} } });
+  const unavailable = buildFinalSubmissionReadinessView({ status: "reviewer_pack_review_required", evidence: { delivery: {} } }, finalAssets);
   assert.equal(unavailable.checks.public_read_only_mvp_available, false);
   assert.equal(unavailable.remaining_requirements.includes("public_read_only_mvp_available"), true);
+});
+
+test("final asset evidence is content-addressed and rejects drift or a forged final receipt", () => {
+  const valid = {
+    schema: "arc-erp.current-release-final-assets-evidence.v1",
+    release_id: "verified-milestone-close-current-mvp-workbench-rc1",
+    source: "public_github_release_readback",
+    tag: "programme-final-20260810",
+    release_url: "https://github.com/gaysonloser/arc-payment-receipt/releases/tag/programme-final-20260810",
+    assets: [
+      { kind: "final_demo_video", format: "mp4", name: "arc-enterprise-settlement-control-programme-final-3min.mp4", url: "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4", sha256: "a".repeat(64), bytes: 1, http_status: 200, github_digest: `sha256:${"a".repeat(64)}` },
+      { kind: "final_deck_pdf", format: "pdf", name: "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf", url: "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf", sha256: "b".repeat(64), bytes: 1, http_status: 200, github_digest: `sha256:${"b".repeat(64)}` },
+      { kind: "final_deck_pptx", format: "pptx", name: "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx", url: "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx", sha256: "c".repeat(64), bytes: 1, http_status: 200, github_digest: `sha256:${"c".repeat(64)}` }
+    ],
+    final_submission_receipt: null,
+    external_actions: 0,
+    local_fixture_only: false,
+    live_arc: false,
+    live_erp: false
+  };
+  assert.equal(validateFinalAssetsEvidence(valid).valid, true);
+  assert.equal(validateFinalAssetsEvidence({ ...valid, assets: valid.assets.map((asset) => asset.kind === "final_demo_video" ? { ...asset, sha256: "d".repeat(64) } : asset) }).valid, false);
+  assert.equal(validateFinalAssetsEvidence({ ...valid, final_submission_receipt: { status: "submitted" } }).errors.includes("final_submission_receipt_must_remain_unproven"), true);
+  assert.equal(validateFinalAssetsEvidence({ ...valid, tag: "old-tag" }).errors.includes("tag_invalid"), true);
 });
 
 test("serves a bounded three-minute final demo plan without claiming a recording", async () => {

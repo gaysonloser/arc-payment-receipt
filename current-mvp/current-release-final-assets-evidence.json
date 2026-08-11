@@ -1,0 +1,45 @@
+{
+  "schema": "arc-erp.current-release-final-assets-evidence.v1",
+  "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
+  "source": "public_github_release_readback",
+  "tag": "programme-final-20260810",
+  "release_url": "https://github.com/gaysonloser/arc-payment-receipt/releases/tag/programme-final-20260810",
+  "observed_at": "2026-08-10T04:15:03Z",
+  "assets": [
+    {
+      "kind": "final_demo_video",
+      "name": "arc-enterprise-settlement-control-programme-final-3min.mp4",
+      "format": "mp4",
+      "url": "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4",
+      "sha256": "6912f1e979c6dc3e339c63f33864a9eb1495e4ec3840b0bb7e086e17d04b7598",
+      "bytes": 21736653,
+      "http_status": 200,
+      "github_digest": "sha256:6912f1e979c6dc3e339c63f33864a9eb1495e4ec3840b0bb7e086e17d04b7598"
+    },
+    {
+      "kind": "final_deck_pdf",
+      "name": "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf",
+      "format": "pdf",
+      "url": "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf",
+      "sha256": "bc6b1177c9452c308718738cb9fdc2ac562ca6cc10582f2af2128582e5def431",
+      "bytes": 484777,
+      "http_status": 200,
+      "github_digest": "sha256:bc6b1177c9452c308718738cb9fdc2ac562ca6cc10582f2af2128582e5def431"
+    },
+    {
+      "kind": "final_deck_pptx",
+      "name": "Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx",
+      "format": "pptx",
+      "url": "https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx",
+      "sha256": "aea583254464415ee01459e9f71a6c941cb5e13aabd63dff60f4a33061a7d5ff",
+      "bytes": 355470,
+      "http_status": 200,
+      "github_digest": "sha256:aea583254464415ee01459e9f71a6c941cb5e13aabd63dff60f4a33061a7d5ff"
+    }
+  ],
+  "final_submission_receipt": null,
+  "external_actions": 0,
+  "local_fixture_only": false,
+  "live_arc": false,
+  "live_erp": false
+}

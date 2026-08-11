@@ -23,7 +23,8 @@ const WORKBENCH_ENTRIES = Object.freeze([
   ["web/c15-contract.mjs", "programme/verified-milestone-close/web/c15-contract.mjs"],
   ["web/c15-upstream-authority.mjs", "programme/verified-milestone-close/web/c15-upstream-authority.mjs"],
   ["web/settlement-case.mjs", "programme/verified-milestone-close/web/settlement-case.mjs"],
-  ["web/workbench/workbench-projection.mjs", "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs"]
+  ["web/workbench/workbench-projection.mjs", "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs"],
+  ["current-release-final-assets-evidence.json", "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json"]
 ]);
 
 function sha256(bytes) {
@@ -99,11 +100,15 @@ export async function buildManifest() {
     writer_idle: true,
     acceptance_state: "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING",
     current_release_surface_status: {
-      github: { status: "NOT_PUBLISHED", historical_lineage_only: true },
-      render: { status: "NOT_PROVEN", historical_lineage_only: true },
-      encode: { status: "NOT_PROVEN", historical_lineage_only: true },
-      circle_console: { status: "NOT_PROVEN", historical_lineage_only: true },
-      arc_testnet: { status: "NOT_PROVEN", historical_lineage_only: true }
+      github: { status: "TRUE_RECEIPT_HISTORICAL", current_release_bound: false, candidate_binding: false, remote_main: "db52d69705579f249af77ab7d49ad6e2cd686a2f", note: "remote main predates H167/H168 candidate files; exact commit+push owner gate required", owner_gate_required: true, historical_lineage_only: true },
+      render: { status: "TRUE_RECEIPT", current_release_bound: false, observed_commit: "be6d807637849b1c726f0ed32ac03638e0ccb111", note: "real receipt predates current public HEAD; current-release re-readback remains required", historical_lineage_only: true },
+      deck: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
+      video: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
+      circle_console: { status: "BLOCKED", blockers: ["subscription_id_missing", "trusted_readback_loader_not_configured"], historical_lineage_only: false },
+      encode: { status: "UNPROVEN", historical_lineage_only: true },
+      final: { status: "UNPROVEN", historical_lineage_only: true },
+      arc_testnet: { status: "UNPROVEN", evidence_binding: "no current-release-bound receipt in public candidate", historical_lineage_only: true },
+      erp: { status: "UNPROVEN", evidence_binding: "read-only owner evidence is not embedded in public candidate", historical_lineage_only: true }
     },
     verification_inputs: verificationInputs,
     independent_audit: { model: "gpt-5.6-sol", reasoning_effort: "medium", read_only: true, independent: true, status: "PENDING", self_acceptance: false },
@@ -133,11 +138,24 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   if (manifest.independent_audit?.model !== "gpt-5.6-sol" || manifest.independent_audit?.reasoning_effort !== "medium" || manifest.independent_audit?.read_only !== true || manifest.independent_audit?.independent !== true || manifest.independent_audit?.status !== "PENDING" || manifest.independent_audit?.self_acceptance !== false) issues.push("audit_boundary_missing");
   if (JSON.stringify(manifest.accepted_request ?? null) !== JSON.stringify(ACCEPTED_PACKET)) issues.push("accepted_packet_binding_missing");
   if (JSON.stringify(manifest.source_request ?? null) !== JSON.stringify(SOURCE_REQUEST)) issues.push("source_request_lineage_missing");
-  const expectedSurfaces = ["github", "render", "encode", "circle_console", "arc_testnet"];
-  for (const surface of expectedSurfaces) {
+  const expectedSurfaces = {
+    github: "TRUE_RECEIPT_HISTORICAL",
+    render: "TRUE_RECEIPT",
+    deck: "TRUE_RECEIPT",
+    video: "TRUE_RECEIPT",
+    circle_console: "BLOCKED",
+    encode: "UNPROVEN",
+    final: "UNPROVEN",
+    arc_testnet: "UNPROVEN",
+    erp: "UNPROVEN"
+  };
+  for (const [surface, expectedStatus] of Object.entries(expectedSurfaces)) {
     const value = manifest.current_release_surface_status?.[surface];
-    if (value?.status !== (surface === "github" ? "NOT_PUBLISHED" : "NOT_PROVEN") || value?.historical_lineage_only !== true) issues.push(`current_surface_status_invalid:${surface}`);
+    if (value?.status !== expectedStatus) issues.push(`current_surface_status_invalid:${surface}`);
   }
+  const consoleBlockers = manifest.current_release_surface_status?.circle_console?.blockers ?? [];
+  if (!consoleBlockers.includes("subscription_id_missing") || !consoleBlockers.includes("trusted_readback_loader_not_configured")) issues.push("circle_console_blockers_missing");
+  if (manifest.current_release_surface_status?.final?.status === "TRUE_RECEIPT" || manifest.current_release_surface_status?.encode?.status === "TRUE_RECEIPT") issues.push("unproven_surface_promoted");
   const expectedInputs = [
     ["tools/current_release_workbench.test.mjs", "test"],
     ["tools/build_current_release_workbench_manifest.mjs", "verifier"],

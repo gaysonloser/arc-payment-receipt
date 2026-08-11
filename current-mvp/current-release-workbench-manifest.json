@@ -23,23 +23,57 @@
   "acceptance_state": "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING",
   "current_release_surface_status": {
     "github": {
-      "status": "NOT_PUBLISHED",
+      "status": "TRUE_RECEIPT_HISTORICAL",
+      "current_release_bound": false,
+      "candidate_binding": false,
+      "remote_main": "db52d69705579f249af77ab7d49ad6e2cd686a2f",
+      "note": "remote main predates H167/H168 candidate files; exact commit+push owner gate required",
+      "owner_gate_required": true,
       "historical_lineage_only": true
     },
     "render": {
-      "status": "NOT_PROVEN",
+      "status": "TRUE_RECEIPT",
+      "current_release_bound": false,
+      "observed_commit": "be6d807637849b1c726f0ed32ac03638e0ccb111",
+      "note": "real receipt predates current public HEAD; current-release re-readback remains required",
       "historical_lineage_only": true
     },
-    "encode": {
-      "status": "NOT_PROVEN",
-      "historical_lineage_only": true
+    "deck": {
+      "status": "TRUE_RECEIPT",
+      "current_release_bound": true,
+      "tag": "programme-final-20260810",
+      "historical_lineage_only": false
+    },
+    "video": {
+      "status": "TRUE_RECEIPT",
+      "current_release_bound": true,
+      "tag": "programme-final-20260810",
+      "historical_lineage_only": false
     },
     "circle_console": {
-      "status": "NOT_PROVEN",
+      "status": "BLOCKED",
+      "blockers": [
+        "subscription_id_missing",
+        "trusted_readback_loader_not_configured"
+      ],
+      "historical_lineage_only": false
+    },
+    "encode": {
+      "status": "UNPROVEN",
+      "historical_lineage_only": true
+    },
+    "final": {
+      "status": "UNPROVEN",
       "historical_lineage_only": true
     },
     "arc_testnet": {
-      "status": "NOT_PROVEN",
+      "status": "UNPROVEN",
+      "evidence_binding": "no current-release-bound receipt in public candidate",
+      "historical_lineage_only": true
+    },
+    "erp": {
+      "status": "UNPROVEN",
+      "evidence_binding": "read-only owner evidence is not embedded in public candidate",
       "historical_lineage_only": true
     }
   },
@@ -47,14 +81,14 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 15147,
-      "sha256": "d6d1b405f3856ce21848f5a4cb77d12ea4f31c621c0af89342e95d3908bce4ad"
+      "bytes": 19204,
+      "sha256": "ee415cf03c912a55343b4330e0eebd1016297bb94bc1f5c6f131fe2d66e5366f"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 11159,
-      "sha256": "26d83edab18d287e59579377d66f53855ee2898de9fe52cdaf087b8237bad53e"
+      "bytes": 12989,
+      "sha256": "cb2227c30fa3800c475985e9f1c5a2db1863e9c0bc7c2fd3047b023aef5f5ab4"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -65,8 +99,8 @@
     {
       "path": "tools/current_mvp_source_binding.test.mjs",
       "role": "test",
-      "bytes": 4944,
-      "sha256": "101c2eba75cb33fa6683a96fec7199f2ffd5ff0c9da443e15fad5694d07a379d"
+      "bytes": 4958,
+      "sha256": "c60107845d8538dad2491e05160c4d3277db68ff924d88eed32846101095c77d"
     },
     {
       "path": "tools/circle_contract_webhook_gate.mjs",
@@ -83,8 +117,8 @@
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 114060,
-      "sha256": "a39ebb67b32e4ff870b1febb20c009974eb7f27ae9bede3b88aa3f1ce53613cb"
+      "bytes": 117915,
+      "sha256": "c1297388d74eb3a7469f794651c001ed2a6a02b0e1e70176e15284ce9e9435a4"
     },
     {
       "path": "tools/circle_console_server.test.mjs",
@@ -113,9 +147,16 @@
     "status": "PENDING",
     "self_acceptance": false
   },
-  "entry_count": 27,
+  "entry_count": 28,
   "manifest_sha256_self_excluded": true,
   "entries": [
+    {
+      "path": "current-release-final-assets-evidence.json",
+      "bytes": 2147,
+      "sha256": "d7dfbe4e0a6a9e7ddbcd3eeddeccc56d629d075c5e1552479a373c1fb8394ecf",
+      "source_reference": "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json",
+      "source_is_candidate": true
+    },
     {
       "path": "web/assets/brand/arc-icon-navy-official.svg",
       "bytes": 974,
