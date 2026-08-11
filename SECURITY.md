@@ -12,9 +12,11 @@ The contract immediately forwards the full value to an immutable merchant. It ha
 
 ## Service boundary
 
-The included service is read-only by default. It exposes generated evidence and exact receipt lookups, rejects non-GET methods except one deliberately disabled webhook ingress, and contains no signer, wallet, API key, enabled webhook, database, or ERP state-changing route.
+The included service is read-only by default. It exposes generated evidence and exact receipt lookups, rejects non-GET methods except two explicitly bounded POST routes, and contains no signer, wallet, API key, enabled webhook, database, or ERP state-changing route. The Circle webhook is deliberately disabled by default; the opening-balance fixture validator is ephemeral and never persists or posts.
 
 `POST /api/v1/circle-webhook` returns `503` unless a separately supplied Circle ECDSA verification key, durable queue, durable idempotency store, and explicit Circle subscription are all present. It verifies `X-Circle-Signature` before accepting an exact Arc registry event, uses the notification ID for idempotency, and never signs, broadcasts, creates an ERP document, or self-enables a Circle resource.
+
+`POST /api/v1/opening-balance-fixture-validate` accepts only an in-memory fixture for fail-closed validation. It never persists a fixture, writes ERP, signs or broadcasts a transaction, or represents a live opening-balance posting.
 
 ## Known limitations
 
