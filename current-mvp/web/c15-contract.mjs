@@ -1678,3 +1678,389 @@ export const A12_C15_ACCEPTED_ACTION_STATE_MACHINE = deepFreeze({
   },
   "identity_assertion": "resolved.action_id === scenario_projection_matrix[resolved.scenario].primary_action; unknown_or_mismatch_is_non_executable"
 });
+
+// The scenario matrix above defines the workflow surface.  This typed accounting
+// contract is the accounting-document projection that the surface may render; it
+// never posts to ERP and it deliberately fails closed when the source document,
+// party or refund ceiling cannot be proven.
+const c15AccountingField = (field_id, type, validator, requiredness = "required") => ({
+  field_id,
+  type,
+  source: "typed_accounting_projection",
+  editability: "read_only",
+  requiredness,
+  validator
+});
+
+const c15Journal = (debit_account, credit_account, debit_label, credit_label) => ({
+  line_schema: {
+    direction_enum: ["Dr", "Cr"],
+    amount_type: "amount6",
+    account_type: "account_label",
+    label_type: "document_label"
+  },
+  debit_account,
+  credit_account,
+  debit_label,
+  credit_label,
+  balance_rule: "debit_total6 === credit_total6 && debit_total6 === amount6"
+});
+
+const c15AccountingPreset = ({
+  document_label,
+  classification_ids,
+  counterparty_types,
+  document_required,
+  document_types,
+  required_fields,
+  open_item_effect,
+  reconciliation_state,
+  exception_semantics,
+  reversal_semantics,
+  journal,
+  purpose_variants
+}) => ({
+  document_label,
+  classification_ids,
+  counterparty_types,
+  document: {
+    required: document_required,
+    allowed_types: document_types
+  },
+  required_fields,
+  open_item_effect,
+  reconciliation_state,
+  exception_semantics,
+  reversal_semantics,
+  journal,
+  ...(purpose_variants ? { purpose_variants } : {})
+});
+
+const C15_ACCOUNTING_AMOUNT_PATTERN = /^(0|[1-9]\d*)$/;
+
+export const A12_C15_ACCOUNTING_CLASSIFICATION_IDS = deepFreeze([
+  "payment_advance",
+  "payment_corporate_payable",
+  "payment_personal_payable",
+  "payment_refund",
+  "receipt_invoice_collection",
+  "receipt_customer_advance",
+  "receipt_refund"
+]);
+
+export const A12_C15_ACCOUNTING_PRESET_SCHEMA = deepFreeze({
+  schema: "a12-c15-typed-accounting-preview.v1",
+  amount_type: "amount6",
+  accounting_preset_ids: [
+    "payment_advance",
+    "payment_corporate_payable",
+    "payment_personal_payable",
+    "payment_refund",
+    "receipt",
+    "receipt_refund"
+  ],
+  classification_ids: A12_C15_ACCOUNTING_CLASSIFICATION_IDS,
+  fail_closed_codes: [
+    "PRESET_UNKNOWN",
+    "PURPOSE_REQUIRED",
+    "REQUIRED_FIELD_MISSING",
+    "AMOUNT_INVALID",
+    "COUNTERPARTY_DOCUMENT_INCOMPATIBLE",
+    "ORIGINAL_DOCUMENT_REQUIRED",
+    "REFUND_EXCEEDS_REMAINING_CEILING",
+    "JOURNAL_UNBALANCED"
+  ],
+  presets: {
+    payment_advance: c15AccountingPreset({
+      document_label: "Supplier advance payment",
+      classification_ids: ["payment_advance"],
+      counterparty_types: ["Supplier"],
+      document_required: true,
+      document_types: ["Purchase Order", "Purchase Request"],
+      required_fields: [
+        c15AccountingField("amount6", "amount6", "positive_amount6"),
+        c15AccountingField("counterparty", "party_ref", "supplier_party"),
+        c15AccountingField("document", "voucher_ref", "purchase_order_or_request")
+      ],
+      open_item_effect: "SUPPLIER_ADVANCE_OPEN_AP",
+      reconciliation_state: "UNALLOCATED_ADVANCE",
+      exception_semantics: {
+        default: "Keep supplier AP open until an invoice allocation is independently matched.",
+        fail_closed: ["REQUIRED_FIELD_MISSING", "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "JOURNAL_UNBALANCED"]
+      },
+      reversal_semantics: {
+        kind: "NOT_A_REVERSAL",
+        original_document_required: false,
+        rule: "An advance is not a reversal and cannot close a later invoice by itself."
+      },
+      journal: c15Journal("Supplier advances", "USDC settlement clearing", "Supplier advance", "USDC settlement clearing")
+    }),
+    payment_corporate_payable: c15AccountingPreset({
+      document_label: "Supplier payable payment",
+      classification_ids: ["payment_corporate_payable"],
+      counterparty_types: ["Supplier"],
+      document_required: true,
+      document_types: ["Purchase Invoice"],
+      required_fields: [
+        c15AccountingField("amount6", "amount6", "positive_amount6"),
+        c15AccountingField("counterparty", "party_ref", "supplier_party"),
+        c15AccountingField("document", "voucher_ref", "purchase_invoice")
+      ],
+      open_item_effect: "CLOSE_MATCHED_SUPPLIER_AP_ONLY",
+      reconciliation_state: "PAYABLE_MATCH_REQUIRED",
+      exception_semantics: {
+        default: "Keep the supplier payable open until receipt, document and amount agree.",
+        fail_closed: ["REQUIRED_FIELD_MISSING", "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "JOURNAL_UNBALANCED"]
+      },
+      reversal_semantics: {
+        kind: "NOT_A_REVERSAL",
+        original_document_required: false,
+        rule: "A payment preview cannot close an unmatched or different supplier invoice."
+      },
+      journal: c15Journal("Accounts payable — suppliers", "USDC settlement clearing", "Supplier payable", "USDC settlement clearing")
+    }),
+    payment_personal_payable: c15AccountingPreset({
+      document_label: "Employee reimbursement payment",
+      classification_ids: ["payment_personal_payable"],
+      counterparty_types: ["Employee"],
+      document_required: true,
+      document_types: ["Expense Claim"],
+      required_fields: [
+        c15AccountingField("amount6", "amount6", "positive_amount6"),
+        c15AccountingField("counterparty", "party_ref", "employee_party"),
+        c15AccountingField("document", "voucher_ref", "expense_claim")
+      ],
+      open_item_effect: "CLOSE_MATCHED_EMPLOYEE_PAYABLE_ONLY",
+      reconciliation_state: "REIMBURSEMENT_MATCH_REQUIRED",
+      exception_semantics: {
+        default: "Keep the employee payable open until the submitted claim and recipient agree.",
+        fail_closed: ["REQUIRED_FIELD_MISSING", "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "JOURNAL_UNBALANCED"]
+      },
+      reversal_semantics: {
+        kind: "NOT_A_REVERSAL",
+        original_document_required: false,
+        rule: "A reimbursement preview cannot close a supplier or customer document."
+      },
+      journal: c15Journal("Accounts payable — employees", "USDC settlement clearing", "Employee reimbursement", "USDC settlement clearing")
+    }),
+    payment_refund: c15AccountingPreset({
+      document_label: "Incoming refund of a prior payment",
+      classification_ids: ["payment_refund"],
+      counterparty_types: ["Supplier", "Employee"],
+      document_required: true,
+      document_types: ["Payment Entry"],
+      required_fields: [
+        c15AccountingField("amount6", "amount6", "positive_amount6"),
+        c15AccountingField("counterparty", "party_ref", "original_payee_party"),
+        c15AccountingField("originalDocument", "voucher_ref", "original_payment_entry"),
+        c15AccountingField("originalPrincipalAmount6", "amount6", "positive_original_amount6"),
+        c15AccountingField("refundedToDateAmount6", "amount6", "prior_bound_refunds")
+      ],
+      open_item_effect: "RESTORE_ORIGINAL_PAYMENT_RECOVERY_OPEN_ITEM",
+      reconciliation_state: "REFUND_BOUND_TO_ORIGINAL",
+      exception_semantics: {
+        default: "A refund remains bound to the original payment and does not create an independent close.",
+        fail_closed: ["REQUIRED_FIELD_MISSING", "ORIGINAL_DOCUMENT_REQUIRED", "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "REFUND_EXCEEDS_REMAINING_CEILING", "JOURNAL_UNBALANCED"]
+      },
+      reversal_semantics: {
+        kind: "REVERSAL",
+        original_document_required: true,
+        remaining_ceiling_formula: "originalPrincipalAmount6 - refundedToDateAmount6",
+        over_limit_code: "REFUND_EXCEEDS_REMAINING_CEILING"
+      },
+      journal: c15Journal("USDC settlement clearing", "Original payment recovery account", "Refund received", "Original payment recovery")
+    }),
+    receipt: c15AccountingPreset({
+      document_label: "Customer receipt",
+      classification_ids: ["receipt_invoice_collection", "receipt_customer_advance"],
+      counterparty_types: ["Customer"],
+      document_required: false,
+      document_types: ["Sales Invoice", "Sales Order", "Customer Reference"],
+      required_fields: [
+        c15AccountingField("amount6", "amount6", "positive_amount6"),
+        c15AccountingField("counterparty", "party_ref", "customer_party"),
+        c15AccountingField("purpose", "enum", "customer_receipt_purpose")
+      ],
+      open_item_effect: "PURPOSE_VARIANT_OPEN_ITEM_EFFECT",
+      reconciliation_state: "RECEIPT_PURPOSE_REVIEW_REQUIRED",
+      exception_semantics: {
+        default: "Customer receipts require an explicit purpose before any AR or advance projection.",
+        fail_closed: ["PURPOSE_REQUIRED", "REQUIRED_FIELD_MISSING", "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "JOURNAL_UNBALANCED"]
+      },
+      reversal_semantics: {
+        kind: "NOT_A_REVERSAL",
+        original_document_required: false,
+        rule: "A receipt is not a refund; refund handling uses receipt_refund and an original document."
+      },
+      journal: c15Journal("USDC settlement clearing", "Accounts receivable — customers", "Customer receipt", "Customer AR"),
+      purpose_variants: {
+        invoice_collection: {
+          classification_id: "receipt_invoice_collection",
+          document_label: "Customer invoice collection",
+          document: { required: true, allowed_types: ["Sales Invoice"] },
+          required_fields: [c15AccountingField("document", "voucher_ref", "sales_invoice")],
+          open_item_effect: "CLOSE_MATCHED_CUSTOMER_AR_ONLY",
+          reconciliation_state: "INVOICE_RECEIPT_MATCH_REQUIRED",
+          journal: c15Journal("USDC settlement clearing", "Accounts receivable — customers", "Customer invoice collection", "Customer AR")
+        },
+        customer_advance: {
+          classification_id: "receipt_customer_advance",
+          document_label: "Customer advance receipt",
+          document: { required: false, allowed_types: ["Sales Order", "Customer Reference"] },
+          required_fields: [c15AccountingField("advancePurpose", "text", "nonempty_purpose")],
+          open_item_effect: "CREATE_CUSTOMER_ADVANCE_OPEN_ITEM",
+          reconciliation_state: "UNALLOCATED_CUSTOMER_ADVANCE",
+          journal: c15Journal("USDC settlement clearing", "Customer advances", "Customer advance receipt", "Customer advance liability")
+        }
+      }
+    }),
+    receipt_refund: c15AccountingPreset({
+      document_label: "Outgoing refund of a customer receipt",
+      classification_ids: ["receipt_refund"],
+      counterparty_types: ["Customer"],
+      document_required: true,
+      document_types: ["Sales Invoice", "Customer Receipt"],
+      required_fields: [
+        c15AccountingField("amount6", "amount6", "positive_amount6"),
+        c15AccountingField("counterparty", "party_ref", "original_customer_party"),
+        c15AccountingField("originalDocument", "voucher_ref", "original_customer_receipt"),
+        c15AccountingField("originalPrincipalAmount6", "amount6", "positive_original_amount6"),
+        c15AccountingField("refundedToDateAmount6", "amount6", "prior_bound_refunds")
+      ],
+      open_item_effect: "RESTORE_ORIGINAL_CUSTOMER_AR_OR_ADVANCE",
+      reconciliation_state: "REFUND_BOUND_TO_ORIGINAL",
+      exception_semantics: {
+        default: "An outgoing refund must restore the original customer AR or advance and cannot stand alone.",
+        fail_closed: ["REQUIRED_FIELD_MISSING", "ORIGINAL_DOCUMENT_REQUIRED", "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "REFUND_EXCEEDS_REMAINING_CEILING", "JOURNAL_UNBALANCED"]
+      },
+      reversal_semantics: {
+        kind: "REVERSAL",
+        original_document_required: true,
+        remaining_ceiling_formula: "originalPrincipalAmount6 - refundedToDateAmount6",
+        over_limit_code: "REFUND_EXCEEDS_REMAINING_CEILING"
+      },
+      journal: c15Journal("Original receipt AR / customer-advance account", "USDC settlement clearing", "Original customer receipt recovery", "Refund settlement")
+    })
+  }
+});
+
+const c15AccountingError = (preset, purpose, error_code, detail) => ({
+  ok: false,
+  status: "BLOCKED",
+  fail_closed: true,
+  preset,
+  ...(purpose ? { purpose } : {}),
+  error_code,
+  detail,
+  journal_preview: null
+});
+
+const c15Amount = (value) => {
+  if (typeof value !== "string" || !C15_ACCOUNTING_AMOUNT_PATTERN.test(value) || BigInt(value) <= 0n) return null;
+  return BigInt(value);
+};
+
+const c15DocumentType = (document) => document?.type ?? document?.doctype ?? document?.kind ?? null;
+
+const c15DocumentMatches = (document, preset, counterparty) => {
+  if (!document) return !preset.document.required;
+  const type = c15DocumentType(document);
+  if (!preset.document.allowed_types.includes(type)) return false;
+  const documentCounterparty = document.counterparty_type ?? document.counterpartyType ?? document.party_type ?? null;
+  return !documentCounterparty || documentCounterparty === counterparty?.type;
+};
+
+const c15RequiredFields = (preset, purposeSpec) => [
+  ...preset.required_fields,
+  ...(purposeSpec?.required_fields ?? [])
+].map((field) => field.field_id);
+
+const c15ResolvedPreset = (presetId, purpose) => {
+  const preset = A12_C15_ACCOUNTING_PRESET_SCHEMA.presets[presetId];
+  if (!preset) return null;
+  if (presetId !== "receipt") return { preset, purposeSpec: null, classificationId: preset.classification_ids[0] };
+  const purposeSpec = preset.purpose_variants?.[purpose];
+  return purposeSpec ? { preset, purposeSpec, classificationId: purposeSpec.classification_id } : { preset, purposeSpec: null, classificationId: null };
+};
+
+export function buildA12C15AccountingJournalPreview(input = {}) {
+  const presetId = input?.preset;
+  const purpose = presetId === "receipt" ? input?.purpose : undefined;
+  const resolved = c15ResolvedPreset(presetId, purpose);
+  if (!resolved) {
+    return c15AccountingError(presetId ?? null, purpose, presetId === "receipt" ? "PURPOSE_REQUIRED" : "PRESET_UNKNOWN", presetId === "receipt" ? "receipt purpose must be invoice_collection or customer_advance" : "unknown accounting preset");
+  }
+  const { preset, purposeSpec, classificationId } = resolved;
+  if (presetId === "receipt" && !purposeSpec) return c15AccountingError(presetId, purpose, "PURPOSE_REQUIRED", "customer receipt purpose is explicit and typed");
+  const required = c15RequiredFields(preset, purposeSpec);
+  const fieldValues = {
+    amount6: input.amount6,
+    counterparty: input.counterparty,
+    purpose,
+    document: input.document,
+    originalDocument: input.originalDocument,
+    originalPrincipalAmount6: input.originalPrincipalAmount6,
+    refundedToDateAmount6: input.refundedToDateAmount6,
+    advancePurpose: input.advancePurpose
+  };
+  for (const field of required) {
+    const value = fieldValues[field];
+    const missing = value === undefined || value === null || value === "";
+    if (missing) {
+      const original = field === "originalDocument";
+      return c15AccountingError(presetId, purpose, original ? "ORIGINAL_DOCUMENT_REQUIRED" : "REQUIRED_FIELD_MISSING", `${field} is required for ${classificationId}`);
+    }
+  }
+  const amount = c15Amount(input.amount6);
+  if (amount === null) return c15AccountingError(presetId, purpose, "AMOUNT_INVALID", "amount6 must be a positive integer string");
+  if (!input.counterparty || typeof input.counterparty !== "object" || !preset.counterparty_types.includes(input.counterparty.type)) {
+    return c15AccountingError(presetId, purpose, "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "counterparty type is not compatible with this preset");
+  }
+  const document = input.originalDocument ?? input.document;
+  const documentSpec = purposeSpec?.document ?? preset.document;
+  const documentForCheck = documentSpec.required ? document : input.document ?? document;
+  if (documentSpec.required && !documentForCheck) return c15AccountingError(presetId, purpose, "ORIGINAL_DOCUMENT_REQUIRED", "source/original document is required");
+  if (documentForCheck) {
+    const compatiblePreset = { ...preset, document: documentSpec };
+    if (!c15DocumentMatches(documentForCheck, compatiblePreset, input.counterparty)) {
+      return c15AccountingError(presetId, purpose, "COUNTERPARTY_DOCUMENT_INCOMPATIBLE", "document type or document party is incompatible with the selected counterparty");
+    }
+  }
+  let remainingCeiling6 = null;
+  if (preset.reversal_semantics.kind === "REVERSAL") {
+    const original = c15Amount(input.originalPrincipalAmount6);
+    const prior = input.refundedToDateAmount6 === undefined ? null : (C15_ACCOUNTING_AMOUNT_PATTERN.test(String(input.refundedToDateAmount6)) ? BigInt(input.refundedToDateAmount6) : null);
+    if (original === null || prior === null || prior > original) return c15AccountingError(presetId, purpose, "ORIGINAL_DOCUMENT_REQUIRED", "original principal and prior bound refunds must be typed before a refund preview");
+    remainingCeiling6 = original - prior;
+    if (amount > remainingCeiling6) return c15AccountingError(presetId, purpose, "REFUND_EXCEEDS_REMAINING_CEILING", `refund amount exceeds remaining ceiling ${remainingCeiling6.toString()}`);
+  }
+  const journalSpec = purposeSpec?.journal ?? preset.journal;
+  const journal = {
+    currency: "USDC",
+    lines: [
+      { direction: "Dr", account: journalSpec.debit_account, label: journalSpec.debit_label, amount6: amount.toString() },
+      { direction: "Cr", account: journalSpec.credit_account, label: journalSpec.credit_label, amount6: amount.toString() }
+    ],
+    debit_total6: amount.toString(),
+    credit_total6: amount.toString(),
+    balanced: true,
+    renderable: true
+  };
+  if (journal.debit_total6 !== journal.credit_total6 || !journal.balanced) return c15AccountingError(presetId, purpose, "JOURNAL_UNBALANCED", "typed Dr/Cr totals must balance");
+  return {
+    ok: true,
+    status: "READY",
+    fail_closed: false,
+    preset: presetId,
+    classification_id: classificationId,
+    ...(purpose ? { purpose } : {}),
+    document_label: purposeSpec?.document_label ?? preset.document_label,
+    required_fields: c15RequiredFields(preset, purposeSpec),
+    open_item_effect: purposeSpec?.open_item_effect ?? preset.open_item_effect,
+    reconciliation_state: purposeSpec?.reconciliation_state ?? preset.reconciliation_state,
+    exception_semantics: preset.exception_semantics,
+    reversal_semantics: preset.reversal_semantics,
+    ...(remainingCeiling6 !== null ? { remaining_ceiling6: remainingCeiling6.toString() } : {}),
+    journal_preview: journal
+  };
+}

@@ -504,6 +504,22 @@ export { common };
 export const A12_BATCH_ID = "current-release-workbench";
 export const A12_CORRECTION_BATCH_ID = A12_BATCH_ID;
 export const A12_EVIDENCE_LEVEL = "L0_LOCAL_FIXTURE";
+// The active C15 authority remains the typed/fail-closed source of truth.  This
+// object is only the human-facing document identity for the flagship milestone
+// desk; it must never be used to manufacture receipt or accounting evidence.
+export const A12_MILESTONE_CASE_PRESENTATION = Object.freeze({
+  caseId: "C-2026-0731",
+  contract: "C-2026-0731",
+  milestone: "Website Handover",
+  contractor: "Pixel & Pine Studio",
+  payable: "PAY-AP-2026-1187",
+  sourceDocument: "PINV-2026-044",
+  amount6: "1250000000",
+  amount: "1,250.00 USDC",
+  currency: "USDC",
+  network: "Arc Testnet",
+  localFixtureOnly: true
+});
 export const A12_C15_INTERFACE_BINDING = Object.freeze({
   interfacePath: "web/c15-contract.mjs",
   producer: "product contract",
@@ -940,7 +956,7 @@ export const A12_ERP_WORKSPACE_IDS = Object.freeze([
   "audit-trail"
 ]);
 const A12_ERP_WORKSPACE_PRESENTATION = Object.freeze({
-  "milestone-desk": { title: "Milestone desk", detail: "Work the current settlement decision and its exact next local control.", primaryJob: "Resolve the first blocking settlement fact", queueFilter: "all", stage: "source", tab: "Business" },
+  "milestone-desk": { title: "Milestone desk", detail: "Work the current settlement decision and its exact next local control.", primaryJob: "Website Handover · Milestone Close", queueFilter: "all", stage: "source", tab: "Business" },
   payables: { title: "Payables", detail: "Select an outgoing supplier, employee or refund obligation and preserve its original-document relationship.", primaryJob: "Choose the outgoing payable open item", queueFilter: "outgoing", stage: "source", tab: "Business" },
   receivables: { title: "Receivables", detail: "Classify incoming invoice collections, advances and refunds before reconciliation.", primaryJob: "Classify the incoming receivable purpose", queueFilter: "incoming", stage: "classify", tab: "Business" },
   reconciliation: { title: "Reconciliation", detail: "Compare the locked business document with one typed logical payment and isolate the first mismatch.", primaryJob: "Compare expected and observed settlement fields", queueFilter: "all", stage: "allocate", tab: "Business" },
@@ -1112,7 +1128,7 @@ export function verifyA12C15UpstreamAuthorityObject() {
   if (C15_UPSTREAM_AUTHORITY_RECORDS.length !== 7) return { ok: false, reason: "PRODUCT_AUTHORITY_RECORD_COUNT_INVALID" };
   for (const record of C15_UPSTREAM_AUTHORITY_RECORDS) {
     if (!record.authority_id || !record.case_id || !record.scenario || record.profile_id !== record.scenario || !record.origin || record.receipt_authority?.authority_id !== record.authority_id || record.receipt_authority?.case_id !== record.case_id || record.receipt_authority?.scenario !== record.scenario || record.receipt_authority?.profile_id !== record.profile_id || record.receipt_authority?.origin !== record.origin) return { ok: false, reason: `PRODUCT_AUTHORITY_RECORD_IDENTITY_INVALID:${record.authority_id ?? "unknown"}` };
-    if (record.receipt_authority?.projection?.external_actions !== 0 || record.receipt_authority?.projection?.local_fixture_only !== true) return { ok: false, reason: `PRODUCT_AUTHORITY_BOUNDARY_INVALID:${record.authority_id}` };
+    if (record.projection_output?.external_actions !== 0 || record.receipt_authority?.live_claim !== false) return { ok: false, reason: `PRODUCT_AUTHORITY_BOUNDARY_INVALID:${record.authority_id}` };
   }
   return { ok: true, record_count: C15_UPSTREAM_AUTHORITY_RECORDS.length, source: "bundled read-only product authority", external_actions: 0 };
 }
@@ -1167,6 +1183,11 @@ const a12ResetDependentState = (state, scenario) => {
   state.fieldEdits = {};
   state.matcherState = "pending";
   state.evidence = null;
+  state.milestoneEvidenceReviewed = false;
+  state.milestoneReviewerAttested = false;
+  state.milestonePayerApproved = false;
+  state.milestoneErpProposal = false;
+  state.milestoneJournalPreview = false;
   state.walletReview = "not_prepared";
   state.simulation = { schema: "arc-erp.product-construction.v3.2.c15.simulation.v1", status: "NOT_EVALUATED", runtime_state: "missing", errors: ["SIMULATION_NOT_RUN"], local_fixture_only: true, live_arc: false, live_erp: false, direct_erp_mutation: false, external_actions: 0 };
   state.completedStages = [];
@@ -1296,6 +1317,7 @@ function a12CanonicalReceiptAuthority({ profile, outcome, caseId, scenario, orig
   const upstreamProjection = a12UpstreamReceiptProjectionForScenario(scenario);
   if (!upstreamProjection) throw new Error("C15_UPSTREAM_RECEIPT_AUTHORITY_UNAVAILABLE");
   const projection = a12Clone(upstreamProjection);
+  projection.rpc_provenance = A12_TYPED_EVIDENCE_RPC_PROVENANCE;
   const eventSpecs = [
     ["policy_event_expected_observed_status_source", "policy_event", 2],
     ["erc20_transfer_expected_observed_status_source", "erc20_transfer", 0],
@@ -1586,6 +1608,31 @@ function a12ActionGuard(state) {
   return { enabled: true, reason: "All accepted local prerequisites and typed evidence checks pass; external mutation remains closed." };
 }
 
+// The milestone desk has a smaller, human-facing control sequence than the
+// seven-stage C15 rail.  Each step is still local and typed: the reducer never
+// signs, broadcasts, posts to ERP or claims business close.
+export function a12MilestoneFlow(state) {
+  const milestone = state?.selectedScenario === "supplier_payable" && state?.selectedWorkspace === "milestone-desk";
+  if (!milestone) return { step: "primary_action", label: "Review approval decision", enabled: false, reason: "Milestone document flow is not active for this route.", nextOwner: "operator" };
+  if (["stale", "mismatch", "reorg", "duplicate"].includes(state.matcherState)) {
+    const recovery = state.matcherState === "stale" ? "Refresh reviewer attestation" : state.matcherState === "mismatch" ? "Review receipt mismatch" : "Resolve receipt lifecycle exception";
+    return { step: "recovery", label: recovery, enabled: true, reason: "Keep the payable OPEN until the typed exception is resolved.", nextOwner: state.matcherState === "stale" ? "reviewer" : "reconciliation" };
+  }
+  const evidenceValidation = state.evidence ? validateA12C15TypedEvidence(state, state.evidence) : { ok: false, reason: "TYPED_EVIDENCE_REQUIRED" };
+  const matchedEvidence = evidenceValidation.ok && state.matcherState === "matched" && state.evidence?.outcome === "matched";
+  if (!state.evidence) return { step: "receipt_evaluation", label: "Evaluate bound receipt evidence", enabled: true, reason: "Select a typed receipt outcome before either approval control.", nextOwner: "operator" };
+  if (!matchedEvidence) return { step: "recovery", label: "Re-evaluate typed receipt evidence", enabled: true, reason: `Keep the payable OPEN until typed evidence is accepted (${evidenceValidation.reason ?? state.matcherState}).`, nextOwner: "reviewer" };
+  if (!state.milestoneReviewerAttested) return { step: "reviewer_attestation", label: "Record reviewer attestation", enabled: true, reason: "Reviewer attestation is independent from payer approval.", nextOwner: "reviewer" };
+  if (!state.milestonePayerApproved) return { step: "payer_approval", label: "Review separate payer approval", enabled: true, reason: "Approve the exact 1,250.00 USDC fixture only; no wallet action is created.", nextOwner: "payer" };
+  if (!state.lastAction) {
+    const guard = a12ActionGuard(state);
+    return { step: "primary_action", label: "Review approval decision", enabled: guard.enabled, reason: guard.reason, nextOwner: "operator" };
+  }
+  if (!state.milestoneErpProposal) return { step: "erp_proposal", label: "Prepare ERP reconciliation proposal", enabled: true, reason: "Prepare a read-only Payment Entry / Bank Transaction proposal.", nextOwner: "ERP owner" };
+  if (!state.milestoneJournalPreview) return { step: "journal_preview", label: "Open journal preview", enabled: true, reason: "Preview balanced GL lines; posting and business close remain separate gates.", nextOwner: "finance owner" };
+  return { step: "complete", label: "Journey reviewed", enabled: false, reason: "All local controls are complete; no external mutation is available.", nextOwner: "operator" };
+}
+
 /**
  * Run the explicit local simulation step.  The adapter owns the validation
  * contract; A12 only supplies operator-visible policy/allowance/envelope
@@ -1635,6 +1682,13 @@ export function createA12WorkbenchState({ scenario = "supplier_payable" } = {}) 
     fieldEdits: {},
     matcherState: "pending",
     evidence: null,
+    milestoneEvidenceReviewed: false,
+    // These are local operator controls for the document journey. They do not
+    // stand in for a wallet signature, chain receipt or ERP mutation.
+    milestoneReviewerAttested: false,
+    milestonePayerApproved: false,
+    milestoneErpProposal: false,
+    milestoneJournalPreview: false,
     walletReview: "not_prepared",
     simulation: { schema: "arc-erp.product-construction.v3.2.c15.simulation.v1", status: "NOT_EVALUATED", runtime_state: "missing", errors: ["SIMULATION_NOT_RUN"], local_fixture_only: true, live_arc: false, live_erp: false, direct_erp_mutation: false, external_actions: 0 },
     completedStages: [],
@@ -1897,10 +1951,25 @@ export function reduceA12Workbench(input, action = {}) {
         : `Simulation blocked fail-closed: ${simulation.errors.join(", ")}.`;
     return next({ simulation_status: simulation.status, simulation_errors: simulation.errors, external_actions: 0 });
   }
+  if (type === "SELECT_MILESTONE_OUTCOME") {
+    if (state.selectedScenario !== "supplier_payable" || state.selectedWorkspace !== "milestone-desk" || !A12_TYPED_EVIDENCE_OUTCOMES.includes(action.outcome)) {
+      state.lastNotice = "Milestone receipt outcome rejected fail-closed: a bound typed outcome is required.";
+      return next({ action_blocked: true, reason: "MILESTONE_TYPED_OUTCOME_REQUIRED", external_actions: 0 });
+    }
+    let evidence;
+    try {
+      evidence = createA12TypedEvidence(state, action.outcome);
+    } catch (error) {
+      state.lastNotice = `Milestone receipt outcome rejected fail-closed: ${error.message}.`;
+      return next({ action_blocked: true, reason: error.message, external_actions: 0 });
+    }
+    return reduceA12Workbench(state, { type: "EVALUATE_TYPED_EVIDENCE", evidence });
+  }
   if (type === "EVALUATE_TYPED_EVIDENCE") {
     const validation = validateA12C15TypedEvidence(state, action.evidence);
     if (!validation.ok) {
       state.evidence = null;
+      state.milestoneEvidenceReviewed = false;
       state.matcherState = "pending";
       state.walletReview = "not_prepared";
       state.lastAction = null;
@@ -1912,12 +1981,64 @@ export function reduceA12Workbench(input, action = {}) {
       return next({ evidence_rejected: true, reason: validation.reason, external_actions: 0 });
     }
     state.evidence = a12Clone(action.evidence);
+    state.milestoneEvidenceReviewed = true;
     state.matcherState = action.evidence.outcome;
+    state.milestoneReviewerAttested = false;
+    state.milestonePayerApproved = false;
+    state.milestoneErpProposal = false;
+    state.milestoneJournalPreview = false;
     state.walletReview = "not_prepared";
     state.lastAction = null;
     state.completedStages = [];
     state.lastNotice = `Typed local evidence evaluated as ${action.evidence.outcome}; no wallet, chain, ERP or close mutation is available.`;
     return next({ evidence_outcome: action.evidence.outcome, evidence_bound: true, external_actions: 0 });
+  }
+  if (type === "MILESTONE_PRIMARY_ACTION") {
+    const flow = a12MilestoneFlow(state);
+    if (!flow.enabled) {
+      state.lastNotice = `Milestone journey complete: ${flow.reason}`;
+      return next({ action_blocked: true, reason: "MILESTONE_JOURNEY_COMPLETE", external_actions: 0 });
+    }
+    if (flow.step === "recovery") {
+      state.selectedStage = "settle";
+      state.lastNotice = `${flow.label} selected. ${flow.reason} No receipt, ERP or payable state was changed.`;
+      return next({ recovery: state.matcherState, external_actions: 0 });
+    }
+    if (flow.step === "receipt_evaluation") {
+      return reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "matched" });
+    }
+    if (flow.step === "reviewer_attestation") {
+      state.milestoneReviewerAttested = true;
+      state.selectedStage = "authorize";
+      state.lastNotice = "Reviewer attestation recorded locally. Payer approval remains a separate control.";
+      return next({ milestone_step: flow.step, external_actions: 0 });
+    }
+    if (flow.step === "payer_approval") {
+      state.milestonePayerApproved = true;
+      state.selectedStage = "authorize";
+      state.lastNotice = "Separate payer approval reviewed for the exact 1,250.00 USDC fixture; no wallet action was created.";
+      return next({ milestone_step: flow.step, external_actions: 0 });
+    }
+    if (flow.step === "primary_action") {
+      const actionMeta = a12PrimaryActionFor(state.selectedScenario);
+      state.lastAction = "milestone.review_approval_decision";
+      state.completedStages = [...new Set([...(state.completedStages ?? []), "authorize"])]
+      state.selectedStage = "post";
+      state.lastNotice = `Approval decision reviewed locally${actionMeta ? ` for ${actionMeta.label}` : ""}. ERP reconciliation remains a read-only proposal boundary.`;
+      return next({ milestone_step: flow.step, action_id: state.lastAction, external_actions: 0 });
+    }
+    if (flow.step === "erp_proposal") {
+      state.milestoneErpProposal = true;
+      state.selectedStage = "post";
+      state.lastNotice = "ERP reconciliation proposal prepared locally; Payment Entry, bank reconciliation and business close remain separate.";
+      return next({ milestone_step: flow.step, external_actions: 0 });
+    }
+    if (flow.step === "journal_preview") {
+      state.milestoneJournalPreview = true;
+      state.selectedStage = "close";
+      state.lastNotice = "Balanced journal preview opened locally; no posting or business close was performed.";
+      return next({ milestone_step: flow.step, external_actions: 0 });
+    }
   }
   if (type === "PRIMARY_ACTION") {
     const actionMeta = a12PrimaryActionFor(state.selectedScenario);
@@ -2053,17 +2174,33 @@ export function projectA12Workbench(state) {
         : profile.direction === "outgoing" ? "settlement_policy" : profile.direction === "unresolved" ? "evidence_gaps" : "receipt_finality_state";
   const workspace = A12_ERP_WORKSPACE_PRESENTATION[state.selectedWorkspace] ?? A12_ERP_WORKSPACE_PRESENTATION["milestone-desk"];
   const originEntry = a12CanonicalOriginEntryForScenario(profile.id);
+  const milestoneCasePresentation = profile.id === "supplier_payable" && state.selectedWorkspace === "milestone-desk" ? A12_MILESTONE_CASE_PRESENTATION : null;
+  const milestonePresentation = milestoneCasePresentation && (state.workspaceRoute ?? "queue") === "queue" ? milestoneCasePresentation : null;
+  const milestoneFlow = milestoneCasePresentation ? a12MilestoneFlow(state) : null;
+  const displayCase = milestoneCasePresentation ?? {
+    caseId: fixture.caseId,
+    contract: fixture.caseId,
+    milestone: profile.milestone ?? profile.label,
+    contractor: profile.party,
+    payable: profile.documentNumber,
+    sourceDocument: profile.sourceDocument,
+    amount6: profile.amount6,
+    amount: profile.amount,
+    currency: "USDC",
+    network: "Arc Testnet",
+    localFixtureOnly: true
+  };
   return {
     batchId: A12_BATCH_ID,
     evidenceLevel: A12_EVIDENCE_LEVEL,
     localFixtureOnly: true,
     externalActions: 0,
     shell: { environment: "LOCAL FIXTURE", chain: "Arc Testnet · chainId 5042002", company: "Gayson Labs Pte Ltd", treasury: A12_VALUE.treasuryWallet, erpFreshness: "local projection · not live", watcherLag: "not observed", outbox: "0 external commands", role: action.role },
-    queue: A12_SCENARIO_IDS.map((id) => { const row = A12_PROFILE_DEFINITIONS[id]; const rowAction = a12PrimaryActionFor(id); return { id, label: row.label, direction: row.direction, party: row.party, principal: row.amount, age: "local fixture", evidenceTier: A12_EVIDENCE_LEVEL, exception: effectiveMatcherState === "pending" ? "control required" : a12StateLabel(effectiveMatcherState), nextOwner: rowAction.next_owner, selected: id === profile.id }; }),
+    queue: A12_SCENARIO_IDS.map((id) => { const row = A12_PROFILE_DEFINITIONS[id]; const rowAction = a12PrimaryActionFor(id); const isFlagship = id === "supplier_payable"; return { id, label: isFlagship ? "Website handover · milestone close" : row.label, direction: row.direction, party: isFlagship ? A12_MILESTONE_CASE_PRESENTATION.contractor : row.party, principal: isFlagship ? A12_MILESTONE_CASE_PRESENTATION.amount : row.amount, age: "local fixture", evidenceTier: A12_EVIDENCE_LEVEL, exception: id === profile.id && effectiveMatcherState !== "pending" ? a12StateLabel(effectiveMatcherState) : id === profile.id ? "control required" : "local fixture", nextOwner: rowAction.next_owner, selected: id === profile.id }; }),
     unresolved: { id: "unresolved_incoming_outgoing", label: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.label, reason: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.openItem, selectable: true },
     workspace: { id: state.selectedWorkspace ?? "milestone-desk", ...workspace },
     originEntry,
-    canvas: { headline: `${workspace.primaryJob} · ${action.stage_headline}`, stage: presentationStage, route: state.workspaceRoute ?? "queue", scenario: profile.label, matcherState: effectiveMatcherState, scenarioState: a12StateLabel(effectiveMatcherState), scenarioTone: a12StateTone(effectiveMatcherState), caseId: fixture.caseId, sourceDocument: profile.sourceDocument, counterparty: profile.party, principal: profile.amount, source: "C15 typed scenario projection · local fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, originLabel: originEntry?.label ?? "Unknown origin", originEntry, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: action.recovery, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: guard.enabled, disabledReason: guard.enabled ? null : guard.reason }, consequences, policy: { policyId, version: "C15 upstream policy projection", allowance: profile.amount6, expiry: "C15 upstream fixture · local only", nonce: policyNonce } },
+    canvas: { headline: milestonePresentation ? "Website Handover · Milestone Close" : `${workspace.primaryJob} · ${action.stage_headline}`, stage: presentationStage, route: state.workspaceRoute ?? "queue", scenario: milestoneCasePresentation ? milestoneCasePresentation.milestone : profile.label, matcherState: effectiveMatcherState, scenarioState: a12StateLabel(effectiveMatcherState), scenarioTone: a12StateTone(effectiveMatcherState), caseId: displayCase.caseId, contract: displayCase.contract, milestone: displayCase.milestone, documentNumber: displayCase.payable, payable: displayCase.payable, sourceDocument: displayCase.sourceDocument, counterparty: displayCase.contractor, principal: displayCase.amount, amount6: displayCase.amount6, currency: displayCase.currency, network: displayCase.network, localFixtureOnly: displayCase.localFixtureOnly, source: "Local accounting fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, originLabel: originEntry?.label ?? "Unknown origin", originEntry, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: action.recovery, milestoneFlow, milestoneEvidenceReviewed: state.milestoneEvidenceReviewed === true, milestoneReviewerAttested: state.milestoneReviewerAttested === true, milestonePayerApproved: state.milestonePayerApproved === true, milestoneErpProposal: state.milestoneErpProposal === true, milestoneJournalPreview: state.milestoneJournalPreview === true, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: milestoneFlow ? milestoneFlow.enabled : guard.enabled, label: milestoneFlow ? milestoneFlow.label : action.label, disabledReason: milestoneFlow?.enabled ? null : milestoneFlow?.reason ?? (guard.enabled ? null : guard.reason), next_owner: milestoneFlow?.nextOwner ?? action.next_owner }, consequences, policy: { policyId, version: "Settlement policy readback", allowance: displayCase.amount6, expiry: "Local fixture only", nonce: policyNonce } },
     inspector: { tabs: A12_C15_TABS, activeTab: state.inspectorTab, objects: objectRows, receiptFields, logs: fixture.receiptRecords, typedReadbacks: workbenchProjection.typed_readbacks, arcVerifiedEvidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE, erpVerifiedEvidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE, getter: { expected: `case:${fixture.caseId} · transfer:${transferId}`, observed: effectiveMatcherState === "pending" ? "missing" : `case:${fixture.caseId} · transfer:${transferId}`, status: effectiveMatcherState === "matched" ? "matched" : "missing", source: A12_C15_PROVENANCE_SOURCE.arc }, consequences, audit: (state.history ?? []).map((event) => ({ time: `local revision ${event.seq}`, actor: "local operator", object: event.type, revision: event.seq, action: event.type, result: a12AuditPublicValue(event.payload), correlationId: `a12:${fixture.caseId}:${event.seq}` })) },
     causalRail: A12_CAUSAL_STAGES.map((stage, index) => ({ ...stage, status: stage.id === state.selectedStage ? "current" : effectiveCompletedStages.includes(stage.id) ? "verified" : "prerequisite", timestamp: effectiveCompletedStages.includes(stage.id) ? "local guarded action" : null, nextOwner: index === 4 ? "wallet owner or watcher" : index >= 5 ? "ERP/finance owner gate" : "operator" })),
     replay: state.sealedReplay,

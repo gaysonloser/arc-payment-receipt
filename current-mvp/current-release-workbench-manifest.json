@@ -3,11 +3,11 @@
   "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
   "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
   "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
-  "content_identity_sha256": "e1daa5afe2a3839191501c66653eeea39c0534c3d7472099d5d6a6033a0212a1",
+  "content_identity_sha256": "a0437d78e03bf93ab887656cf3e2453b85a0d3dd7ef4a3f01159a6ce64288801",
   "manifest_sha256_self_excluded": true,
   "release_binding": {
     "model": "content_addressed_external_receipt",
-    "content_identity_sha256": "e1daa5afe2a3839191501c66653eeea39c0534c3d7472099d5d6a6033a0212a1",
+    "content_identity_sha256": "a0437d78e03bf93ab887656cf3e2453b85a0d3dd7ef4a3f01159a6ce64288801",
     "self_authenticating_commit": false,
     "github_commit": null,
     "render_deployment_id": null,
@@ -169,8 +169,8 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 47399,
-      "sha256": "69e830c14a487e9f17bedfaa397f64c2c35b6c67c268d036c5cce12837b2a373"
+      "bytes": 50145,
+      "sha256": "166ee219a22b1160385f381cdf0c1d0bfbc8825b9af0c6b6e07818730d328dfc"
     },
     {
       "path": "tools/current_mvp_engineering_support.test.mjs",
@@ -265,8 +265,8 @@
     {
       "path": "tools/current_mvp_accounting_close.test.mjs",
       "role": "test",
-      "bytes": 6158,
-      "sha256": "96d2a72ffe85803be81345fc53a502a904fb240d330e23de3398922bef1b880a"
+      "bytes": 13814,
+      "sha256": "e6bff86ecc20fc521f87c45fbd59147412dff690101fb70f13cde148c01de19b"
     },
     {
       "path": "tools/current_mvp_fail_closed_lifecycle.test.mjs",
@@ -467,8 +467,8 @@
     },
     {
       "path": "web/c15-contract.mjs",
-      "bytes": 49997,
-      "sha256": "c77b926c70f2a6d3e1643bde88605b27b91d0095fc2b9dab742d2eb485de5a9d",
+      "bytes": 68343,
+      "sha256": "bb6d809ea451df61ff4b561b4290e777e3cb0980a73f94d41a317880eb9eab8f",
       "mode": "100644",
       "source_reference": "programme/verified-milestone-close/web/c15-contract.mjs"
     },
@@ -481,8 +481,8 @@
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 161418,
-      "sha256": "57df3de17b478bbf8b49a23ed04ac27f834d386540b1082c69d9f3fa106c6269",
+      "bytes": 171415,
+      "sha256": "fe21885f4da445acce4b4cc42873d5ecc9ed82fd3d5259367cb6a954c0110779",
       "mode": "100644",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
@@ -499,8 +499,8 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 156778,
-      "sha256": "acfb537f739fe7e714d80af8eb911f59da7001f26f2fe86d4cb6cd9448583d9a",
+      "bytes": 165619,
+      "sha256": "acc3de1fee1e00348630bcc1864bcfe564f72070d4729b63956458cca60b53c2",
       "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,

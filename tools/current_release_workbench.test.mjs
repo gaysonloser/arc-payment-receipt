@@ -28,6 +28,8 @@ import {
   A12_CAUSAL_STAGES,
   A12_ORIGIN_ENTRY_CATALOG,
   A12_SEVEN_SCENARIO_IDS,
+  a12MilestoneFlow,
+  createA12TypedEvidence,
   createA12WorkbenchState,
   projectA12Workbench,
   reduceA12Workbench,
@@ -335,7 +337,8 @@ test("Milestone desk is an accounting document center with a single five-step de
   assert.match(markup, /aria-label="Document to reviewer to Arc receipt to ERP reconciliation to GL close timeline"/);
   assert.match(markup, /USDC · Arc settlement summary/);
   for (const label of ["Counterparty", "Open item", "Principal", "Status", "Gayson guide", "next owner", "recovery"]) assert.match(markup, new RegExp(label));
-  assert.equal((markup.match(/data-a12-decision=/g) ?? []).length, 3);
+  assert.equal((markup.match(/data-a12-milestone-outcome=/g) ?? []).length, 3);
+  assert.match(markup, /<button type="button" class="a12-decision-row/);
   assert.doesNotMatch(markup, /a12-command/);
   assert.doesNotMatch(fullMarkup, /class="a12-command"/);
   assert.equal((fullMarkup.match(/data-a12-primary/g) ?? []).length, 1);
@@ -346,6 +349,51 @@ test("Milestone desk is an accounting document center with a single five-step de
   assert.match(index, /navigation-workspace\.mjs\?rev=v3-2-a12-r4-milestone-document-center/);
   assert.equal(a12RuntimeLayoutMetrics(1440, 1024, 1).overflowX, "none");
   assert.equal(a12RuntimeLayoutMetrics(1024, 768, 2).inspectorMode, "focus_trapped_drawer");
+});
+
+test("mounted milestone journey advances through evidence, approvals and journal while exceptions stay open", () => {
+  let state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  assert.equal(a12MilestoneFlow(state).step, "receipt_evaluation");
+  assert.equal(state.milestoneErpProposal, false);
+  assert.equal(state.milestoneJournalPreview, false);
+  state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "stale" });
+  assert.equal(state.matcherState, "stale");
+  assert.equal(a12MilestoneFlow(state).step, "recovery");
+  assert.equal(state.milestoneErpProposal, false);
+  assert.equal(state.milestoneJournalPreview, false);
+  state = reduceA12Workbench(createA12WorkbenchState({ scenario: "supplier_payable" }), { type: "SELECT_MILESTONE_OUTCOME", outcome: "matched" });
+  assert.equal(state.matcherState, "matched");
+  assert.equal(state.evidence?.outcome, "matched");
+  const mountedSteps = [];
+  for (let index = 0; index < 5; index += 1) {
+    const view = projectA12Workbench(state);
+    const markup = a12UiMarkup(view, state);
+    const flow = a12MilestoneFlow(state);
+    mountedSteps.push(flow.step);
+    assert.equal(flow.enabled, true);
+    assert.match(markup, /data-a12-milestone-primary/);
+    assert.match(markup, /data-testid="milestone-business-document"/);
+    state = reduceA12Workbench(state, { type: "MILESTONE_PRIMARY_ACTION" });
+  }
+  assert.deepEqual(mountedSteps, ["reviewer_attestation", "payer_approval", "primary_action", "erp_proposal", "journal_preview"]);
+  assert.equal(state.milestoneEvidenceReviewed, true);
+  assert.equal(state.milestoneReviewerAttested, true);
+  assert.equal(state.milestonePayerApproved, true);
+  assert.equal(state.milestoneErpProposal, true);
+  assert.equal(state.milestoneJournalPreview, true);
+  assert.equal(a12MilestoneFlow(state).step, "complete");
+  assert.match(state.lastNotice, /journal preview opened locally/i);
+  assert.match(a12UiMarkup(projectA12Workbench(state), state), /Balanced journal preview available/);
+
+  for (const matcherState of ["stale", "mismatch"]) {
+    const exceptionState = { ...createA12WorkbenchState({ scenario: "supplier_payable" }), matcherState };
+    const exceptionView = projectA12Workbench(exceptionState);
+    const exceptionMarkup = a12UiMarkup(exceptionView, exceptionState);
+    assert.match(exceptionMarkup, new RegExp(`data-a12-milestone-state="${matcherState}"`));
+    assert.match(exceptionMarkup, /data-a12-milestone-payable>OPEN</);
+    assert.match(exceptionMarkup, /Payable stays OPEN/);
+    assert.equal(a12MilestoneFlow(exceptionState).step, "recovery");
+  }
 });
 
 test("workflow navigation changes the main decision surface, not only an inspector tab", () => {
