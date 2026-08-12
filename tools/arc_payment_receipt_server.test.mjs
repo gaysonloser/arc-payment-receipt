@@ -16,6 +16,7 @@ import {
   buildFinalDemoPlanView,
   buildFinalSubmissionReadinessView,
   buildCurrentReleaseSurfaceReadinessView,
+  buildCurrentCircleConsoleSurface,
   bindArcTestnetReadbackToRelease,
   validateEncodeAuthenticatedReadback,
   validateFinalLateEmailSendReceipt,
@@ -75,6 +76,8 @@ test("current-release surface validators remain unproven by default and bind exa
   assert.equal(defaults.encode.status, "UNPROVEN");
   assert.equal(defaults.final.status, "UNPROVEN");
   assert.equal(defaults.arc_testnet.status, "UNPROVEN");
+  assert.equal(defaults.circle_console.status, "BLOCKED");
+  assert.equal(defaults.erp.status, "UNPROVEN");
   const encode = validateEncodeAuthenticatedReadback({
     ...surfaceBase,
     kind: "encode_authenticated_current_product_readback",
@@ -124,6 +127,12 @@ test("current-release surface validators remain unproven by default and bind exa
     platform_observed_at: surfaceBase.observed_at
   };
   assert.equal(validateEncodeAuthenticatedReadback(missingEncodeReceiptFields, surfaceTime).status, "UNPROVEN");
+});
+
+test("current-release Circle surface requires an accepted authenticated receipt, not configuration readiness", () => {
+  assert.equal(buildCurrentCircleConsoleSurface({ accepted: false, errors: ["authentication_required"], receipt: null }).status, "BLOCKED");
+  assert.equal(buildCurrentCircleConsoleSurface({ accepted: false, errors: [], receipt: { subscription_id: "configured-only" } }).current_release_bound, false);
+  assert.equal(buildCurrentCircleConsoleSurface({ accepted: true, errors: [], receipt: { subscription_id: "sub-current" } }).status, "VERIFIED_READ_ONLY");
 });
 
 test("current PolicySettlementV1 deployment, PolicyCreated and getPolicy readback bind one release without a new chain write", async () => {
@@ -917,6 +926,12 @@ test("serves current-release surface readiness without external API calls", asyn
   assert.equal(payload.encode.status, "UNPROVEN");
   assert.equal(payload.final.status, "UNPROVEN");
   assert.equal(payload.arc_testnet.status, "UNPROVEN");
+  assert.equal(payload.circle_console.status, "BLOCKED");
+  assert.equal(payload.circle_console.current_release_bound, false);
+  assert.equal(payload.erp.status, "VERIFIED_READ_ONLY");
+  assert.equal(payload.erp.current_release_bound, true);
+  assert.equal(payload.erp.live_erp, false);
+  assert.equal(payload.erp.business_close_verified, false);
 });
 
 test("final asset evidence is content-addressed and rejects drift or a forged final receipt", () => {

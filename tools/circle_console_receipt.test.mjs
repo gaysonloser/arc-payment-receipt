@@ -21,6 +21,10 @@ const NOW_MS = Date.parse("2026-08-10T12:00:00.000Z");
 const contractAddress = "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7";
 const eventSignature = "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)";
 const eventTopic = `0x${"cd".repeat(32)}`;
+const expectedTxHash = `0x${"22".repeat(32)}`;
+const expectedBlockHash = `0x${"11".repeat(32)}`;
+const expectedBlockHeight = 56111686;
+const expectedLogIndex = 0;
 const subscriptionId = "Subscription_evt_0xab12cd34";
 const webhookHistoryUrl = "https://console.circle.com/contracts/current/subscriptions/current/events";
 const eventHistoryUrl = "https://console.circle.com/contracts/current/event-history";
@@ -30,6 +34,10 @@ function buildPolicy() {
     contractAddress,
     eventSignature,
     eventTopic,
+    expectedEventTxHash: expectedTxHash,
+    expectedEventBlockHash: expectedBlockHash,
+    expectedEventBlockHeight: expectedBlockHeight,
+    expectedEventLogIndex: expectedLogIndex,
     subscriptionId,
     releaseCommit: CURRENT_RELEASE_COMMIT,
     now: () => NOW_MS
@@ -96,7 +104,13 @@ function trustedInput() {
         id: "event-1",
         authenticated: true,
         firstConfirmDate: new Date(NOW_MS - 45_000).toISOString(),
-        block_height: 56111686,
+        blockHash: expectedBlockHash,
+        blockHeight: expectedBlockHeight,
+        txHash: expectedTxHash,
+        logIndex: String(expectedLogIndex),
+        topics: [eventTopic],
+        data: "0x",
+        eventSignatureHash: eventTopic,
         ...currentHistoryBinding
       }]
     }
@@ -416,6 +430,36 @@ test("trusted histories require current non-empty authenticated entries", () => 
   const wrongChainResult = buildCircleConsoleReceipt(wrongChain, policy);
   assert.equal(wrongChainResult.accepted, false);
   assert.ok(wrongChainResult.errors.includes("event_history_entry_0_chain_id_mismatch"));
+});
+
+test("event history requires the official event-log payload before accepting a readback", () => {
+  const policy = trustedPolicy();
+  const incomplete = trustedInput();
+  delete incomplete.event_history.entries[0].txHash;
+  incomplete.event_history.entries[0].topics = [];
+  const result = buildCircleConsoleReceipt(incomplete, policy);
+  assert.equal(result.accepted, false);
+  assert.ok(result.errors.includes("event_history_entry_0_tx_hash_required"));
+  assert.ok(result.errors.includes("event_history_entry_0_topics_required"));
+  assert.equal(result.receipt, null);
+});
+
+test("event history must bind the exact policy topic and current Arc receipt identity", () => {
+  for (const mutate of [
+    (entry) => { entry.txHash = `0x${"aa".repeat(32)}`; },
+    (entry) => { entry.blockHash = `0x${"bb".repeat(32)}`; },
+    (entry) => { entry.blockHeight += 1; },
+    (entry) => { entry.logIndex = "13"; },
+    (entry) => { entry.topics[0] = `0x${"cc".repeat(32)}`; },
+    (entry) => { entry.eventSignatureHash = `0x${"dd".repeat(32)}`; },
+    (entry) => { entry.data = "0x1"; }
+  ]) {
+    const input = trustedInput();
+    mutate(input.event_history.entries[0]);
+    const result = buildCircleConsoleReceipt(input, trustedPolicy());
+    assert.equal(result.accepted, false);
+    assert.equal(result.receipt, null);
+  }
 });
 
 test("primary Console sources require HTTPS 200 and never echo credentials", () => {

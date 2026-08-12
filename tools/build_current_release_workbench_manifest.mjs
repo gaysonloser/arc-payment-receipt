@@ -71,11 +71,12 @@ async function git(args) {
 }
 
 async function worktreeTruth() {
-  const [numstatOutput, rawOutput, statusOutput, baselineCommit] = await Promise.all([
+  const [numstatOutput, rawOutput, statusOutput, baselineCommit, currentHead] = await Promise.all([
     git(["diff", H187_PUBLISHED_BASELINE_COMMIT, "--numstat", "--"]),
     git(["diff", H187_PUBLISHED_BASELINE_COMMIT, "--raw", "--no-renames", "--"]),
     git(["status", "--porcelain=v1", "--untracked-files=all", "--"]),
-    Promise.resolve(`${H187_PUBLISHED_BASELINE_COMMIT}\n`)
+    Promise.resolve(`${H187_PUBLISHED_BASELINE_COMMIT}\n`),
+    git(["rev-parse", "HEAD"])
   ]);
   const numstat = new Map();
   for (const line of numstatOutput.trim().split("\n").filter(Boolean)) {
@@ -127,7 +128,7 @@ async function worktreeTruth() {
   const baseline = baselineCommit.trim();
   return {
     baseline_commit: baseline,
-    current_head: baseline,
+    current_head: currentHead.trim(),
     tracked_modified_count: snapshots.length,
     content_candidate_count: contentCandidates.length,
     mode_only_non_candidate_count: snapshots.filter((item) => !item.content_delta).length,
@@ -308,7 +309,7 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   const selfExcludedCandidate = publicationCandidate.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
   const actualTruth = await worktreeTruth();
   const actualCandidatePaths = actualTruth.publication_candidate_paths.map((item) => item.path).sort().join(",");
-  if (manifest.worktree_truth?.baseline_commit !== H187_PUBLISHED_BASELINE_COMMIT || manifest.worktree_truth?.tracked_modified_count !== actualTruth.tracked_modified_count || manifest.worktree_truth?.content_candidate_count !== actualTruth.content_candidate_count || manifest.worktree_truth?.content_candidate_count !== 7 || manifest.worktree_truth?.mode_only_non_candidate_count !== actualTruth.mode_only_non_candidate_count || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== actualTruth.documentation_only_content_count || manifest.worktree_truth?.publication_candidate_state !== "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE" || manifest.worktree_truth?.publication_candidate_count !== actualTruth.publication_candidate_count || manifest.worktree_truth?.publication_candidate_count !== 7 || publicationCandidate.map((item) => item.path).sort().join(",") !== actualCandidatePaths || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
+  if (manifest.worktree_truth?.baseline_commit !== H187_PUBLISHED_BASELINE_COMMIT || manifest.worktree_truth?.current_head !== actualTruth.current_head || manifest.worktree_truth?.tracked_modified_count !== actualTruth.tracked_modified_count || manifest.worktree_truth?.content_candidate_count !== actualTruth.content_candidate_count || manifest.worktree_truth?.content_candidate_count !== 13 || manifest.worktree_truth?.mode_only_non_candidate_count !== actualTruth.mode_only_non_candidate_count || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== actualTruth.documentation_only_content_count || manifest.worktree_truth?.publication_candidate_state !== "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE" || manifest.worktree_truth?.publication_candidate_count !== actualTruth.publication_candidate_count || manifest.worktree_truth?.publication_candidate_count !== 13 || publicationCandidate.map((item) => item.path).sort().join(",") !== actualCandidatePaths || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
   for (const item of publicationCandidate) {
     if (item.self_excluded) continue;
     const bytes = await readFile(join(supportRoot, item.path));

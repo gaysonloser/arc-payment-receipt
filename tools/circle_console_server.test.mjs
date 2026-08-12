@@ -12,6 +12,10 @@ import {
 const CONTRACT = "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7";
 const EVENT_SIGNATURE = "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)";
 const EVENT_TOPIC = `0x${"cd".repeat(32)}`;
+const EVENT_TX_HASH = `0x${"22".repeat(32)}`;
+const EVENT_BLOCK_HASH = `0x${"11".repeat(32)}`;
+const EVENT_BLOCK_HEIGHT = 56111686;
+const EVENT_LOG_INDEX = 0;
 const SUBSCRIPTION = "Subscription_evt_current_release";
 const RELEASE_COMMIT = "d".repeat(40);
 const NOW = Date.parse("2026-08-10T12:00:00.000Z");
@@ -41,6 +45,10 @@ function policy() {
     contractAddress: CONTRACT,
     eventSignature: EVENT_SIGNATURE,
     eventTopic: EVENT_TOPIC,
+    expectedEventTxHash: EVENT_TX_HASH,
+    expectedEventBlockHash: EVENT_BLOCK_HASH,
+    expectedEventBlockHeight: EVENT_BLOCK_HEIGHT,
+    expectedEventLogIndex: EVENT_LOG_INDEX,
     subscriptionId: SUBSCRIPTION,
     releaseCommit: RELEASE_COMMIT,
     webhookHistoryUrl: WEBHOOK_HISTORY_URL,
@@ -86,7 +94,19 @@ function currentReadback() {
       authenticated: true,
       http_status: 200,
       url: EVENT_HISTORY_URL,
-      entries: [{ id: "event-1", authenticated: true, firstConfirmDate: new Date(NOW - 45_000).toISOString(), ...currentHistoryBinding }]
+      entries: [{
+        id: "event-1",
+        authenticated: true,
+        firstConfirmDate: new Date(NOW - 45_000).toISOString(),
+        blockHash: EVENT_BLOCK_HASH,
+        blockHeight: EVENT_BLOCK_HEIGHT,
+        txHash: EVENT_TX_HASH,
+        logIndex: String(EVENT_LOG_INDEX),
+        topics: [EVENT_TOPIC],
+        data: "0x",
+        eventSignatureHash: EVENT_TOPIC,
+        ...currentHistoryBinding
+      }]
     }
   };
 }

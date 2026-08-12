@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { verifyCurrentMvpErpReadiness } from "./current_mvp_erp_readiness.mjs";
+import { verifyCurrentMvpErpReadiness, verifyEmbeddedCurrentMvpErpProjection, bindVerifiedEmbeddedErpProjectionToPublicRelease } from "./current_mvp_erp_readiness.mjs";
+import { CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE } from "../current-mvp/web/workbench/workbench-projection.mjs";
 
 const sha = (digit) => digit.repeat(64);
 const release = { release_id: "vmc-current-mvp-r1", commit_sha: "a".repeat(40), manifest_sha256: sha("b") };
@@ -115,4 +116,56 @@ test("zero-value or directionally impossible posting evidence cannot close busin
   const closeResult = verifyCurrentMvpErpReadiness({ release, company, readiness, mutationReceipt, postingReadback: falseClosed });
   assert.equal(closeResult.status, "BLOCKED");
   assert.equal(closeResult.errors.includes("POSTING_OPEN_ITEM_AMOUNT_OR_STATUS_INVALID"), true);
+});
+
+test("embedded H167 ERP projection requires exact paid invoice, submitted payment, reconciled bank and balanced GL facts", () => {
+  const embeddedRelease = { release_id: "verified-milestone-close-current-mvp-workbench-rc1", commit_sha: "a".repeat(40), manifest_sha256: sha("b"), observed_at: "2026-08-12T12:00:00Z" };
+  const accepted = verifyEmbeddedCurrentMvpErpProjection({ release: embeddedRelease, evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE });
+  assert.equal(accepted.valid, true);
+  for (const field of ["purchase_invoice", "payment_entry", "bank_transaction"]) {
+    const mutated = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+    delete mutated[field];
+    const rejected = verifyEmbeddedCurrentMvpErpProjection({ release: embeddedRelease, evidence: mutated });
+    assert.equal(rejected.valid, false, field);
+  }
+  const unbalanced = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+  unbalanced.purchase_invoice.gl.total_credit = "0.99";
+  assert.equal(verifyEmbeddedCurrentMvpErpProjection({ release: embeddedRelease, evidence: unbalanced }).valid, false);
+  const wrongSource = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+  wrongSource.source_artifact_sha256 = "a".repeat(64);
+  const wrongSourceResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: wrongSource });
+  assert.equal(wrongSourceResult.current_release_bound, false);
+  assert.equal(wrongSourceResult.public_current_release_bound, false);
+  const wrongBatch = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+  wrongBatch.source_batch = "HISTORICAL-ERP-EVIDENCE";
+  const wrongBatchResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: wrongBatch });
+  assert.equal(wrongBatchResult.current_release_bound, false);
+  assert.equal(wrongBatchResult.public_current_release_bound, false);
+  const wrongEnrichedSource = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+  wrongEnrichedSource.enriched_projection_source.packet_object_sha256 = "b".repeat(64);
+  const wrongEnrichedSourceResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: wrongEnrichedSource });
+  assert.equal(wrongEnrichedSourceResult.current_release_bound, false);
+  assert.equal(wrongEnrichedSourceResult.public_current_release_bound, false);
+  for (const mutate of [
+    (value) => { value.purchase_invoice.selector = "ACC-PINV-FORGED"; },
+    (value) => { value.purchase_invoice.supplier = "FORGED-SUPPLIER"; },
+    (value) => { value.purchase_invoice.gl.creditors_account = "Forged Creditors"; },
+    (value) => { value.payment_entry.selector = "ACC-PAY-FORGED"; },
+    (value) => { value.payment_entry.paid_from = "Forged Bank"; },
+    (value) => { value.bank_transaction.selector = "ACC-BTN-FORGED"; },
+    (value) => { value.payment_is_not_close = false; },
+    (value) => { value.claim_boundary.erp_mutation_claimed = true; },
+    (value) => { value.mutation_receipt.status = "accepted"; },
+    (value) => { value.posting_readback.status = "verified"; }
+  ]) {
+    const forged = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+    mutate(forged);
+    const forgedResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: forged });
+    assert.equal(forgedResult.current_release_bound, false);
+    assert.equal(forgedResult.public_current_release_bound, false);
+  }
+  const publicBinding = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE });
+  assert.equal(publicBinding.status, "VERIFIED_READ_ONLY");
+  assert.equal(publicBinding.public_current_release_bound, true);
+  assert.equal(publicBinding.business_close_verified, false);
 });

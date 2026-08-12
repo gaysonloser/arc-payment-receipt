@@ -170,6 +170,12 @@ export function buildCircleConsoleReceiptPolicy(options = {}) {
     contractAddress: normalizeAddress(options.contractAddress),
     eventSignature: options.eventSignature ?? "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)",
     eventTopic: String(options.eventTopic ?? "").toLowerCase(),
+    expectedEvent: {
+      txHash: String(options.expectedEventTxHash ?? options.expectedEvent?.txHash ?? "").toLowerCase(),
+      blockHash: String(options.expectedEventBlockHash ?? options.expectedEvent?.blockHash ?? "").toLowerCase(),
+      blockHeight: Number(options.expectedEventBlockHeight ?? options.expectedEvent?.blockHeight ?? -1),
+      logIndex: Number(options.expectedEventLogIndex ?? options.expectedEvent?.logIndex ?? -1)
+    },
     subscriptionId: String(options.subscriptionId ?? ""),
     releaseCommit: normalizeReleaseCommit(options.releaseCommit),
     webhookHistoryUrl: String(options.webhookHistoryUrl ?? ""),
@@ -303,6 +309,36 @@ function historyEntryValue(entry, ...keys) {
   return null;
 }
 
+function validateEventHistoryPayload(entry, label, policy) {
+  const errors = [];
+  const blockHash = historyEntryValue(entry, "block_hash", "blockHash");
+  if (!HASH.test(String(blockHash ?? ""))) errors.push(`${label}_block_hash_required`);
+  const blockHeight = Number(historyEntryValue(entry, "block_height", "blockHeight"));
+  if (!Number.isSafeInteger(blockHeight) || blockHeight < 0) errors.push(`${label}_block_height_required`);
+  const txHash = historyEntryValue(entry, "tx_hash", "txHash");
+  if (!HASH.test(String(txHash ?? ""))) errors.push(`${label}_tx_hash_required`);
+  const logIndex = Number(historyEntryValue(entry, "log_index", "logIndex"));
+  if (!Number.isSafeInteger(logIndex) || logIndex < 0) errors.push(`${label}_log_index_required`);
+  const topics = historyEntryValue(entry, "topics");
+  if (!Array.isArray(topics) || topics.length === 0 || topics.some((topic) => !EVENT_TOPIC.test(String(topic ?? "")))) {
+    errors.push(`${label}_topics_required`);
+  }
+  const data = String(historyEntryValue(entry, "data") ?? "");
+  if (!/^0x(?:[0-9a-f]{2})*$/i.test(data)) errors.push(`${label}_data_required`);
+  const eventSignatureHash = historyEntryValue(entry, "event_signature_hash", "eventSignatureHash");
+  if (!HASH.test(String(eventSignatureHash ?? ""))) errors.push(`${label}_event_signature_hash_required`);
+  const topic0 = Array.isArray(topics) ? String(topics[0] ?? "").toLowerCase() : "";
+  const signatureHash = String(eventSignatureHash ?? "").toLowerCase();
+  if (topic0 && topic0 !== policy.eventTopic) errors.push(`${label}_topic0_mismatch`);
+  if (signatureHash && signatureHash !== policy.eventTopic) errors.push(`${label}_event_signature_hash_mismatch`);
+  const expected = policy.expectedEvent ?? {};
+  if (expected.txHash && String(txHash ?? "").toLowerCase() !== expected.txHash) errors.push(`${label}_tx_hash_mismatch`);
+  if (expected.blockHash && String(blockHash ?? "").toLowerCase() !== expected.blockHash) errors.push(`${label}_block_hash_mismatch`);
+  if (Number.isSafeInteger(expected.blockHeight) && expected.blockHeight >= 0 && blockHeight !== expected.blockHeight) errors.push(`${label}_block_height_mismatch`);
+  if (Number.isSafeInteger(expected.logIndex) && expected.logIndex >= 0 && logIndex !== expected.logIndex) errors.push(`${label}_log_index_mismatch`);
+  return errors;
+}
+
 function validateHistoryEntries(value, policy, prefix) {
   if (!Array.isArray(value?.entries) || value.entries.length === 0) return [];
   const errors = [];
@@ -335,6 +371,7 @@ function validateHistoryEntries(value, policy, prefix) {
     if (subscriptionId !== policy.subscriptionId) errors.push(`${label}_subscription_mismatch`);
     const releaseCommit = normalizeReleaseCommit(historyEntryValue(entry, "release_commit", "releaseCommit"));
     if (releaseCommit !== policy.releaseCommit) errors.push(`${label}_release_commit_mismatch`);
+    if (prefix === "event_history") errors.push(...validateEventHistoryPayload(entry, label, policy));
     if (entry.fixture === true || entry.historical === true || entry.archive === true || /fixture|historical|archive/i.test(JSON.stringify(entry))) {
       errors.push(`${label}_historical_or_fixture`);
     }

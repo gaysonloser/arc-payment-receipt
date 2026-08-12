@@ -19,6 +19,8 @@ import {
   currentMvpContentType,
   resolveCurrentMvpRequest
 } from "./current_mvp_source_binding.mjs";
+import { bindVerifiedEmbeddedErpProjectionToPublicRelease } from "./current_mvp_erp_readiness.mjs";
+import { CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE } from "../current-mvp/web/workbench/workbench-projection.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_EVIDENCE_PATH = resolve(HERE, "../outputs/ArcPaymentReceipt_event_monitor_latest.json");
@@ -1028,14 +1030,40 @@ export function validateArcTestnetCurrentReleaseReceipt(input, { now = new Date(
   });
 }
 
-export function buildCurrentReleaseSurfaceReadinessView({ encode = null, final = null, arc_testnet = null, expectedRelease = null, now = new Date().toISOString() } = {}) {
+export function buildCurrentReleaseSurfaceReadinessView({ encode = null, final = null, arc_testnet = null, circle_console = null, erp = null, expectedRelease = null, now = new Date().toISOString() } = {}) {
   return {
     release_id: CURRENT_SURFACE_RELEASE_ID,
     external_actions: 0,
+    circle_console: circle_console ?? {
+      valid: false,
+      status: "BLOCKED",
+      current_release_bound: false,
+      errors: ["AUTHENTICATED_SUBSCRIPTION_READBACK_REQUIRED"],
+      external_actions: 0
+    },
+    erp: erp ?? {
+      valid: false,
+      status: "UNPROVEN",
+      current_release_bound: false,
+      business_close_verified: false,
+      errors: ["ERP_READBACK_REQUIRED"],
+      external_actions: 0
+    },
     encode: validateEncodeAuthenticatedReadback(encode, { now, expectedRelease }),
     final: validateFinalLateEmailSendReceipt(final, { now, expectedRelease }),
     arc_testnet: validateArcTestnetCurrentReleaseReceipt(arc_testnet, { now, expectedRelease }),
     boundaries: { no_api_calls: true, no_credentials: true, absent_or_historical_unproven: true, final_submission_receipt_proven: false }
+  };
+}
+
+export function buildCurrentCircleConsoleSurface(verification = null) {
+  const accepted = verification?.accepted === true && verification?.receipt != null;
+  return {
+    valid: accepted,
+    status: accepted ? "VERIFIED_READ_ONLY" : "BLOCKED",
+    current_release_bound: accepted,
+    errors: accepted ? [] : [...new Set(verification?.errors ?? ["AUTHENTICATED_SUBSCRIPTION_READBACK_REQUIRED"])],
+    external_actions: 0
   };
 }
 
@@ -2073,6 +2101,10 @@ export function createReceiptServer(options = {}) {
     contractAddress: options.circleConsoleContractAddress ?? runtimeEnvironment.CIRCLE_CONSOLE_CONTRACT_ADDRESS ?? CURRENT_POLICY_SETTLEMENT_CONTRACT,
     eventSignature: options.circleConsoleEventSignature ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_SIGNATURE ?? CURRENT_POLICY_CREATED_EVENT,
     eventTopic: options.circleConsoleEventTopic ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_TOPIC ?? "",
+    expectedEventTxHash: options.circleConsoleExpectedEventTxHash ?? runtimeEnvironment.CIRCLE_CONSOLE_EXPECTED_EVENT_TX_HASH ?? "0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c",
+    expectedEventBlockHash: options.circleConsoleExpectedEventBlockHash ?? runtimeEnvironment.CIRCLE_CONSOLE_EXPECTED_EVENT_BLOCK_HASH ?? "0x52df6ea5554d4ee8015d9917f4c26ada04eed38e58d0a841af632dc889fa160d",
+    expectedEventBlockHeight: options.circleConsoleExpectedEventBlockHeight ?? runtimeEnvironment.CIRCLE_CONSOLE_EXPECTED_EVENT_BLOCK_HEIGHT ?? 56295297,
+    expectedEventLogIndex: options.circleConsoleExpectedEventLogIndex ?? runtimeEnvironment.CIRCLE_CONSOLE_EXPECTED_EVENT_LOG_INDEX ?? 12,
     subscriptionId: options.circleConsoleSubscriptionId ?? runtimeEnvironment.CIRCLE_CONSOLE_SUBSCRIPTION_ID ?? "",
     releaseCommit: options.currentReleaseCommit ?? runtimeEnvironment.RENDER_GIT_COMMIT ?? runtimeEnvironment.CURRENT_RELEASE_COMMIT ?? "",
     webhookHistoryUrl: options.circleConsoleWebhookHistoryUrl ?? runtimeEnvironment.CIRCLE_CONSOLE_WEBHOOK_HISTORY_URL ?? "",
@@ -2539,9 +2571,26 @@ export function createReceiptServer(options = {}) {
         const expectedRelease = {
           release_id: CURRENT_SURFACE_RELEASE_ID,
           commit_sha: options.currentReleaseCommit ?? runtimeEnvironment.RENDER_GIT_COMMIT ?? runtimeEnvironment.CURRENT_RELEASE_COMMIT ?? "",
-          manifest_sha256: createHash("sha256").update(manifestBytes).digest("hex")
+          manifest_sha256: createHash("sha256").update(manifestBytes).digest("hex"),
+          observed_at: new Date(now()).toISOString()
         };
-        json(response, 200, buildCurrentReleaseSurfaceReadinessView({ arc_testnet: bindArcTestnetReadbackToRelease(arcTestnetReadback, expectedRelease), expectedRelease }), request.method);
+        const circleConsole = circleConsoleReceiptReadiness();
+        let circleVerification = buildCircleConsoleReceiptVerificationView(null, circleConsoleReceiptPolicy, circleConsole);
+        if (circleConsole.status === "ready_for_trusted_circle_console_readback" && trustedReadbackLoader) {
+          try {
+            const circleReadback = await trustedReadbackLoader();
+            circleVerification = buildCircleConsoleReceiptVerificationView(circleReadback, circleConsoleReceiptPolicy, circleConsole);
+          } catch (error) {
+            circleVerification = { accepted: false, errors: ["trusted_circle_console_readback_unavailable", ...(error?.errors ?? [])], receipt: null };
+          }
+        }
+        const publishedErp = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: expectedRelease, evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE });
+        json(response, 200, buildCurrentReleaseSurfaceReadinessView({
+          arc_testnet: bindArcTestnetReadbackToRelease(arcTestnetReadback, expectedRelease),
+          circle_console: buildCurrentCircleConsoleSurface(circleVerification),
+          erp: publishedErp,
+          expectedRelease
+        }), request.method);
         return;
       }
 

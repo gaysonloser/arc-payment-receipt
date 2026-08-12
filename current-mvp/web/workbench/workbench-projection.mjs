@@ -85,6 +85,11 @@ export const CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE = deepFreeze({
   evidence_class: "verified_erp_read_only",
   source_batch: "CURRENT-RELEASE-LIVE-EVIDENCE-CLOSURE-H167",
   source_artifact_sha256: "f773f8ba6567d4376e539701909506a6690201c0070c013bda7bcf046e1800c9",
+  enriched_projection_source: {
+    packet_id: "programme-current-product-quality-ready-freeze-h176-v1",
+    packet_object_sha256: "9eb6eb68879c5bf8359b0805fa10caa6540712d12a4b12045cf5bf77982f356b",
+    selector: "unique exchange handoffs[176]#/erp_verified_read_only_projection"
+  },
   credentials_exposed: false,
   local_fixture_only: false,
   company: "AOXPET Arc Lab",

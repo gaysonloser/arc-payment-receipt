@@ -22,6 +22,16 @@ const TRUTH_CLASS = Object.freeze({
   posting_readback: "live_erp_posting_readback",
   business_close_readback: "live_erp_business_close_readback"
 });
+const H167_ERP_SOURCE_SHA256 = "f773f8ba6567d4376e539701909506a6690201c0070c013bda7bcf046e1800c9";
+const H176_ENRICHED_PROJECTION_PACKET_SHA256 = "9eb6eb68879c5bf8359b0805fa10caa6540712d12a4b12045cf5bf77982f356b";
+const H167_ERP_EXACT = Object.freeze({
+  company: "AOXPET Arc Lab",
+  company_abbr: "AAL",
+  currency: "USD",
+  invoice: Object.freeze({ selector: "ACC-PINV-2026-00002", supplier: "ARC-LAB-SUP-CATVERSE-001", supplier_invoice: "PINV-2026-044" }),
+  payment: Object.freeze({ selector: "ACC-PAY-2026-00009", posting_date: "2026-08-10", paid_from: "Arc Settlement Bank - AAL", paid_to: "Creditors - AAL", reference_no: "0x20a6af59824205cfe691c603012d11525defccac6fa1df945b08b9ceb44f6e10", clearance_date: "2026-08-10" }),
+  bank: Object.freeze({ selector: "ACC-BTN-2026-00004", description_binding: "ACC-PAY-2026-00009" })
+});
 
 const canonical = (value) => {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -130,9 +140,9 @@ export function verifyCurrentMvpErpReadiness({ release, company, localFixture, r
 /**
  * Bind the privacy-safe ERP projection embedded in the public workbench to the
  * read-only readiness contract.  The source facts are owner-live readbacks,
- * but the public candidate remains an unbound, non-posting projection: this
- * wrapper deliberately reports live_erp=false and public_current_release_bound
- * false so a manifest cannot promote the projection to a public ERP gate.
+ * while this verifier remains an unbound, non-posting projection.  Only the
+ * separate binder below may bind a successfully verified projection to the
+ * public release; neither path can authorize an ERP write or business close.
  */
 export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}) {
   const source = object(evidence);
@@ -143,6 +153,20 @@ export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}
   if (source?.local_fixture_only !== false) sourceErrors.push("ERP_PROJECTION_FIXTURE_BOUNDARY_INVALID");
   if (source?.external_actions !== 0) sourceErrors.push("ERP_PROJECTION_EXTERNAL_ACTIONS_INVALID");
   if (!source?.company || !source?.company_abbr) sourceErrors.push("ERP_PROJECTION_COMPANY_REQUIRED");
+  if (source?.company !== H167_ERP_EXACT.company || source?.company_abbr !== H167_ERP_EXACT.company_abbr || source?.currency !== H167_ERP_EXACT.currency) sourceErrors.push("ERP_PROJECTION_H167_COMPANY_BINDING_INVALID");
+  if (source?.source_batch !== "CURRENT-RELEASE-LIVE-EVIDENCE-CLOSURE-H167" || source?.source_artifact_sha256 !== H167_ERP_SOURCE_SHA256) sourceErrors.push("ERP_PROJECTION_H167_SOURCE_BINDING_INVALID");
+  const enrichedSource = object(source?.enriched_projection_source);
+  if (enrichedSource?.packet_id !== "programme-current-product-quality-ready-freeze-h176-v1" || enrichedSource?.packet_object_sha256 !== H176_ENRICHED_PROJECTION_PACKET_SHA256 || enrichedSource?.selector !== "unique exchange handoffs[176]#/erp_verified_read_only_projection") sourceErrors.push("ERP_PROJECTION_H176_ENRICHED_SOURCE_BINDING_INVALID");
+  const invoice = object(source?.purchase_invoice);
+  const invoiceGl = object(invoice?.gl);
+  if (invoice?.selector !== H167_ERP_EXACT.invoice.selector || invoice?.supplier !== H167_ERP_EXACT.invoice.supplier || invoice?.supplier_invoice !== H167_ERP_EXACT.invoice.supplier_invoice || invoice.status !== "Paid" || invoiceGl?.creditors_account !== "Creditors - AAL" || invoiceGl?.creditors_side !== "credit" || invoiceGl?.creditors_amount !== "1.00" || invoiceGl?.stock_received_not_billed_account !== "Stock Received But Not Billed - AAL" || invoiceGl?.stock_received_not_billed_side !== "debit" || invoiceGl?.stock_received_not_billed_amount !== "1.00" || invoiceGl?.total_debit !== "1.00" || invoiceGl?.total_credit !== "1.00" || invoiceGl?.closing !== "0") sourceErrors.push("ERP_PROJECTION_PAID_INVOICE_OR_GL_INVALID");
+  const payment = object(source?.payment_entry);
+  if (payment?.selector !== H167_ERP_EXACT.payment.selector || payment.status !== "Submitted" || payment.payment_type !== "Pay" || payment.posting_date !== H167_ERP_EXACT.payment.posting_date || payment.paid_amount !== "1.00" || payment.allocated !== "1.00" || payment.unallocated !== "0" || payment.difference !== "0" || payment.invoice_outstanding !== "0" || payment.paid_from !== H167_ERP_EXACT.payment.paid_from || payment.paid_to !== H167_ERP_EXACT.payment.paid_to || payment.reference_no !== H167_ERP_EXACT.payment.reference_no || payment.clearance_date !== H167_ERP_EXACT.payment.clearance_date) sourceErrors.push("ERP_PROJECTION_SUBMITTED_PAYMENT_INVALID");
+  const bank = object(source?.bank_transaction);
+  if (bank?.selector !== H167_ERP_EXACT.bank.selector || bank.status !== "Reconciled" || bank.direction !== "Withdrawal" || bank.amount !== "1.00" || bank.description_binding !== H167_ERP_EXACT.bank.description_binding || bank.description_binding !== payment?.selector) sourceErrors.push("ERP_PROJECTION_RECONCILED_BANK_INVALID");
+  if (source?.mutation_receipt?.status !== "not_provided" || source?.posting_readback?.status !== "read_only_source_statuses_only" || source?.payment_is_not_close !== true) sourceErrors.push("ERP_PROJECTION_POSTING_BOUNDARY_INVALID");
+  const claim = object(source?.claim_boundary);
+  if (claim?.invoice_readback !== true || claim?.submitted_payment_readback !== true || claim?.reconciled_bank_readback !== true || claim?.balanced_gl_readback !== true || claim?.accounting_period_closed !== false || claim?.pcv_or_business_close !== false || claim?.business_close_claimed !== false || claim?.erp_mutation_claimed !== false) sourceErrors.push("ERP_PROJECTION_CLAIM_BOUNDARY_INVALID");
   if (source?.business_close?.status !== "not_proven" || source?.accounting_period?.status !== "not_proven" || source?.period_closing_voucher?.status !== "not_proven") sourceErrors.push("ERP_PROJECTION_CLOSE_BOUNDARY_INVALID");
   if (source?.payment_ledger?.status !== "not_proven") sourceErrors.push("ERP_PROJECTION_PLED_BOUNDARY_INVALID");
   const readiness = source ? {
@@ -173,6 +197,7 @@ export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}
     live_erp: false,
     local_fixture_only: false,
     current_worktree_candidate_bound: false,
+    current_release_bound: false,
     public_current_release_bound: false,
     business_close: "not_proven",
     business_close_verified: false,
@@ -185,6 +210,7 @@ export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}
         evidence_class: source.evidence_class,
         source_batch: source.source_batch,
         source_artifact_sha256: source.source_artifact_sha256,
+        enriched_projection_source: source.enriched_projection_source,
         company: source.company,
         company_abbr: source.company_abbr,
         payment_ledger: source.payment_ledger,
@@ -201,4 +227,17 @@ export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}
     })
   };
   return result;
+}
+
+export function bindVerifiedEmbeddedErpProjectionToPublicRelease({ release, evidence } = {}) {
+  const verified = verifyEmbeddedCurrentMvpErpProjection({ release, evidence });
+  if (!verified.valid) return verified;
+  return {
+    ...verified,
+    status: "VERIFIED_READ_ONLY",
+    current_release_bound: true,
+    public_current_release_bound: true,
+    live_erp: false,
+    business_close_verified: false
+  };
 }

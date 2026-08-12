@@ -571,7 +571,7 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal("receipt_observed_remote_main" in manifest.current_release_surface_status.github, false);
   assert.equal(manifest.current_release_surface_status.github.owner_gate_required, true);
   assert.equal(manifest.worktree_truth.publication_candidate_state, "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE");
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 7);
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 13);
   assert.equal(manifest.current_release_surface_status.render.baseline_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
   assert.equal("observed_commit" in manifest.current_release_surface_status.render, false);
   assert.equal(manifest.current_release_surface_status.render.current_release_bound, false);
@@ -599,12 +599,13 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal(manifest.baseline_git_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
   assert.equal(manifest.current_worktree_candidate_bound, false);
   assert.equal(manifest.worktree_truth.baseline_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
-  assert.equal(manifest.worktree_truth.tracked_modified_count, 14);
-  assert.equal(manifest.worktree_truth.content_candidate_count, 7);
+  assert.equal(manifest.worktree_truth.current_head, "1090a0f9b52b81d92fab1abf810b16f0e2a7b261");
+  assert.equal(manifest.worktree_truth.tracked_modified_count, 20);
+  assert.equal(manifest.worktree_truth.content_candidate_count, 13);
   assert.equal(manifest.worktree_truth.mode_only_non_candidate_count, 7);
   assert.equal(manifest.worktree_truth.self_excluded_manifest_path, "current-mvp/current-release-workbench-manifest.json");
   assert.equal(manifest.worktree_truth.publication_candidate_state, "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE");
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 7);
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 13);
   const selfExcludedManifest = manifest.worktree_truth.publication_candidate_paths.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
   assert.equal(selfExcludedManifest.self_excluded, true);
   assert.equal(selfExcludedManifest.hash_excluded, true);

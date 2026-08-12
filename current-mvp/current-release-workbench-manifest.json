@@ -165,6 +165,7 @@
         "live_erp": false,
         "local_fixture_only": false,
         "current_worktree_candidate_bound": false,
+        "current_release_bound": false,
         "public_current_release_bound": false,
         "business_close": "not_proven",
         "business_close_verified": false,
@@ -175,7 +176,7 @@
           "business_close_readback"
         ],
         "errors": [],
-        "verification_fingerprint": "344c4718256e113eb6fa012bfd92665556382092efc6cf9966c43915f4d8e926"
+        "verification_fingerprint": "10421fda63a0944affd142b42666e17d2e7e0b349002e291c04490146308c88e"
       },
       "business_close": "not_proven",
       "historical_lineage_only": false
@@ -183,9 +184,9 @@
   },
   "worktree_truth": {
     "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
-    "current_head": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
-    "tracked_modified_count": 14,
-    "content_candidate_count": 7,
+    "current_head": "1090a0f9b52b81d92fab1abf810b16f0e2a7b261",
+    "tracked_modified_count": 20,
+    "content_candidate_count": 13,
     "mode_only_non_candidate_count": 7,
     "content_candidate_paths": [
       {
@@ -197,6 +198,16 @@
         "excluded": false,
         "self_excluded": true,
         "hash_excluded": true
+      },
+      {
+        "path": "current-mvp/web/workbench/workbench-projection.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 32907,
+        "sha256": "5a72ea1c127b532ba5ddefe8004adb42914968cc48eec1c9082bbc35654b1056"
       },
       {
         "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
@@ -225,8 +236,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 142845,
-        "sha256": "836a77c41f25b53e65f36bc162629d1975ed8385a58f511c9b16b2a770f23a9d"
+        "bytes": 145721,
+        "sha256": "b2925910ef6738aa44fd297ff9c77cafa358422c8ab57225dbadfce53f83332e"
       },
       {
         "path": "tools/arc_payment_receipt_server.test.mjs",
@@ -235,8 +246,8 @@
         "mode_changed": true,
         "content_delta": true,
         "excluded": false,
-        "bytes": 90525,
-        "sha256": "a1b45222b0d3c285dbedf54ef76aee9165d7f31e920f0040f3f9defd3e5eb56e"
+        "bytes": 91598,
+        "sha256": "95ed7efc302b942a8b0218645ec949cdffd6ed2db9981bd4af7cd625316adc44"
       },
       {
         "path": "tools/build_current_release_workbench_manifest.mjs",
@@ -245,8 +256,58 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 28355,
-        "sha256": "d75b54508554edc171c0ce5c6d8992155125d78f2cdbb501b71aa9213361bd79"
+        "bytes": 28482,
+        "sha256": "32e7fc5261f57f6317d773c29007946ecbf10bf8c90ff19c713629817e4d6ea0"
+      },
+      {
+        "path": "tools/circle_console_receipt.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 21929,
+        "sha256": "bda5c8e50ffa00b63b1dec2687fa9899312d30b4d54e3b3920b7ba1dc1b5894a"
+      },
+      {
+        "path": "tools/circle_console_server.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 8680,
+        "sha256": "a561f05d49a4a6d7aae827e191b2d945345f4a21835df07eeb092aa83fded24f"
+      },
+      {
+        "path": "tools/circle_contract_webhook_gate.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 27810,
+        "sha256": "58b5f4cfbfdada767f910ef7718468b5cca4f413d1b55b275bb0aaa7a52780fa"
+      },
+      {
+        "path": "tools/current_mvp_erp_readiness.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 18193,
+        "sha256": "d831d8414bd9ce35f2077882f980eb3c7d2085abf76180e63045a037b608fe52"
+      },
+      {
+        "path": "tools/current_mvp_erp_readiness.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 12014,
+        "sha256": "4774bd2b9d90932e9a1231bfdb0b975f714574f45f0951b3da56940388baf0c2"
       },
       {
         "path": "tools/current_release_workbench.test.mjs",
@@ -255,8 +316,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 40255,
-        "sha256": "d45f6ea2e2e2954fcbef64d7a6959a7b308a078ed52db9564653f99bd0a35566"
+        "bytes": 40356,
+        "sha256": "042927aa0208d8ce9089e96b4a09428c704ff17624bfe8a17763f821f63466d8"
       }
     ],
     "documentation_only_content_count": 0,
@@ -335,7 +396,7 @@
     ],
     "untracked_paths": [],
     "publication_candidate_state": "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
-    "publication_candidate_count": 7,
+    "publication_candidate_count": 13,
     "publication_candidate_paths": [
       {
         "path": "current-mvp/current-release-workbench-manifest.json",
@@ -346,6 +407,17 @@
         "excluded": false,
         "self_excluded": true,
         "hash_excluded": true,
+        "documentation_only": false
+      },
+      {
+        "path": "current-mvp/web/workbench/workbench-projection.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 32907,
+        "sha256": "5a72ea1c127b532ba5ddefe8004adb42914968cc48eec1c9082bbc35654b1056",
         "documentation_only": false
       },
       {
@@ -377,8 +449,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 142845,
-        "sha256": "836a77c41f25b53e65f36bc162629d1975ed8385a58f511c9b16b2a770f23a9d",
+        "bytes": 145721,
+        "sha256": "b2925910ef6738aa44fd297ff9c77cafa358422c8ab57225dbadfce53f83332e",
         "documentation_only": false
       },
       {
@@ -388,8 +460,8 @@
         "mode_changed": true,
         "content_delta": true,
         "excluded": false,
-        "bytes": 90525,
-        "sha256": "a1b45222b0d3c285dbedf54ef76aee9165d7f31e920f0040f3f9defd3e5eb56e",
+        "bytes": 91598,
+        "sha256": "95ed7efc302b942a8b0218645ec949cdffd6ed2db9981bd4af7cd625316adc44",
         "documentation_only": false
       },
       {
@@ -399,8 +471,63 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 28355,
-        "sha256": "d75b54508554edc171c0ce5c6d8992155125d78f2cdbb501b71aa9213361bd79",
+        "bytes": 28482,
+        "sha256": "32e7fc5261f57f6317d773c29007946ecbf10bf8c90ff19c713629817e4d6ea0",
+        "documentation_only": false
+      },
+      {
+        "path": "tools/circle_console_receipt.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 21929,
+        "sha256": "bda5c8e50ffa00b63b1dec2687fa9899312d30b4d54e3b3920b7ba1dc1b5894a",
+        "documentation_only": false
+      },
+      {
+        "path": "tools/circle_console_server.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 8680,
+        "sha256": "a561f05d49a4a6d7aae827e191b2d945345f4a21835df07eeb092aa83fded24f",
+        "documentation_only": false
+      },
+      {
+        "path": "tools/circle_contract_webhook_gate.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 27810,
+        "sha256": "58b5f4cfbfdada767f910ef7718468b5cca4f413d1b55b275bb0aaa7a52780fa",
+        "documentation_only": false
+      },
+      {
+        "path": "tools/current_mvp_erp_readiness.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 18193,
+        "sha256": "d831d8414bd9ce35f2077882f980eb3c7d2085abf76180e63045a037b608fe52",
+        "documentation_only": false
+      },
+      {
+        "path": "tools/current_mvp_erp_readiness.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 12014,
+        "sha256": "4774bd2b9d90932e9a1231bfdb0b975f714574f45f0951b3da56940388baf0c2",
         "documentation_only": false
       },
       {
@@ -410,8 +537,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 40255,
-        "sha256": "d45f6ea2e2e2954fcbef64d7a6959a7b308a078ed52db9564653f99bd0a35566",
+        "bytes": 40356,
+        "sha256": "042927aa0208d8ce9089e96b4a09428c704ff17624bfe8a17763f821f63466d8",
         "documentation_only": false
       }
     ],
@@ -424,14 +551,14 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 40255,
-      "sha256": "d45f6ea2e2e2954fcbef64d7a6959a7b308a078ed52db9564653f99bd0a35566"
+      "bytes": 40356,
+      "sha256": "042927aa0208d8ce9089e96b4a09428c704ff17624bfe8a17763f821f63466d8"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 28355,
-      "sha256": "d75b54508554edc171c0ce5c6d8992155125d78f2cdbb501b71aa9213361bd79"
+      "bytes": 28482,
+      "sha256": "32e7fc5261f57f6317d773c29007946ecbf10bf8c90ff19c713629817e4d6ea0"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -448,44 +575,44 @@
     {
       "path": "tools/circle_contract_webhook_gate.mjs",
       "role": "verifier",
-      "bytes": 24924,
-      "sha256": "7b2c5ab64c363dfbaadcd89ea27e57b131ed88fdff0de1e867396a1aa860e054"
+      "bytes": 27810,
+      "sha256": "58b5f4cfbfdada767f910ef7718468b5cca4f413d1b55b275bb0aaa7a52780fa"
     },
     {
       "path": "tools/circle_console_receipt.test.mjs",
       "role": "test",
-      "bytes": 20044,
-      "sha256": "cc8149d70a7d60d137ba123ea7f7b4c2067205563301277c73bf81a83962a18b"
+      "bytes": 21929,
+      "sha256": "bda5c8e50ffa00b63b1dec2687fa9899312d30b4d54e3b3920b7ba1dc1b5894a"
     },
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 142845,
-      "sha256": "836a77c41f25b53e65f36bc162629d1975ed8385a58f511c9b16b2a770f23a9d"
+      "bytes": 145721,
+      "sha256": "b2925910ef6738aa44fd297ff9c77cafa358422c8ab57225dbadfce53f83332e"
     },
     {
       "path": "tools/arc_payment_receipt_server.test.mjs",
       "role": "test",
-      "bytes": 90525,
-      "sha256": "a1b45222b0d3c285dbedf54ef76aee9165d7f31e920f0040f3f9defd3e5eb56e"
+      "bytes": 91598,
+      "sha256": "95ed7efc302b942a8b0218645ec949cdffd6ed2db9981bd4af7cd625316adc44"
     },
     {
       "path": "tools/circle_console_server.test.mjs",
       "role": "test",
-      "bytes": 8059,
-      "sha256": "a649a0f95e7a4b519e4a55ccb89e537cbb9c90a8047e11e201f8fe0abb663837"
+      "bytes": 8680,
+      "sha256": "a561f05d49a4a6d7aae827e191b2d945345f4a21835df07eeb092aa83fded24f"
     },
     {
       "path": "tools/current_mvp_erp_readiness.mjs",
       "role": "verifier",
-      "bytes": 13391,
-      "sha256": "b65e47fa4e6176c69d4fa785403978c3ac94a0c52fad6cad9b04e03991838a62"
+      "bytes": 18193,
+      "sha256": "d831d8414bd9ce35f2077882f980eb3c7d2085abf76180e63045a037b608fe52"
     },
     {
       "path": "tools/current_mvp_erp_readiness.test.mjs",
       "role": "test",
-      "bytes": 8015,
-      "sha256": "ad47635d803eebd892633fe95f9296a83bfefd085da10dffdda1ba7e97864253"
+      "bytes": 12014,
+      "sha256": "4774bd2b9d90932e9a1231bfdb0b975f714574f45f0951b3da56940388baf0c2"
     },
     {
       "path": "tools/current_mvp_accounting_close.test.mjs",
@@ -749,8 +876,8 @@
     },
     {
       "path": "web/workbench/workbench-projection.mjs",
-      "bytes": 32622,
-      "sha256": "4b4580eef995a213b18fd096f57c7738e83044c3ee41b92fd80c8801e49f57bc",
+      "bytes": 32907,
+      "sha256": "5a72ea1c127b532ba5ddefe8004adb42914968cc48eec1c9082bbc35654b1056",
       "mode": "100644",
       "source_reference": "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs",
       "source_is_candidate": true
