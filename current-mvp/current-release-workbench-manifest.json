@@ -195,8 +195,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30000,
-        "sha256": "ec4e18f320a1de4c1bc600217d02aa3ecbd4537f97de32361a87c6162d7e5434"
+        "bytes": 30142,
+        "sha256": "f2deb922069422d1c3491ea422bc6a6e3d2db95d4a83bc7237dd39f790994a0a"
       },
       {
         "path": "SECURITY.md",
@@ -245,8 +245,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 27232,
-        "sha256": "ae72956518c15291facbfec6c6438bd96777a804bf8bae56a1c9bb12bfca9adf"
+        "bytes": 27263,
+        "sha256": "14d22a6ef81b85ea9664113b6b5fcd7e33978ebfa4adad230f3637a6b7740f8a"
       },
       {
         "path": "tools/circle_console_receipt.test.mjs",
@@ -384,8 +384,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30000,
-        "sha256": "ec4e18f320a1de4c1bc600217d02aa3ecbd4537f97de32361a87c6162d7e5434",
+        "bytes": 30142,
+        "sha256": "f2deb922069422d1c3491ea422bc6a6e3d2db95d4a83bc7237dd39f790994a0a",
         "documentation_only": false
       },
       {
@@ -439,8 +439,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 27232,
-        "sha256": "ae72956518c15291facbfec6c6438bd96777a804bf8bae56a1c9bb12bfca9adf",
+        "bytes": 27263,
+        "sha256": "14d22a6ef81b85ea9664113b6b5fcd7e33978ebfa4adad230f3637a6b7740f8a",
         "documentation_only": false
       },
       {
@@ -502,7 +502,7 @@
     "untracked_policy": "must_be_empty_before_manifest_freeze",
     "current_worktree_candidate_bound": false,
     "self_excluded_manifest_path": "current-mvp/current-release-workbench-manifest.json",
-    "clean_worktree_rule": "The complete unpublished candidate is classified from git diff origin/main: every content-changing path since the published baseline is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
+    "clean_worktree_rule": "The complete H187 release delta is classified from git diff against the immutable 4f1f4b9 comparison baseline: every content-changing path is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
   },
   "verification_inputs": [
     {
@@ -514,8 +514,8 @@
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 27232,
-      "sha256": "ae72956518c15291facbfec6c6438bd96777a804bf8bae56a1c9bb12bfca9adf"
+      "bytes": 27263,
+      "sha256": "14d22a6ef81b85ea9664113b6b5fcd7e33978ebfa4adad230f3637a6b7740f8a"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",

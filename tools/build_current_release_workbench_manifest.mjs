@@ -72,10 +72,10 @@ async function git(args) {
 
 async function worktreeTruth() {
   const [numstatOutput, rawOutput, statusOutput, baselineCommit] = await Promise.all([
-    git(["diff", "origin/main", "--numstat", "--"]),
-    git(["diff", "origin/main", "--raw", "--no-renames", "--"]),
+    git(["diff", H186_BASELINE_COMMIT, "--numstat", "--"]),
+    git(["diff", H186_BASELINE_COMMIT, "--raw", "--no-renames", "--"]),
     git(["status", "--porcelain=v1", "--untracked-files=all", "--"]),
-    git(["rev-parse", "origin/main"])
+    Promise.resolve(`${H186_BASELINE_COMMIT}\n`)
   ]);
   const numstat = new Map();
   for (const line of numstatOutput.trim().split("\n").filter(Boolean)) {
@@ -135,7 +135,7 @@ async function worktreeTruth() {
     untracked_policy: "must_be_empty_before_manifest_freeze",
     current_worktree_candidate_bound: false,
     self_excluded_manifest_path: "current-mvp/current-release-workbench-manifest.json",
-    clean_worktree_rule: "The complete unpublished candidate is classified from git diff origin/main: every content-changing path since the published baseline is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
+    clean_worktree_rule: "The complete H187 release delta is classified from git diff against the immutable 4f1f4b9 comparison baseline: every content-changing path is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
   };
 }
 
