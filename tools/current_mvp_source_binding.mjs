@@ -40,6 +40,7 @@ function isAllowedWorkbenchExtension(path) {
 const MIME_TYPES = Object.freeze({
   ".html": "text/html; charset=utf-8",
   ".mjs": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png"
 });
@@ -69,6 +70,14 @@ export function resolveCurrentMvpRequest(pathname) {
   if (pathname !== CURRENT_MVP_ROUTE_PREFIX && !pathname.startsWith(`${CURRENT_MVP_ROUTE_PREFIX}/`)) return null;
   const suffix = pathname.slice(CURRENT_MVP_ROUTE_PREFIX.length).replace(/^\/+/, "");
   if (suffix === CURRENT_MVP_MANIFEST_BASENAME) return null;
+  if (suffix === CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME) {
+    return {
+      route: pathname,
+      relative_path: CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME,
+      file_path: resolve(CURRENT_MVP_REPOSITORY_ROOT, CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME),
+      document_fallback: false
+    };
+  }
   const hasExtension = /\.[A-Za-z0-9]+$/.test(suffix);
   const relativePath = suffix === "" || !hasExtension ? "index.html" : suffix;
   if (relativePath.split("/").some((segment) => segment === ".." || segment === "." || segment === "")) return null;

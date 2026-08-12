@@ -187,14 +187,14 @@
     {
       "path": "tools/current_mvp_source_binding.mjs",
       "role": "verifier",
-      "bytes": 7611,
-      "sha256": "53926f864319e62c63d05f9fdbb9bdfa9753f33fb5112547dbc77150be089b42"
+      "bytes": 7965,
+      "sha256": "e36d793d27d8d2de767db10412ed9337fa60de20f9bc44585dae9b053bb7844a"
     },
     {
       "path": "tools/current_mvp_source_binding.test.mjs",
       "role": "test",
-      "bytes": 5362,
-      "sha256": "5af6eadfa08f844257e56e46e7f8f4b19736f47dfbabf8d04c81b468157598ff"
+      "bytes": 6381,
+      "sha256": "7be36fdb276d0394be1aecf2ccaa6f9b0b31e5e7992b00096ce9d9ef4536aa2e"
     },
     {
       "path": "tools/circle_contract_webhook_gate.mjs",

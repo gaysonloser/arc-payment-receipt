@@ -9,6 +9,8 @@ import {
   CURRENT_MVP_BUNDLED_MANIFEST_PATH,
   CURRENT_MVP_RELEASE_ID,
   CURRENT_MVP_REPOSITORY_ROOT,
+  CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME,
+  resolveCurrentMvpRequest,
   verifyCurrentMvpBundle
 } from "./current_mvp_source_binding.mjs";
 import { createReceiptServer } from "./arc_payment_receipt_server.mjs";
@@ -16,6 +18,13 @@ import { createReceiptServer } from "./arc_payment_receipt_server.mjs";
 let server;
 let origin;
 let serverBindError;
+
+test("resolves the current release manifest at the public product root without exposing the historical manifest", () => {
+  const current = resolveCurrentMvpRequest(`/current-mvp/${CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME}`);
+  assert.equal(current.relative_path, CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME);
+  assert.equal(current.file_path, join(CURRENT_MVP_REPOSITORY_ROOT, CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME));
+  assert.equal(resolveCurrentMvpRequest("/current-mvp/mvp-publication-staging-rc1-manifest.json"), null);
+});
 
 before(async () => {
   server = createReceiptServer({
@@ -101,6 +110,10 @@ test("serves current MVP routes without replacing the historical root and preser
   assert.equal(missing.status, 404);
   const manifest = await fetch(`${origin}/current-mvp/mvp-publication-staging-rc1-manifest.json`);
   assert.equal(manifest.status, 404);
+  const currentManifest = await fetch(`${origin}/current-mvp/${CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME}`);
+  assert.equal(currentManifest.status, 200);
+  assert.match(currentManifest.headers.get("content-type"), /^application\/json/);
+  assert.deepEqual(await currentManifest.json(), JSON.parse(await readFile(join(CURRENT_MVP_REPOSITORY_ROOT, CURRENT_RELEASE_WORKBENCH_MANIFEST_BASENAME), "utf8")));
 
   const health = await fetch(`${origin}/healthz`);
   const apiHealth = await fetch(`${origin}/api/health`);
