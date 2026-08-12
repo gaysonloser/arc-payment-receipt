@@ -184,7 +184,7 @@
   "worktree_truth": {
     "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
     "current_head": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
-    "tracked_modified_count": 13,
+    "tracked_modified_count": 14,
     "content_candidate_count": 7,
     "mode_only_non_candidate_count": 7,
     "content_candidate_paths": [
@@ -200,12 +200,11 @@
       },
       {
         "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
-        "mode_head": null,
+        "mode_head": "000000",
         "mode_worktree": "100644",
-        "mode_changed": false,
+        "mode_changed": true,
         "content_delta": true,
         "excluded": false,
-        "untracked": true,
         "bytes": 4007,
         "sha256": "43f5367c3abf32698c8fc5c5a7f8e72ceec3be2304dd8e56544878d741f90c37"
       },
@@ -216,8 +215,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30656,
-        "sha256": "a5261311a05fadd0e8c942ac1fb8495e6a86306c79a9b9bc1fbeedb386e205e5"
+        "bytes": 30660,
+        "sha256": "49e42972fa860b4c226283acab2ade76d0a9f5d4846b9e88d42f86dfdd9869c0"
       },
       {
         "path": "tools/arc_payment_receipt_server.mjs",
@@ -257,7 +256,7 @@
         "content_delta": true,
         "excluded": false,
         "bytes": 40255,
-        "sha256": "633bb95236b7e088f6caaa0cc8de7c80b45b6e1e115a990f1bd53c48dc788d1d"
+        "sha256": "d45f6ea2e2e2954fcbef64d7a6959a7b308a078ed52db9564653f99bd0a35566"
       }
     ],
     "documentation_only_content_count": 0,
@@ -351,12 +350,11 @@
       },
       {
         "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
-        "mode_head": null,
+        "mode_head": "000000",
         "mode_worktree": "100644",
-        "mode_changed": false,
+        "mode_changed": true,
         "content_delta": true,
         "excluded": false,
-        "untracked": true,
         "bytes": 4007,
         "sha256": "43f5367c3abf32698c8fc5c5a7f8e72ceec3be2304dd8e56544878d741f90c37",
         "documentation_only": false
@@ -368,8 +366,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30656,
-        "sha256": "a5261311a05fadd0e8c942ac1fb8495e6a86306c79a9b9bc1fbeedb386e205e5",
+        "bytes": 30660,
+        "sha256": "49e42972fa860b4c226283acab2ade76d0a9f5d4846b9e88d42f86dfdd9869c0",
         "documentation_only": false
       },
       {
@@ -413,7 +411,7 @@
         "content_delta": true,
         "excluded": false,
         "bytes": 40255,
-        "sha256": "633bb95236b7e088f6caaa0cc8de7c80b45b6e1e115a990f1bd53c48dc788d1d",
+        "sha256": "d45f6ea2e2e2954fcbef64d7a6959a7b308a078ed52db9564653f99bd0a35566",
         "documentation_only": false
       }
     ],
@@ -427,7 +425,7 @@
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
       "bytes": 40255,
-      "sha256": "633bb95236b7e088f6caaa0cc8de7c80b45b6e1e115a990f1bd53c48dc788d1d"
+      "sha256": "d45f6ea2e2e2954fcbef64d7a6959a7b308a078ed52db9564653f99bd0a35566"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",

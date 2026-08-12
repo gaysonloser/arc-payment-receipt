@@ -599,7 +599,7 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal(manifest.baseline_git_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
   assert.equal(manifest.current_worktree_candidate_bound, false);
   assert.equal(manifest.worktree_truth.baseline_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
-  assert.equal(manifest.worktree_truth.tracked_modified_count, 13);
+  assert.equal(manifest.worktree_truth.tracked_modified_count, 14);
   assert.equal(manifest.worktree_truth.content_candidate_count, 7);
   assert.equal(manifest.worktree_truth.mode_only_non_candidate_count, 7);
   assert.equal(manifest.worktree_truth.self_excluded_manifest_path, "current-mvp/current-release-workbench-manifest.json");
