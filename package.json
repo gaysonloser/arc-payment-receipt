@@ -3,14 +3,13 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "Read-only Arc Testnet native-USDC payment receipt prototype and reconciliation viewer.",
+  "description": "Verified Milestone Close — Arc Enterprise Settlement Control receipt-first workbench with read-only ERP truth boundaries.",
   "scripts": {
     "start": "node tools/arc_payment_receipt_server.mjs",
-    "test": "node --test tools/*.test.mjs"
+    "test": "node --test --test-concurrency=1 tools/*.test.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "license": "MIT"
 }
-

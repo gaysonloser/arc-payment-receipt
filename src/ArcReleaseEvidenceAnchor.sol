@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.24;
 
 /// @title ArcReleaseEvidenceAnchor
 /// @notice A one-time immutable Arc Testnet anchor for a public Arc Lab release packet.

@@ -9,7 +9,13 @@ import {
   C15_UPSTREAM_AUTHORITY_RECORDS,
   getC15UpstreamAuthority
 } from "./c15-upstream-authority.mjs?rev=v3-2-a12-r6-c15-producer-public-authority";
-import { buildAuthorityObservation, projectCurrentReleaseWorkbench, simulateCurrentReleaseWorkbench } from "./workbench/workbench-projection.mjs?rev=v3-2-a12-simulation-r1";
+import {
+  buildAuthorityObservation,
+  projectCurrentReleaseWorkbench,
+  simulateCurrentReleaseWorkbench,
+  CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE,
+  CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE
+} from "./workbench/workbench-projection.mjs?rev=v3-2-a12-simulation-r1";
 
 const common = {
   policyId: "VMC-2026-1187",
@@ -732,6 +738,13 @@ function a12ReceiptStatus(matcherState) {
   if (matcherState === "duplicate") return "1_duplicate_event";
   return "1_identity_mismatch";
 }
+function a12FinalityState(matcherState) {
+  if (matcherState === "matched") return "final";
+  if (matcherState === "stale") return "observed";
+  if (matcherState === "reorg") return "reverted";
+  if (matcherState === "mismatch" || matcherState === "duplicate") return "rejected";
+  return "observed";
+}
 function a12StateBoundary(matcherState) {
   const common = { accountingConsequence: "not_posted", businessClose: "OPEN", liveArc: false, liveErp: false };
   if (matcherState === "matched") return { ...common, accountingConsequence: "projected_not_posted", recovery: "Prepare ERP draft and require separate typed readback; technical match is not ERP posting." };
@@ -938,7 +951,7 @@ export const A12_C15_DAPP_OBJECT_IDS = Object.freeze([
 export const A12_C15_RECEIPT_FIELDS = Object.freeze([
   "rpc_provenance", "observation_timestamp", "chain_id", "token_address", "token_decimals",
   "tx_hash", "from", "to", "nonce", "target", "method", "receipt_status", "block_number",
-  "block_hash", "confirmations", "finality_threshold", "principal_amount6_raw",
+  "block_hash", "confirmations", "finality_state", "principal_amount6_raw",
   "principal_amount6_display", "gas_used", "effective_gas_price", "actual_fee_native18_raw",
   "actual_fee_native18_display", "replacement_state", "reorg_state", "canonical_event_key",
   "policy_event_expected_observed_status_source", "erc20_transfer_expected_observed_status_source",
@@ -1135,6 +1148,7 @@ const A12_TYPED_EVIDENCE_SOURCE = "Arc receipt fixture";
 const A12_TYPED_EVIDENCE_RPC_PROVENANCE = "local_typed_receipt_fixture";
 const A12_TYPED_RECORD_TYPES = Object.freeze(["policy_event", "erc20_transfer", "arc_system_transfer"]);
 const A12_TYPED_FAILURE_STATUSES = Object.freeze(["matched", "stale", "mismatch", "reorg", "duplicate"]);
+export const A12_LIFECYCLE_TRANSITION_TYPES = Object.freeze(["LATE_ENTRY", "REPLACEMENT_RESOLUTION", "REVOKE", "REVERSAL"]);
 
 const a12ResetDependentState = (state, scenario) => {
   state.selectedScenario = scenario;
@@ -1149,6 +1163,9 @@ const a12ResetDependentState = (state, scenario) => {
   state.completedStages = [];
   state.lastAction = null;
   state.history = [];
+  state.lifecycleOperations = {};
+  state.lifecycleObservations = {};
+  state.lastLifecycleResult = null;
   state.revision = 0;
   state.sealedReplay = null;
   return state;
@@ -1685,6 +1702,9 @@ export function createA12WorkbenchState({ scenario = "supplier_payable" } = {}) 
     lastAction: null,
     revision: 0,
     history: [],
+    lifecycleOperations: {},
+    lifecycleObservations: {},
+    lastLifecycleResult: null,
     lastNotice: "",
     fixture,
     externalActions: 0,
@@ -1704,6 +1724,131 @@ function a12WithProjection(next) {
   return next;
 }
 
+function a12LifecycleInput(action) {
+  const payload = action?.payload && typeof action.payload === "object" && !Array.isArray(action.payload) ? action.payload : {};
+  const type = action.type === "REORG_REPLACEMENT" ? "REPLACEMENT_RESOLUTION" : action.type;
+  const operationKey = String(action.operationKey ?? payload.operationKey ?? payload.operation_key ?? "").trim();
+  const logicalPaymentId = String(action.logicalPaymentId ?? payload.logicalPaymentId ?? payload.logical_payment_id ?? "").trim();
+  const canonicalEventKey = String(action.canonicalEventKey ?? payload.canonicalEventKey ?? payload.canonical_event_key ?? "").trim();
+  const replacementCanonicalEventKey = String(action.replacementCanonicalEventKey ?? payload.replacementCanonicalEventKey ?? payload.replacement_canonical_event_key ?? "").trim();
+  const reason = String(action.reason ?? payload.reason ?? "").trim();
+  const authority = a12Clone(action.authority ?? payload.authority ?? null);
+  const observation = a12Clone(action.observation ?? payload.observation ?? null);
+  const replacementObservation = a12Clone(action.replacementObservation ?? payload.replacementObservation ?? payload.replacement_observation ?? null);
+  return {
+    type,
+    operationKey,
+    logicalPaymentId,
+    canonicalEventKey,
+    replacementCanonicalEventKey,
+    reason,
+    authority,
+    observation,
+    replacementObservation
+  };
+}
+
+const A12_LOGICAL_PAYMENT_ID_PATTERN = /^logical:payment:[A-Za-z0-9._:-]+$/;
+const A12_CANONICAL_EVENT_KEY_PATTERN = /^[1-9][0-9]*:0x[0-9a-fA-F]+:[0-9]+$/;
+
+function a12LifecycleObservationValidation(observation, { replacement = false } = {}) {
+  if (!observation || typeof observation !== "object" || Array.isArray(observation)) return "OBSERVATION_OBJECT_REQUIRED";
+  if (![0, 1].includes(observation.receiptStatus)) return "OBSERVATION_RECEIPT_STATUS_REQUIRED";
+  if (!/^0x[0-9a-fA-F]+$/.test(String(observation.blockHash ?? ""))) return "OBSERVATION_BLOCK_HASH_REQUIRED";
+  const observedAt = String(observation.observedAt ?? "");
+  if (!observedAt || !Number.isFinite(Date.parse(observedAt))) return "OBSERVATION_TIMESTAMP_REQUIRED";
+  if (replacement && observation.reorgState !== "canonical") return "REPLACEMENT_CANONICAL_STATE_REQUIRED";
+  return null;
+}
+
+function a12LifecycleValidation(operation, state) {
+  if (!A12_LIFECYCLE_TRANSITION_TYPES.includes(operation.type)) return "LIFECYCLE_OPERATION_TYPE_REQUIRED";
+  if (!operation.operationKey || !operation.logicalPaymentId || !operation.canonicalEventKey) return "LIFECYCLE_TYPED_KEYS_REQUIRED";
+  if (!A12_LOGICAL_PAYMENT_ID_PATTERN.test(operation.logicalPaymentId) || !A12_CANONICAL_EVENT_KEY_PATTERN.test(operation.canonicalEventKey)) return "LIFECYCLE_TYPED_KEYS_INVALID";
+  if (!operation.reason || !operation.authority?.operatorId || !["reviewer", "finance_operator", "watcher"].includes(operation.authority.role)) return "LIFECYCLE_OPERATION_AUTHORITY_REQUIRED";
+  if (operation.type === "LATE_ENTRY") {
+    const observationError = a12LifecycleObservationValidation(operation.observation);
+    if (observationError) return `LATE_ENTRY_${observationError}`;
+  }
+  if (operation.type === "REPLACEMENT_RESOLUTION") {
+    if (!A12_CANONICAL_EVENT_KEY_PATTERN.test(operation.replacementCanonicalEventKey) || operation.replacementCanonicalEventKey === operation.canonicalEventKey) return "REPLACEMENT_CANONICAL_EVENT_REQUIRED";
+    const observationError = a12LifecycleObservationValidation(operation.replacementObservation, { replacement: true });
+    if (observationError) return `REPLACEMENT_${observationError}`;
+  }
+  const observationKey = `${operation.logicalPaymentId}::${operation.canonicalEventKey}`;
+  if (["REPLACEMENT_RESOLUTION", "REVOKE", "REVERSAL"].includes(operation.type) && !state.lifecycleObservations?.[observationKey]) return `${operation.type}_SOURCE_REQUIRED`;
+  return null;
+}
+
+function a12InvalidateLifecycleConsequences(state) {
+  state.matcherState = "pending";
+  state.evidence = null;
+  state.walletReview = "not_prepared";
+  state.completedStages = [];
+  state.lastAction = null;
+  state.selectedStage = "source";
+  state.inspectorTab = "Business";
+  state.inspectorOpen = false;
+}
+
+function a12ReduceLifecycleTransition(state, action) {
+  const operation = a12LifecycleInput(action);
+  const priorOperation = state.lifecycleOperations?.[operation.operationKey];
+  const payloadFingerprint = a12CanonicalJson(operation);
+  if (priorOperation) {
+    if (priorOperation.type === operation.type && priorOperation.payloadFingerprint === payloadFingerprint) {
+      state.lastLifecycleResult = { state: "DUPLICATE_NOOP", operationKey: operation.operationKey, type: operation.type };
+      state.lastNotice = `Duplicate ${operation.type} retry ignored; prior observation and history are unchanged.`;
+      return a12WithProjection(state);
+    }
+    a12InvalidateLifecycleConsequences(state);
+    state.lastLifecycleResult = { state: "CONFLICT_REJECT", operationKey: operation.operationKey, existingType: priorOperation.type, requestedType: operation.type, reason: "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT" };
+    state.lastNotice = `Lifecycle conflict rejected fail-closed for operation key ${operation.operationKey}.`;
+    return a12WithProjection(state);
+  }
+  const validationError = a12LifecycleValidation(operation, state);
+  if (validationError) {
+    a12InvalidateLifecycleConsequences(state);
+    state.lastLifecycleResult = { state: "INVALID_REJECT", operationKey: operation.operationKey || null, type: operation.type, reason: validationError };
+    state.lastNotice = `Lifecycle transition rejected fail-closed: ${validationError}.`;
+    return a12WithProjection(state);
+  }
+  const observationKey = `${operation.logicalPaymentId}::${operation.canonicalEventKey}`;
+  const priorObservation = a12Clone(state.lifecycleObservations?.[observationKey] ?? null);
+  if (operation.type === "LATE_ENTRY" && priorObservation && !a12TypedObjectsEqual(priorObservation.observation, operation.observation)) {
+    a12InvalidateLifecycleConsequences(state);
+    state.lastLifecycleResult = { state: "CONFLICT_REJECT", operationKey: operation.operationKey, type: operation.type, reason: "CANONICAL_EVENT_PAYLOAD_CONFLICT", observationKey };
+    state.lastNotice = `Late-entry conflict rejected fail-closed for canonical event ${operation.canonicalEventKey}.`;
+    return a12WithProjection(state);
+  }
+  a12InvalidateLifecycleConsequences(state);
+  const revision = state.revision + 1;
+  const entry = { ...operation, payloadFingerprint, observationKey, priorObservation, revision };
+  state.lifecycleOperations = { ...(state.lifecycleOperations ?? {}), [operation.operationKey]: entry };
+  state.lifecycleObservations = { ...(state.lifecycleObservations ?? {}) };
+  if (operation.type === "LATE_ENTRY") {
+    state.lifecycleObservations[observationKey] = { logicalPaymentId: operation.logicalPaymentId, canonicalEventKey: operation.canonicalEventKey, status: "late_entry_observed", observation: operation.observation, operationKey: operation.operationKey, revision };
+  } else if (operation.type === "REPLACEMENT_RESOLUTION") {
+    const replacementKey = `${operation.logicalPaymentId}::${operation.replacementCanonicalEventKey}`;
+    if (state.lifecycleObservations[replacementKey]) {
+      state.lastLifecycleResult = { state: "CONFLICT_REJECT", operationKey: operation.operationKey, type: operation.type, reason: "REPLACEMENT_EVENT_ALREADY_OBSERVED", observationKey: replacementKey };
+      state.lastNotice = `Replacement conflict rejected fail-closed for canonical event ${operation.replacementCanonicalEventKey}.`;
+      delete state.lifecycleOperations[operation.operationKey];
+      return a12WithProjection(state);
+    }
+    state.lifecycleObservations[observationKey] = { ...priorObservation, status: "replaced_after_reorg", replacedByCanonicalEventKey: operation.replacementCanonicalEventKey, operationKey: operation.operationKey, revision };
+    state.lifecycleObservations[replacementKey] = { logicalPaymentId: operation.logicalPaymentId, canonicalEventKey: operation.replacementCanonicalEventKey, status: "canonical_replacement", replacesCanonicalEventKey: operation.canonicalEventKey, observation: operation.replacementObservation, operationKey: operation.operationKey, revision };
+    entry.replacementObservationKey = replacementKey;
+  } else {
+    state.lifecycleObservations[observationKey] = { ...(priorObservation ?? { logicalPaymentId: operation.logicalPaymentId, canonicalEventKey: operation.canonicalEventKey, observation: null }), status: operation.type === "REVOKE" ? "revoked" : "reversed", operationKey: operation.operationKey, revision };
+  }
+  state.revision = revision;
+  state.history.push({ seq: state.history.length + 1, type: operation.type, scenario: state.selectedScenario, stage: state.selectedStage, payload: a12Clone(entry) });
+  state.lastLifecycleResult = { state: "APPLIED", operationKey: operation.operationKey, type: operation.type, observationKey, replacementObservationKey: entry.replacementObservationKey ?? null };
+  state.lastNotice = `${operation.type} recorded locally; prior observations remain in lifecycle history and every downstream consequence is invalidated.`;
+  return a12WithProjection(state);
+}
+
 export function reduceA12Workbench(input, action = {}) {
   const state = a12Clone(input ?? createA12WorkbenchState());
   const type = action.type ?? "UNKNOWN";
@@ -1712,6 +1857,7 @@ export function reduceA12Workbench(input, action = {}) {
     state.history.push({ seq: state.history.length + 1, type, scenario: state.selectedScenario, stage: state.selectedStage, payload: a12Clone(payload) });
     return a12WithProjection(state);
   };
+  if (A12_LIFECYCLE_TRANSITION_TYPES.includes(type) || type === "REORG_REPLACEMENT") return a12ReduceLifecycleTransition(state, action);
   if (type === "SELECT_SCENARIO" && A12_SCENARIO_IDS.includes(action.scenario)) {
     a12ResetDependentState(state, action.scenario);
     state.lastNotice = "Dependencies reset: source, policy, wallet review, typed evidence, completed stages and receipt projections are re-evaluated for the selected scenario.";
@@ -1871,7 +2017,8 @@ export function projectA12Workbench(state) {
   const receiptProjection = Object.fromEntries((fixture.receiptProjection ?? []).map((item) => [item.fieldId, item.value]));
   const receiptFields = A12_C15_RECEIPT_FIELDS.map((fieldId) => {
     const current = receiptProjection[fieldId];
-    return { fieldId, value: current ?? "expected_layout_only", source: current && current !== "not_observed" ? A12_C15_PROVENANCE_SOURCE.arc : "Arc receipt fixture", truthClass: current && current !== "not_observed" ? "local_observation" : "missing", fingerprint: `fixture-receipt-${fieldId}-a12` };
+    const value = fieldId === "finality_state" ? a12FinalityState(effectiveMatcherState) : current;
+    return { fieldId, value: value ?? "expected_layout_only", source: fieldId === "finality_state" ? "typed current state model" : current && current !== "not_observed" ? A12_C15_PROVENANCE_SOURCE.arc : "Arc receipt fixture", truthClass: value && value !== "not_observed" ? "local_observation" : "missing", fingerprint: `fixture-receipt-${fieldId}-a12` };
   });
   const objectRows = A12_C15_DAPP_OBJECT_IDS.map((objectId) => {
     const spec = schema.dapp_objects[objectId];
@@ -1896,11 +2043,13 @@ export function projectA12Workbench(state) {
     queue: A12_SCENARIO_IDS.map((id) => { const row = A12_PROFILE_DEFINITIONS[id]; const rowAction = a12PrimaryActionFor(id); return { id, label: row.label, direction: row.direction, party: row.party, principal: row.amount, age: "local fixture", evidenceTier: A12_EVIDENCE_LEVEL, exception: effectiveMatcherState === "pending" ? "control required" : a12StateLabel(effectiveMatcherState), nextOwner: rowAction.next_owner, selected: id === profile.id }; }),
     unresolved: { id: "unresolved_incoming_outgoing", label: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.label, reason: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.openItem, selectable: true },
     canvas: { headline: action.label, scenario: profile.label, caseId: fixture.caseId, sourceDocument: profile.sourceDocument, counterparty: profile.party, principal: profile.amount, source: "C15 typed scenario projection · local fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: action.recovery, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: guard.enabled, disabledReason: guard.enabled ? null : guard.reason }, consequences, policy: { policyId, version: "C15 upstream policy projection", allowance: profile.amount6, expiry: "C15 upstream fixture · local only", nonce: policyNonce } },
-    inspector: { tabs: A12_C15_TABS, activeTab: state.inspectorTab, objects: objectRows, receiptFields, logs: fixture.receiptRecords, typedReadbacks: workbenchProjection.typed_readbacks, getter: { expected: `case:${fixture.caseId} · transfer:${transferId}`, observed: effectiveMatcherState === "pending" ? "missing" : `case:${fixture.caseId} · transfer:${transferId}`, status: effectiveMatcherState === "matched" ? "matched" : "missing", source: A12_C15_PROVENANCE_SOURCE.arc }, consequences, audit: (state.history ?? []).map((event) => ({ time: `local revision ${event.seq}`, actor: "local operator", object: event.type, revision: event.seq, action: event.type, result: event.payload, correlationId: `a12:${fixture.caseId}:${event.seq}` })) },
+    inspector: { tabs: A12_C15_TABS, activeTab: state.inspectorTab, objects: objectRows, receiptFields, logs: fixture.receiptRecords, typedReadbacks: workbenchProjection.typed_readbacks, arcVerifiedEvidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE, erpVerifiedEvidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE, getter: { expected: `case:${fixture.caseId} · transfer:${transferId}`, observed: effectiveMatcherState === "pending" ? "missing" : `case:${fixture.caseId} · transfer:${transferId}`, status: effectiveMatcherState === "matched" ? "matched" : "missing", source: A12_C15_PROVENANCE_SOURCE.arc }, consequences, audit: (state.history ?? []).map((event) => ({ time: `local revision ${event.seq}`, actor: "local operator", object: event.type, revision: event.seq, action: event.type, result: event.payload, correlationId: `a12:${fixture.caseId}:${event.seq}` })) },
     causalRail: A12_CAUSAL_STAGES.map((stage, index) => ({ ...stage, status: stage.id === state.selectedStage ? "current" : effectiveCompletedStages.includes(stage.id) ? "verified" : "prerequisite", timestamp: effectiveCompletedStages.includes(stage.id) ? "local guarded action" : null, nextOwner: index === 4 ? "wallet owner or watcher" : index >= 5 ? "ERP/finance owner gate" : "operator" })),
     replay: state.sealedReplay,
     oracle: A12_C15_VIEWPORT_ORACLE,
     workbenchProjection,
-    claims: { liveArc: false, liveErp: false, chainSuccessImpliesErpPosting: false, chainSuccessImpliesBusinessClose: false, businessClose: "OPEN" }
+    verifiedProgrammeEvidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE,
+    verifiedErpEvidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE,
+    claims: { liveArc: false, liveErp: false, arcDeploymentReadback: "verified_programme_read_only", erpReadback: "verified_read_only", settlementExecution: false, erpPosting: false, businessClose: false, chainSuccessImpliesErpPosting: false, chainSuccessImpliesBusinessClose: false }
   };
 }

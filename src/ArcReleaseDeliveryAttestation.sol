@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.24;
 
 /// @title ArcReleaseDeliveryAttestation
 /// @notice Immutable zero-value attestation that binds a delivery-verifier release to the release it verifies.

@@ -100,7 +100,7 @@ export async function buildManifest() {
     writer_idle: true,
     acceptance_state: "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING",
     current_release_surface_status: {
-      github: { status: "TRUE_RECEIPT_HISTORICAL", current_release_bound: false, candidate_binding: false, remote_main: "db52d69705579f249af77ab7d49ad6e2cd686a2f", note: "remote main predates H167/H168 candidate files; exact commit+push owner gate required", owner_gate_required: true, historical_lineage_only: true },
+      github: { status: "TRUE_RECEIPT_HISTORICAL", current_release_bound: false, candidate_binding: false, remote_main: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", note: "remote main is the published baseline and does not contain the current local product-quality candidate; exact commit+push owner gate required", owner_gate_required: true, historical_lineage_only: true },
       render: { status: "TRUE_RECEIPT", current_release_bound: false, observed_commit: "be6d807637849b1c726f0ed32ac03638e0ccb111", note: "real receipt predates current public HEAD; current-release re-readback remains required", historical_lineage_only: true },
       deck: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
       video: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
@@ -108,7 +108,14 @@ export async function buildManifest() {
       encode: { status: "UNPROVEN", historical_lineage_only: true },
       final: { status: "UNPROVEN", historical_lineage_only: true },
       arc_testnet: { status: "UNPROVEN", evidence_binding: "no current-release-bound receipt in public candidate", historical_lineage_only: true },
-      erp: { status: "UNPROVEN", evidence_binding: "read-only owner evidence is not embedded in public candidate", historical_lineage_only: true }
+      erp: {
+        status: "VERIFIED_READ_ONLY_CANDIDATE",
+        evidence_binding: "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
+        candidate_binding: true,
+        public_remote_binding: false,
+        live_erp_mutation: false,
+        historical_lineage_only: false
+      }
     },
     verification_inputs: verificationInputs,
     independent_audit: { model: "gpt-5.6-sol", reasoning_effort: "medium", read_only: true, independent: true, status: "PENDING", self_acceptance: false },
@@ -147,7 +154,7 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     encode: "UNPROVEN",
     final: "UNPROVEN",
     arc_testnet: "UNPROVEN",
-    erp: "UNPROVEN"
+    erp: "VERIFIED_READ_ONLY_CANDIDATE"
   };
   for (const [surface, expectedStatus] of Object.entries(expectedSurfaces)) {
     const value = manifest.current_release_surface_status?.[surface];

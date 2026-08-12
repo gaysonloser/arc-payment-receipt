@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.24;
 
 /// @title ArcPaymentReceipt
 /// @notice Minimal native-USDC payment settlement with an onchain receipt index.
@@ -50,4 +50,3 @@ contract ArcPaymentReceipt {
         emit PaymentReceived(orderId, msg.sender, merchant, msg.value, metadataHash);
     }
 }
-

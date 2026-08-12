@@ -31,6 +31,132 @@ export const CURRENT_RELEASE_WORKBENCH_BOUNDARY = Object.freeze({
   wallet_or_chain_write: false
 });
 
+const deepFreeze = (value) => {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  Object.freeze(value);
+  for (const child of Object.values(value)) deepFreeze(child);
+  return value;
+};
+
+// These are privacy-safe, programme-owned read-only facts. They are displayed
+// as evidence classes only; neither object is a current-release live gate and
+// neither implies settlement execution, ERP posting or business close.
+export const CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE = deepFreeze({
+  evidence_class: "verified_programme_read_only",
+  source_batch: "arc-policysettlementv1-arc-deployment-readback-receipt-first-owner-receipt-v1",
+  source_packet_index: 118,
+  source_packet_sha256: "5e9111e62f2cc2597802fbb0e9f24b7dbe8f739cc5012db3ba8557df0f1345b0",
+  correction_packet_sha256: "293fe8e427c27d1335bbd2eb2ae6dc7e27837ed43696d28a31f16a9049c1fd59",
+  chain_id: 5042002,
+  chain_name: "Arc Testnet",
+  contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+  tx_hash: "0xbf3e6c73e9d481c375e66c6b280da271c6831e8143a1f1b241ecac62b343a27b",
+  receipt_status: "0x1",
+  block_number: 56126973,
+  block_hash: "0x212dbfa6b4d9359e61ce0525a7a778f8cc338f3e676ca816446b73e1bbf67633",
+  deployed_code_bytes: 6877,
+  deployed_code_sha256: "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675",
+  token_getter: {
+    selector: "0xfc0c546a",
+    return_address: "0x3600000000000000000000000000000000000000"
+  },
+  readback_finality: "observed_confirmations_and_block_hash_reread",
+  reorg_state: "no_reorg_observed_at_readback",
+  deployment_log_semantics: "CREATE receipt has no PolicyCreated log; deployment and follow-on policy readback are separate evidence.",
+  follow_on_policy_readback: {
+    status: "verified_in_programme_evidence",
+    events: ["PolicyCreated"],
+    getter: "getPolicy(bytes32)",
+    source_label: "H118 programme acceptance evidence",
+    settlement_execution_claimed: false
+  },
+  claim_boundary: {
+    current_release_binding: false,
+    deployment_readback_only: true,
+    settlement_execution_claimed: false,
+    erp_posting_claimed: false,
+    business_close_claimed: false,
+    local_fixture_only: false,
+    external_actions: 0
+  }
+});
+
+export const CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE = deepFreeze({
+  evidence_class: "verified_erp_read_only",
+  source_batch: "CURRENT-RELEASE-LIVE-EVIDENCE-CLOSURE-H167",
+  source_artifact_sha256: "f773f8ba6567d4376e539701909506a6690201c0070c013bda7bcf046e1800c9",
+  credentials_exposed: false,
+  local_fixture_only: false,
+  company: "AOXPET Arc Lab",
+  company_abbr: "AAL",
+  currency: "USD",
+  purchase_invoice: {
+    selector: "ACC-PINV-2026-00002",
+    supplier: "ARC-LAB-SUP-CATVERSE-001",
+    supplier_invoice: "PINV-2026-044",
+    status: "Paid",
+    gl: {
+      creditors_account: "Creditors - AAL",
+      creditors_side: "credit",
+      creditors_amount: "1.00",
+      stock_received_not_billed_account: "Stock Received But Not Billed - AAL",
+      stock_received_not_billed_side: "debit",
+      stock_received_not_billed_amount: "1.00",
+      total_debit: "1.00",
+      total_credit: "1.00",
+      closing: "0"
+    }
+  },
+  payment_entry: {
+    selector: "ACC-PAY-2026-00009",
+    status: "Submitted",
+    payment_type: "Pay",
+    posting_date: "2026-08-10",
+    paid_amount: "1.00",
+    invoice_outstanding: "0",
+    allocated: "1.00",
+    unallocated: "0",
+    difference: "0",
+    paid_from: "Arc Settlement Bank - AAL",
+    paid_to: "Creditors - AAL",
+    reference_no: "0x20a6af59824205cfe691c603012d11525defccac6fa1df945b08b9ceb44f6e10",
+    clearance_date: "2026-08-10"
+  },
+  bank_transaction: {
+    selector: "ACC-BTN-2026-00004",
+    status: "Reconciled",
+    direction: "Withdrawal",
+    amount: "1.00",
+    description_binding: "ACC-PAY-2026-00009"
+  },
+  payment_ledger: {
+    status: "not_proven",
+    selector: null,
+    selector_redacted: true
+  },
+  mutation_receipt: { status: "not_provided" },
+  posting_readback: { status: "read_only_source_statuses_only" },
+  accounting_period: { status: "not_proven" },
+  period_closing_voucher: { status: "not_proven" },
+  business_close: { status: "not_proven" },
+  cancelled_related_payment_entries: [
+    { selector: "ACC-PAY-2026-00007", status: "Cancelled" },
+    { selector: "ACC-PAY-2026-00008", status: "Cancelled" }
+  ],
+  payment_is_not_close: true,
+  external_actions: 0,
+  claim_boundary: {
+    invoice_readback: true,
+    submitted_payment_readback: true,
+    reconciled_bank_readback: true,
+    balanced_gl_readback: true,
+    accounting_period_closed: false,
+    pcv_or_business_close: false,
+    business_close_claimed: false,
+    erp_mutation_claimed: false
+  }
+});
+
 const ZERO_COUNTS = Object.freeze({
   bank_transaction: 0,
   close: 0,
@@ -41,7 +167,7 @@ const ZERO_COUNTS = Object.freeze({
 
 const REQUIRED_RECEIPT_FIELDS = Object.freeze([
   "chain_id", "tx_hash", "block_hash", "receipt_status", "from", "to",
-  "nonce", "raw_calldata", "principal_amount6_raw", "finality_threshold",
+  "nonce", "raw_calldata", "principal_amount6_raw",
   "canonical_event_key", "reorg_state", "replacement_state"
 ]);
 
@@ -157,6 +283,8 @@ function blocked(authority, scenario, errors, { receiptObserved = false } = {}) 
     live_arc: false,
     live_erp: false,
     evidence_level: "synthetic_local",
+    verified_programme_evidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE,
+    verified_erp_evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE,
     provenance: {
       authority_id: authority?.authority_id ?? null,
       authority_fingerprint: authority?.authority_fingerprint ?? null,
@@ -502,6 +630,8 @@ export function projectCurrentReleaseWorkbench({ scenario, receipt, erpReadback,
   projection.external_actions = 0;
   projection.direct_erp_mutation = false;
   projection.receipt_observed = true;
+  projection.verified_programme_evidence = CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE;
+  projection.verified_erp_evidence = CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE;
   projection.simulation = simulation ? clone(simulation) : simulateCurrentReleaseWorkbench({ scenario });
   projection.typed_readbacks = buildTypedReadbacks(authority);
   projection.dapp = clone(projection.dapp ?? {});

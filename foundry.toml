@@ -2,5 +2,9 @@
 src = "src"
 test = "test"
 solc_version = "0.8.24"
+# Current local reproducible strategy: all source and test pragmas target the
+# same ^0.8.24 compiler range. PolicySettlementV1's checked-in artifact metadata
+# identifies solc 0.8.24; other historical deployed addresses/bytecode are not
+# rewritten or claimed source-identical by this local normalization.
 optimizer = true
 optimizer_runs = 200

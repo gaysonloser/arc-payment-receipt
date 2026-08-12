@@ -1,25 +1,25 @@
-# Three-Minute Demo Script
+# Verified Milestone Close · Three-Minute Demo Script
 
-## 0:00-0:25 - Problem
+## 0:00-0:25 - Current product and problem
 
-Arc uses USDC as its native value and gas token, but a merchant application still needs a durable order reference and a reconciliation trail. Payment Receipt provides that without retaining customer funds; its deployed Solidity contract remains named `ArcPaymentReceipt`.
+Open `/current-mvp/` and introduce **Verified Milestone Close** (presentation name: **Arc Enterprise Settlement Control**). The current operator journey starts with a supplier payable and also supports the customer-receipt/refund entry. It keeps Arc/USDC receipt facts, programmable `PolicySettlementV1`, and ERPNext accounting truth in separate typed layers.
 
-## 0:25-0:55 - Contract
+## 0:25-0:55 - Programmable-money boundary
 
-Show the verified Arcscan contract. Highlight the immutable merchant, `pay`, `receipts`, duplicate-order protection, and the `PaymentReceived` event. State clearly that this is a Testnet prototype and is not audited.
+Show the PolicySettlementV1 policy/unsigned-instruction view. Explain that policy, attestation and wallet review are distinct gates; the workbench never signs or broadcasts. If the reviewer opens the historical Payment Receipt component, label it as support lineage rather than the current product.
 
-## 0:55-1:25 - Settlement
+## 0:55-1:25 - Receipt-first settlement
 
-Open the P1 transaction. Show the `0.01 test USDC` call, successful status, receipt event, and zero contract balance. Explain that the value reaches the merchant in the same transaction.
+Show the three correlated records: PolicySettlementV1/SettlementExecuted, ERC-20 Transfer and Arc system Transfer. Demonstrate finality, TTL, replay and reorg checks. A missing, stale or mismatched record stays OPEN and produces no ERP/GL/PLED/close consequence.
 
-## 1:25-2:05 - Receipt viewer
+## 1:25-2:05 - ERP accounting truth
 
-Query the opaque P1 order ID. Show payer, merchant, amount, metadata hash, block, gas, and the four passing integrity checks. Explain that the backend is read-only and rejects non-GET requests.
+Open the ERP inspector and show the independent Invoice, Payment Entry, Bank Transaction, GL, Payment Ledger and close readbacks. Keep chain success, ERP posting and business close visibly separate; local fixtures are labeled local-only and the backend remains read-only.
 
-## 2:05-2:40 - Circle integration
+## 2:05-2:40 - Fail-closed and lifecycle paths
 
-Show that Circle imported the contract as verified and subscribed to `PaymentReceived`. Then show the dual-source panel: RPC history has one P1 event, but it occurred before the Circle monitor was created; the overlap window is `0 / 0` and aligned.
+Switch between supplier payable and customer receipt/refund. Show TTL expiry, replay, revoke and reversal as explicit states. Refunds preserve the original source and ceiling; an over-ceiling or duplicate request is rejected, never silently posted.
 
-## 2:40-3:00 - Enterprise boundary
+## 2:40-3:00 - Evidence boundary
 
-Open the AOXPET Arc Lab shell. State that Arc House is community and contribution context, Arc Testnet is the settlement fact layer, Circle Console is source assurance, Render is read-only presentation, and ERPNext is future business proof under a separate AAL Company. Close with the production path: independent audit, real payer/merchant separation, refunds/disputes, isolated ERP draft rails, operational monitoring, and human approval before any write or posting.
+State that Arc Testnet is the chain fact layer, Render is read-only presentation, and ERPNext is the business authority. Circle Console, Encode and Final remain separate owner gates. The older Arc Lab/Payment Receipt screens are historical/support components only. Close with the explicit boundary: no signer, wallet transaction, ERP posting or business close is claimed by this release.

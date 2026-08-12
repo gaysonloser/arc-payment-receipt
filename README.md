@@ -1,20 +1,20 @@
-# Payment Receipt
+# Verified Milestone Close
 
-<img src="assets/payment-receipt-logo.png" width="120" alt="Payment Receipt logo">
+<img src="assets/payment-receipt-logo.png" width="120" alt="Verified Milestone Close logo">
 
-Payment Receipt is an independent DeFi prototype built on Arc Testnet. Its verified Solidity contract remains named `ArcPaymentReceipt`. A payment atomically settles native test USDC to an immutable merchant, stores an opaque order receipt, and emits a structured `PaymentReceived` event for reconciliation. Circle Contracts and Event Monitor are used for read-only contract and event operations.
+**Presentation name:** Arc Enterprise Settlement Control. Verified Milestone Close is the current release: a receipt-first Arc/USDC workbench for a treasury operator reviewing a supplier payable and its customer-receipt/refund counterpart. `PolicySettlementV1` supplies the programmable-money boundary; the workbench separately displays typed ERPNext Invoice, Payment Entry, Bank Transaction, GL, Payment Ledger, Accounting Period and close readbacks. Chain success never implies ERP posting or business close.
 
-**Live demo:** [arc-payment-receipt.onrender.com](https://arc-payment-receipt.onrender.com/)
+**Published baseline demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) (commit `dc239d696d9b6dea1fe8edec483e94fc72581dbd`).
 
-The demo runs as a free Render web service. It may take 50 seconds or more to wake after a period of inactivity.
+The baseline demo runs as a free Render web service and may take 50 seconds or more to wake after inactivity. The product-quality changes currently present in the local worktree are a release candidate only: they are not yet committed, pushed, or deployed, so the published baseline must not be read as evidence for those candidate changes.
 
-**Delivery surfaces:** GitHub is the engineering source and ephemeral CI authority; this existing Render service is the public running proof; Arc Testnet provides immutable chain facts; Circle Console provides an independent contract/event view; Frappe Cloud ERPNext remains the business, ledger, SLE and cost authority; Encode and Arc House retain reviewer and community-credit records. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+**Current-release boundary:** GitHub is the engineering source and Render is the public runtime. The remote `main` baseline is `dc239d696d9b6dea1fe8edec483e94fc72581dbd`; the uncommitted local candidate is not current-release-bound until a separately approved commit, non-force push, deployment, and readback complete. Arc Testnet provides immutable receipt facts; ERPNext remains the authoritative business/ledger/close system. Circle Console, Encode and Final submission remain separate owner-gated surfaces. The local fixture, read-only UI, historical receipts and public chain deployment do not claim a signer, wallet action, ERP posting or business close. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
 
-## Arc Lab Enterprise OS E1
+## Historical/support component: Arc Lab Enterprise OS E1
 
-This service is also the only planned public Arc runtime for **CATVERSE Twin-Ledger Enterprise Finance OS -- AOXPET Arc Lab**. The E1 upgrade adds a read-only enterprise shell inside the existing `arc-payment-receipt` Render service; it does not create a second Arc web service.
+The Arc Lab E1 shell is retained as historical/support lineage inside the existing service. It is not the current submission product or umbrella and does not replace Verified Milestone Close.
 
-Payment Receipt is now positioned as the D09 treasury and payment component. It is not the umbrella for the enterprise portfolio. The Arc Lab namespace is `ARC-LAB-*`, target company is `AOXPET Arc Lab / AAL / USD`, and the public shell keeps Base runtime, ERP company, credentials, events, queues, and evidence isolated.
+The historical/support Payment Receipt component is retained as the D09 treasury and payment component. It is not the current umbrella for the enterprise portfolio. The Arc Lab namespace is `ARC-LAB-*`, target company is `AOXPET Arc Lab / AAL / USD`, and the public shell keeps Base runtime, ERP company, credentials, events, queues, and evidence isolated.
 
 The Arc Lab hero is procurement and manufacturing settlement control: supplier milestones, quality hold/release, cost residual boundaries, inventory read-only verification, and close/report impact. The payment receipt contract remains useful because cash settlement is one component of that operating system.
 
@@ -72,7 +72,7 @@ The current wallet for future, explicitly confirmed Arc actions is **ARC** (`0x7
 
 Wallet migration does not rewrite chain history. `0x8aAa...8889` remains the historical Payment Receipt deployer and immutable merchant; `0x63cd...13DA` remains the historical P2 payer and Enterprise Evidence Registry deployer. ARC capability recovery is now independently verified through official Memo tx `0x5f89...0a18` and synthetic Payment Receipt canary tx `0xccb9...48cc`. The public route exposes only sanitized receipts and never exposes a signer or transaction executor.
 
-## Enterprise OS overview
+## Historical/support lineage: Enterprise OS overview
 
 Arc Lab follows the CATVERSE Twin-Ledger standard:
 
@@ -88,23 +88,21 @@ GitHub is the engineering proof and technical source of truth. Render is the run
 
 Stablecoin settlement alone does not give an application a privacy-aware order reference, a durable receipt record, or a clean reconciliation surface. This prototype keeps custody out of the contract while making settlement evidence independently verifiable.
 
-## Programmable Money Hackathon delta — local candidate
+## Current release controls
 
-`ArcPaymentReceipt` remains the historical payment-receipt and reconciliation
-component. The current hackathon work adds a separate, local **Programmable
-Settlement Policy Preview** for a treasury reviewer deciding whether a supplier
-USDC settlement is eligible on Arc Testnet. It requires three explicit
-predecessors: quality acceptance, confirmed settlement evidence and human
-approval. When all are present it emits a deterministic, unsigned review
-instruction; otherwise it fails closed with a specific reason.
+The current workbench binds both entry journeys to a canonical case, policy,
+receipt and ERP source. It requires three independently checked receipt records,
+TTL/finality/replay/reorg controls and typed readbacks before a local, unsigned
+proposal is shown. Missing or conflicting facts remain OPEN with zero ERP/GL/
+PLED/close consequence. Refund, revoke and reversal paths preserve the original
+source identity and fail closed on over-ceiling or replay.
 
-This preview is not a wallet, relayer, custody service, automated payment,
-App Kit integration or ERP writer. It does not prepare calldata or broadcast a
-transaction. Its source and tests are present locally in
-`tools/programmable_settlement_policy.mjs` and
-`tools/programmable_settlement_policy.test.mjs`. The candidate needs a
-separately approved public-source release and destination review before it is
-represented as a public or deployed feature.
+The current surface is not a wallet, relayer, custody service, automated
+payment, App Kit integration or ERP writer. It accepts no signer or credentials,
+and its two POST routes are explicitly fail-closed (disabled webhook and
+ephemeral fixture validation). `ArcPaymentReceipt` and the Arc Lab E1 views are
+historical/support components retained for provenance, not current product
+claims.
 
 ## What is implemented
 
@@ -182,7 +180,7 @@ See [Interaction Trail](docs/INTERACTION_TRAIL.md) for how Arc House, Arc Testne
 
 ## 14-domain and C0-C7 status
 
-Current Arc Lab status is truthful and partial:
+Historical/support Arc Lab status (not the current submission product) is truthful and partial:
 
 - Implemented locally: D03 Order-to-Cash through D14 Governance and Human Gates, including D09's read-only ERP reconciliation mapping.
 - In progress: D01 Company Configuration. The isolated `AOXPET Arc Lab / AAL / USD` Company and dedicated draft-only identity exist, while credentials and master data remain separately gated.
@@ -194,7 +192,7 @@ Existing ERPNext drafts `ACC-JV-2026-00006` and `ACC-PAY-2026-00002` are histori
 
 | Claim | Status | Boundary |
 | --- | --- | --- |
-| Existing Payment Receipt contract and read-only evidence API | live | Arc Testnet and public Render component |
+| Historical Payment Receipt contract and read-only evidence API | historical/support | Arc Testnet and public Render component; not the current submission umbrella |
 | AAL Enterprise OS shell | live candidate | E1 read-only only; no ERP credential or write |
 | Procurement/manufacturing/cost-control domain model | local proof | fixtures and controls only |
 | AAL ERPNext Company and dedicated draft-only identity | C0 complete | no public identity value, API credential, master data, opening balance or business document |

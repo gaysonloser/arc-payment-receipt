@@ -8,6 +8,8 @@ import { verifyCurrentMvpBundle } from "./current_mvp_source_binding.mjs";
 import {
   C15_WORKBENCH_CONTRACT,
   CURRENT_RELEASE_WORKBENCH_SCENARIOS,
+  CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE,
+  CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE,
   buildAuthorityObservation,
   buildTypedReadbacks,
   consumeCurrentReleaseProjection,
@@ -17,6 +19,8 @@ import {
 } from "../current-mvp/web/workbench/workbench-projection.mjs";
 import {
   A12_C15_DAPP_OBJECT_IDS,
+  A12_LIFECYCLE_TRANSITION_TYPES,
+  A12_C15_RECEIPT_FIELDS,
   A12_C15_SCENARIO_SCHEMA,
   A12_C15_TABS,
   A12_C15_VIEWPORT_ORACLE,
@@ -198,6 +202,8 @@ test("deep UI contract binds seven schemas, five inspectors, seven causal stages
   assert.match(navigation, /clientWidth/);
   assert.match(navigation, /SET_SEARCH_QUERY/);
   assert.match(navigation, /a12UiFilteredQueue/);
+  assert.match(navigation, /\.a12-primary:disabled\{opacity:1;background:#c7d0dd;color:#3f4d5e;cursor:not-allowed\}/);
+  assert.match(navigation, /\.a12-queue-list\{max-height:360px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable\}/);
   assert.equal(A12_SEVEN_SCENARIO_IDS.length, 7);
   assert.equal(new Set(A12_SEVEN_SCENARIO_IDS).size, 7);
   assert.deepEqual(A12_C15_TABS, ["Business", "Arc", "ERP", "Ledger", "Audit"]);
@@ -209,6 +215,54 @@ test("deep UI contract binds seven schemas, five inspectors, seven causal stages
   assert.deepEqual(a12RuntimeLayoutMetrics(1280, 800, 2).viewport, "1280x800");
   assert.deepEqual(a12RuntimeLayoutMetrics(1024, 768, 2).inspectorMode, "focus_trapped_drawer");
   assert.deepEqual(A12_C15_VIEWPORT_ORACLE["1024x768"].inspectorMode, "focus_trapped_drawer");
+});
+
+test("current inspector exposes verified Arc/ERP evidence without threshold or live-close claims", async () => {
+  const state = createA12WorkbenchState();
+  const view = projectA12Workbench(state);
+  assert.equal(A12_C15_RECEIPT_FIELDS.includes("finality_threshold"), false);
+  assert.equal(A12_C15_RECEIPT_FIELDS.includes("finality_state"), true);
+  assert.deepEqual(view.inspector.arcVerifiedEvidence, CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE);
+  assert.deepEqual(view.inspector.erpVerifiedEvidence, CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
+  assert.equal(view.inspector.arcVerifiedEvidence.chain_id, 5042002);
+  assert.equal(view.inspector.arcVerifiedEvidence.receipt_status, "0x1");
+  assert.equal(view.inspector.arcVerifiedEvidence.claim_boundary.settlement_execution_claimed, false);
+  assert.equal(view.inspector.erpVerifiedEvidence.company, "AOXPET Arc Lab");
+  assert.equal(view.inspector.erpVerifiedEvidence.company_abbr, "AAL");
+  assert.equal(view.inspector.erpVerifiedEvidence.payment_ledger.status, "not_proven");
+  assert.equal(view.inspector.erpVerifiedEvidence.claim_boundary.business_close_claimed, false);
+  assert.equal(view.claims.erpPosting, false);
+  assert.equal(view.claims.businessClose, false);
+  const navigation = await readFile(join(CURRENT_MVP_ROOT, "web/navigation-workspace.mjs"), "utf8");
+  assert.match(navigation, /Verified Arc programme evidence/);
+  assert.match(navigation, /Verified ERP evidence/);
+  assert.match(navigation, /input\[data-a12-search\]\{min-height:44px!important;height:44px\}/);
+  assert.doesNotMatch(navigation, /missing live readback/);
+  assert.doesNotMatch(navigation, /policy getter · missing live readback/);
+  assert.doesNotMatch(navigation, /<h3>Receipt \/ finality · \$\{a12UiEscape\(view\.claims\.liveArc/);
+});
+
+test("current narrative and compiler contract reject historical umbrella drift", async () => {
+  const readme = await readFile(join(CURRENT_MVP_ROOT, "..", "README.md"), "utf8");
+  const architecture = await readFile(join(CURRENT_MVP_ROOT, "..", "docs/ARCHITECTURE.md"), "utf8");
+  const demo = await readFile(join(CURRENT_MVP_ROOT, "..", "docs/DEMO_SCRIPT.md"), "utf8");
+  assert.match(readme, /^# Verified Milestone Close/m);
+  assert.match(readme, /historical\/support/);
+  assert.match(architecture, /Verified Milestone Close/);
+  assert.match(demo, /current product/);
+  assert.doesNotMatch(readme.split("\n")[0], /^# Payment Receipt$/);
+  const foundry = await readFile(join(CURRENT_MVP_ROOT, "..", "foundry.toml"), "utf8");
+  assert.match(foundry, /solc_version\s*=\s*"0\.8\.24"/);
+  assert.match(foundry, /current local reproducible strategy/i);
+  assert.match(foundry, /not[\s\S]*source-identical/);
+  const policyArtifact = JSON.parse(await readFile(join(CURRENT_MVP_ROOT, "..", "artifacts/PolicySettlementV1.sol/PolicySettlementV1.json"), "utf8"));
+  assert.equal(policyArtifact.metadata?.compiler?.version, "0.8.24+commit.e11b9ed9");
+  const sourcePaths = ["ArcPaymentReceipt.sol", "ArcReleaseDeliveryAttestation.sol", "ArcReleaseEvidenceAnchor.sol", "PolicySettlementV1.sol"];
+  const sourceBytes = await Promise.all(sourcePaths.map((name) => readFile(join(CURRENT_MVP_ROOT, "..", "src", name), "utf8")));
+  for (const source of sourceBytes) assert.match(source, /pragma solidity \^0\.8\.24;/);
+  const packageJson = JSON.parse(await readFile(join(CURRENT_MVP_ROOT, "..", "package.json"), "utf8"));
+  assert.match(packageJson.description, /Verified Milestone Close/);
+  assert.match(packageJson.scripts.test, /--test-concurrency=1/);
 });
 
 test("missing final receipt is OPEN and has no ERP or ledger consequence", () => {
@@ -303,6 +357,129 @@ test("search query is canonical route state and arrow queue uses visible rows on
   assert.equal(visible.every((row) => `${row.id} ${row.label} ${row.party}`.toLowerCase().includes("customer")), true);
 });
 
+const lifecycleAuthority = { role: "finance_operator", operatorId: "finance-fixture" };
+const logicalPaymentId = "logical:payment:fixture-001";
+const canonicalEventKey = "5042002:0xaaa:2";
+
+function applyLifecycleLateEntry(state = createA12WorkbenchState()) {
+  return reduceA12Workbench(state, {
+    type: "LATE_ENTRY",
+    operationKey: "late-entry:fixture-001",
+    logicalPaymentId,
+    canonicalEventKey,
+    reason: "Typed watcher observation arrived after the original accounting cut-off.",
+    authority: { role: "watcher", operatorId: "watcher-fixture" },
+    observation: { receiptStatus: 1, blockHash: "0xaaa", observedAt: "2026-08-12T01:00:00Z" }
+  });
+}
+
+test("active A12 lifecycle records a typed late entry keyed by logical payment and canonical event", () => {
+  assert.deepEqual(A12_LIFECYCLE_TRANSITION_TYPES, ["LATE_ENTRY", "REPLACEMENT_RESOLUTION", "REVOKE", "REVERSAL"]);
+  const state = applyLifecycleLateEntry();
+  const observationKey = `${logicalPaymentId}::${canonicalEventKey}`;
+  assert.equal(state.lastLifecycleResult.state, "APPLIED");
+  assert.equal(state.lifecycleObservations[observationKey].status, "late_entry_observed");
+  assert.equal(state.lifecycleObservations[observationKey].observation.blockHash, "0xaaa");
+  assert.equal(state.history.at(-1).payload.priorObservation, null);
+  assert.equal(state.matcherState, "pending");
+  assert.equal(state.externalActions, 0);
+});
+
+test("active A12 lifecycle resolves a reorg replacement without overwriting the prior observation", () => {
+  const prior = applyLifecycleLateEntry();
+  const replacementKey = "5042002:0xbbb:2";
+  const state = reduceA12Workbench(prior, {
+    type: "REPLACEMENT_RESOLUTION",
+    operationKey: "replacement:fixture-001",
+    logicalPaymentId,
+    canonicalEventKey,
+    replacementCanonicalEventKey: replacementKey,
+    reason: "Original block was reorged; bind the canonical replacement receipt.",
+    authority: lifecycleAuthority,
+    replacementObservation: { receiptStatus: 1, blockHash: "0xbbb", observedAt: "2026-08-12T01:01:00Z", reorgState: "canonical" }
+  });
+  assert.equal(state.lastLifecycleResult.state, "APPLIED");
+  assert.equal(state.lifecycleObservations[`${logicalPaymentId}::${canonicalEventKey}`].status, "replaced_after_reorg");
+  assert.equal(state.lifecycleObservations[`${logicalPaymentId}::${replacementKey}`].status, "canonical_replacement");
+  assert.equal(state.lifecycleOperations["replacement:fixture-001"].priorObservation.observation.blockHash, "0xaaa");
+  assert.equal(state.history.length, 2);
+});
+
+test("active A12 lifecycle applies REVOKE and source-bound REVERSAL while preserving history", () => {
+  const prior = applyLifecycleLateEntry();
+  const revoked = reduceA12Workbench(prior, { type: "REVOKE", operationKey: "revoke:fixture-001", logicalPaymentId, canonicalEventKey, reason: "Reviewer withdrew the observation.", authority: { role: "reviewer", operatorId: "reviewer-fixture" } });
+  assert.equal(revoked.lastLifecycleResult.state, "APPLIED");
+  assert.equal(revoked.lifecycleObservations[`${logicalPaymentId}::${canonicalEventKey}`].status, "revoked");
+  assert.equal(revoked.lifecycleOperations["revoke:fixture-001"].priorObservation.observation.blockHash, "0xaaa");
+  const reversed = reduceA12Workbench(prior, { type: "REVERSAL", operationKey: "reversal:fixture-001", logicalPaymentId, canonicalEventKey, reason: "Reverse the local accounting consequence.", authority: lifecycleAuthority });
+  assert.equal(reversed.lastLifecycleResult.state, "APPLIED");
+  assert.equal(reversed.lifecycleObservations[`${logicalPaymentId}::${canonicalEventKey}`].status, "reversed");
+  assert.equal(reversed.history.length, 2);
+  const missing = reduceA12Workbench(createA12WorkbenchState(), { type: "REVERSAL", operationKey: "reversal:missing", logicalPaymentId, canonicalEventKey, reason: "No source exists.", authority: lifecycleAuthority });
+  assert.equal(missing.lastLifecycleResult.reason, "REVERSAL_SOURCE_REQUIRED");
+});
+
+test("active A12 lifecycle treats an identical operation retry as a duplicate no-op", () => {
+  const action = {
+    type: "LATE_ENTRY", operationKey: "late-entry:retry", logicalPaymentId, canonicalEventKey,
+    reason: "Late receipt readback.", authority: { role: "watcher", operatorId: "watcher-fixture" },
+    observation: { receiptStatus: 1, blockHash: "0xaaa", observedAt: "2026-08-12T01:00:00Z" }
+  };
+  const applied = reduceA12Workbench(createA12WorkbenchState(), action);
+  const duplicate = reduceA12Workbench(applied, structuredClone(action));
+  assert.equal(duplicate.lastLifecycleResult.state, "DUPLICATE_NOOP");
+  assert.equal(duplicate.revision, applied.revision);
+  assert.equal(duplicate.history.length, applied.history.length);
+  assert.deepEqual(duplicate.lifecycleOperations, applied.lifecycleOperations);
+  assert.deepEqual(duplicate.lifecycleObservations, applied.lifecycleObservations);
+});
+
+test("active A12 lifecycle rejects a conflicting payload on the same operation key fail-closed", () => {
+  const applied = applyLifecycleLateEntry();
+  const conflict = reduceA12Workbench(applied, {
+    type: "LATE_ENTRY",
+    operationKey: "late-entry:fixture-001",
+    logicalPaymentId,
+    canonicalEventKey,
+    reason: "Conflicting retry.",
+    authority: { role: "watcher", operatorId: "watcher-fixture" },
+    observation: { receiptStatus: 1, blockHash: "0xconflict" }
+  });
+  assert.equal(conflict.lastLifecycleResult.state, "CONFLICT_REJECT");
+  assert.equal(conflict.lastLifecycleResult.reason, "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT");
+  assert.equal(conflict.revision, applied.revision);
+  assert.equal(conflict.history.length, applied.history.length);
+  assert.deepEqual(conflict.lifecycleOperations, applied.lifecycleOperations);
+  assert.equal(conflict.matcherState, "pending");
+});
+
+test("active A12 lifecycle rejects malformed and empty late-entry evidence fail-closed", () => {
+  const malformedKey = reduceA12Workbench(createA12WorkbenchState(), {
+    type: "LATE_ENTRY", operationKey: "late-entry:malformed", logicalPaymentId,
+    canonicalEventKey: "not-a-canonical-key", reason: "Malformed watcher input.",
+    authority: { role: "watcher", operatorId: "watcher-fixture" }, observation: {}
+  });
+  assert.equal(malformedKey.lastLifecycleResult.state, "INVALID_REJECT");
+  assert.equal(malformedKey.lastLifecycleResult.reason, "LIFECYCLE_TYPED_KEYS_INVALID");
+  const emptyObservation = reduceA12Workbench(createA12WorkbenchState(), {
+    type: "LATE_ENTRY", operationKey: "late-entry:empty", logicalPaymentId,
+    canonicalEventKey, reason: "Empty watcher input.",
+    authority: { role: "watcher", operatorId: "watcher-fixture" }, observation: {}
+  });
+  assert.equal(emptyObservation.lastLifecycleResult.state, "INVALID_REJECT");
+  assert.equal(emptyObservation.lastLifecycleResult.reason, "LATE_ENTRY_OBSERVATION_RECEIPT_STATUS_REQUIRED");
+});
+
+test("active A12 lifecycle rejects a source-less revoke fail-closed", () => {
+  const state = reduceA12Workbench(createA12WorkbenchState(), {
+    type: "REVOKE", operationKey: "revoke:missing", logicalPaymentId, canonicalEventKey,
+    reason: "No source observation exists.", authority: { role: "reviewer", operatorId: "reviewer-fixture" }
+  });
+  assert.equal(state.lastLifecycleResult.state, "INVALID_REJECT");
+  assert.equal(state.lastLifecycleResult.reason, "REVOKE_SOURCE_REQUIRED");
+  assert.equal(Object.keys(state.lifecycleObservations).length, 0);
+});
+
 test("browser measurement contract rejects overflow, focus loss and console errors", () => {
   assert.equal(a12BrowserMeasurementContract({ scrollWidth: 1000, clientWidth: 1000, focusInsideDrawer: true, keyboardNavigable: true, consoleErrors: [] }).valid, true);
   assert.equal(a12BrowserMeasurementContract({ scrollWidth: 1001, clientWidth: 1000, focusInsideDrawer: true, keyboardNavigable: true, consoleErrors: [] }).valid, false);
@@ -321,9 +498,12 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     encode: "UNPROVEN",
     final: "UNPROVEN",
     arc_testnet: "UNPROVEN",
-    erp: "UNPROVEN"
+    erp: "VERIFIED_READ_ONLY_CANDIDATE"
   });
   assert.deepEqual(manifest.current_release_surface_status.circle_console.blockers.sort(), ["subscription_id_missing", "trusted_readback_loader_not_configured"].sort());
+  assert.equal(manifest.current_release_surface_status.erp.candidate_binding, true);
+  assert.equal(manifest.current_release_surface_status.erp.public_remote_binding, false);
+  assert.equal(manifest.current_release_surface_status.erp.live_erp_mutation, false);
   assert.equal(manifest.entries.some((item) => item.path === "current-release-final-assets-evidence.json"), true);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 5);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 4);

@@ -26,8 +26,8 @@
       "status": "TRUE_RECEIPT_HISTORICAL",
       "current_release_bound": false,
       "candidate_binding": false,
-      "remote_main": "db52d69705579f249af77ab7d49ad6e2cd686a2f",
-      "note": "remote main predates H167/H168 candidate files; exact commit+push owner gate required",
+      "remote_main": "dc239d696d9b6dea1fe8edec483e94fc72581dbd",
+      "note": "remote main is the published baseline and does not contain the current local product-quality candidate; exact commit+push owner gate required",
       "owner_gate_required": true,
       "historical_lineage_only": true
     },
@@ -72,23 +72,26 @@
       "historical_lineage_only": true
     },
     "erp": {
-      "status": "UNPROVEN",
-      "evidence_binding": "read-only owner evidence is not embedded in public candidate",
-      "historical_lineage_only": true
+      "status": "VERIFIED_READ_ONLY_CANDIDATE",
+      "evidence_binding": "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
+      "candidate_binding": true,
+      "public_remote_binding": false,
+      "live_erp_mutation": false,
+      "historical_lineage_only": false
     }
   },
   "verification_inputs": [
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 19204,
-      "sha256": "ee415cf03c912a55343b4330e0eebd1016297bb94bc1f5c6f131fe2d66e5366f"
+      "bytes": 30837,
+      "sha256": "bbf1764f689a0d7d28e6ee4a6d24feba25c4fec606a5796f6d595d77d319e2a3"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 12989,
-      "sha256": "cb2227c30fa3800c475985e9f1c5a2db1863e9c0bc7c2fd3047b023aef5f5ab4"
+      "bytes": 13505,
+      "sha256": "e31ec64b33a324ed54b4519fe4a0abd14a5a3340778860aaefce7bf56e8d750e"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -331,24 +334,24 @@
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 148307,
-      "sha256": "6394365263c4dd26c7f84ce56d5f319def7323def0813814745dad9db7d809ca",
+      "bytes": 158944,
+      "sha256": "5fb65655771aa4773e1fcce85edd642704309cd6eac69ceaa8c5675a93c4e514",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
       "current_release_override": true
     },
     {
       "path": "web/index.html",
-      "bytes": 24749,
-      "sha256": "459d9d8d506e4100cb719b1ce6f56e019d753f340f581b88e50f20736c6dc0bf",
+      "bytes": 24751,
+      "sha256": "eebc323cb5e541c112755340946c8504fe3068e9bd0d4ccd61a0f1378608c9c9",
       "historical_sha256": "c06819266a08bef7a3541921b43a235e0968c048bd2c533ab85b74fac2d0646a",
       "historical_bytes": 67534,
       "current_release_override": true
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 125916,
-      "sha256": "a089c14437a148848aa66f7564e23c38445bddad8e9229f3a7e6d675f0f96c18",
+      "bytes": 128896,
+      "sha256": "fac029e6b24079cb5344acf69060655b7628fe31dfa012bb14a3d85fcce6dc1d",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,
       "current_release_override": true
@@ -361,8 +364,8 @@
     },
     {
       "path": "web/workbench/workbench-projection.mjs",
-      "bytes": 27673,
-      "sha256": "f14ff72642f5265ef3e78c9eb65ec21cf0c2eaab3052094d49b04133661c3236",
+      "bytes": 32622,
+      "sha256": "4b4580eef995a213b18fd096f57c7738e83044c3ee41b92fd80c8801e49f57bc",
       "source_reference": "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs",
       "source_is_candidate": true
     }
