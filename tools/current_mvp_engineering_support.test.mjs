@@ -22,7 +22,14 @@ import {
 } from "../current-mvp/web/navigation-workspace.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
-const NAVIGATION_SOURCE = join(ROOT, "current-mvp/web/navigation-workspace.mjs");
+const PUBLIC_IMPORT_GRAPH = [
+  "current-mvp/web/navigation-workspace.mjs",
+  "current-mvp/web/fixture-engine.mjs",
+  "current-mvp/web/c15-upstream-authority.mjs",
+  "current-mvp/web/workbench/workbench-projection.mjs",
+  "current-mvp/web/c15-contract.mjs",
+  "current-mvp/web/settlement-case.mjs"
+].map((path) => join(ROOT, path));
 
 test("A12 workflow route is a distinct primary workspace route, not an inspector-only route", () => {
   const state = createA12WorkbenchState({ scenario: "customer_invoice_receipt" });
@@ -55,8 +62,8 @@ test("audit action and result values are display-safe and never stringify as [ob
   }
 });
 
-test("public render source does not expose producer/runtime/packet hashes or R7/R6 governance debug strings", async () => {
-  const source = await readFile(NAVIGATION_SOURCE, "utf8");
+test("public browser import graph does not expose internal governance selectors or hashes", async () => {
+  const source = (await Promise.all(PUBLIC_IMPORT_GRAPH.map((path) => readFile(path, "utf8")))).join("\n");
   for (const forbidden of [
     "R7 frozen runtime",
     "R6 producer upstream",
@@ -67,8 +74,23 @@ test("public render source does not expose producer/runtime/packet hashes or R7/
     "A12_R6_C15_AUTHORITY_OBJECT_SHA256",
     "A12_R6_C15_AUTHORITY_FILE_SHA256",
     "A12_R6_PRODUCER_EVIDENCE_SHA256",
-    "A12_R6_PRODUCER_RUNTIME_SHA256"
+    "A12_R6_PRODUCER_RUNTIME_SHA256",
+    "accepted_c15_packet",
+    "pre_review_exchange",
+    "producer_evidence_sha256",
+    "producer_runtime_sha256",
+    "C15_UPSTREAM_AUTHORITY_RAW_OBJECT",
+    "unique exchange handoffs",
+    "source_packet_index",
+    "source_packet_sha256",
+    "correction_packet_sha256",
+    "packet_object_sha256",
+    "exchange_sha256",
+    "upstream_authority_object_sha256",
+    "identity_bundle",
+    "projection_fingerprint"
   ]) assert.equal(source.includes(forbidden), false, forbidden);
+  assert.doesNotMatch(source, /["'](?:packet|exchange|handoff)[_-]?(?:id|sha256)?["']\s*:/i);
   assert.doesNotMatch(source, /data-a12-batch/);
   assert.doesNotMatch(source, /fixture-engine\.mjs\?rev=[^"\n]*(?:r[67]|runtime|packet|manifest|hash)/i);
 });

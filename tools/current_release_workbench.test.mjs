@@ -34,15 +34,9 @@ import {
 } from "../current-mvp/web/fixture-engine.mjs";
 import { a12BrowserMeasurementContract, a12RuntimeLayoutMetrics, a12UiFilteredQueue } from "../current-mvp/web/navigation-workspace.mjs";
 import {
-  ACCEPTED_PACKET,
-  ACCEPTANCE_STATE,
-  CURRENT_RELEASE_COMMIT,
+  CONTENT_MANIFEST_SCHEMA,
   CURRENT_MVP_ROOT,
   OUTPUT_PATH,
-  PUBLICATION_CANDIDATE_STATE,
-  RENDER_CURRENT_DEPLOYED_COMMIT,
-  RENDER_CURRENT_DEPLOYMENT_ID,
-  RENDER_CURRENT_DEPLOYMENT_URL,
   RENDER_STATUS,
   RENDER_SERVICE_ID,
   verifyCurrentReleaseWorkbenchManifest
@@ -149,10 +143,9 @@ test("full current-release workbench manifest binds every shipped file and rejec
   assert.equal(result.entry_count, 28);
   assert.equal(result.issues.length, 0);
   const manifest = JSON.parse(await readFile(OUTPUT_PATH, "utf8"));
-  assert.equal(manifest.stable_terminal_freeze, true);
-  assert.equal(manifest.writer_idle, true);
-  assert.equal(manifest.independent_audit.status, "PENDING");
-  assert.equal(manifest.independent_audit.self_acceptance, false);
+  assert.equal(manifest.schema, CONTENT_MANIFEST_SCHEMA);
+  assert.equal(manifest.release_binding.model, "content_addressed_external_receipt");
+  assert.equal(manifest.release_binding.external_immutable_receipt_required, true);
   assert.equal(OUTPUT_PATH.endsWith("current-release-workbench-manifest.json"), true);
   const temporary = await mkdtemp(join(tmpdir(), "arc-workbench-manifest-"));
   try {
@@ -166,29 +159,35 @@ test("full current-release workbench manifest binds every shipped file and rejec
     await writeFile(join(candidate, "web/workbench/unexpected.mjs"), "export default 1;\n", "utf8");
     const extra = await verifyCurrentReleaseWorkbenchManifest({ root: candidate });
     assert.equal(extra.issues.some((issue) => issue === "extra_file:web/workbench/unexpected.mjs"), true);
+    const manifestPath = join(candidate, "current-release-workbench-manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.base_release_id = "forged-base-release";
+    manifest.base_manifest_sha256 = "0".repeat(64);
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    const wrongBase = await verifyCurrentReleaseWorkbenchManifest({ root: candidate });
+    assert.equal(wrongBase.issues.includes("base_manifest_binding_invalid"), true);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
 });
 
-test("current release manifest truth rejects stale GitHub commits and false Render deployment status", async () => {
+test("content manifest rejects embedded GitHub or Render self-receipts", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "arc-h186-manifest-"));
   try {
     const candidate = join(temporary, "current-mvp");
     await cp(CURRENT_MVP_ROOT, candidate, { recursive: true });
     const manifestPath = join(candidate, "current-release-workbench-manifest.json");
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-    manifest.current_release_surface_status.github.commit = RENDER_CURRENT_DEPLOYED_COMMIT;
-    manifest.current_release_surface_status.github.remote_main = RENDER_CURRENT_DEPLOYED_COMMIT;
-    manifest.current_release_surface_status.github.current_release_bound = false;
-    manifest.current_release_surface_status.render.candidate.required_commit = RENDER_CURRENT_DEPLOYED_COMMIT;
-    manifest.current_release_surface_status.render.candidate.status = "DEPLOYED";
-    manifest.current_release_surface_status.render.candidate.owner_gate = "GRANTED";
+    manifest.release_binding.github_commit = "a".repeat(40);
+    manifest.release_binding.render_deployment_id = "dep-fabricated";
+    manifest.delivery_surfaces.github.commit = "a".repeat(40);
+    manifest.delivery_surfaces.render.deployment_id = "dep-fabricated";
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     const result = await verifyCurrentReleaseWorkbenchManifest({ root: candidate });
     assert.equal(result.valid, false);
-    assert.ok(result.issues.includes("github_current_release_binding_invalid"));
-    assert.ok(result.issues.includes("render_deployment_truth_invalid"));
+    assert.ok(result.issues.includes("release_binding_contract_invalid"));
+    assert.ok(result.issues.includes("github_receipt_boundary_invalid"));
+    assert.ok(result.issues.includes("render_receipt_boundary_invalid"));
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
@@ -201,17 +200,17 @@ test("current release manifest binds the embedded ERP read-only projection and k
     await cp(CURRENT_MVP_ROOT, candidate, { recursive: true });
     const manifestPath = join(candidate, "current-release-workbench-manifest.json");
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-    manifest.current_release_surface_status.erp.erp_readiness.live_erp = true;
+    manifest.delivery_surfaces.erp.erp_readiness.live_erp = true;
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     const result = await verifyCurrentReleaseWorkbenchManifest({ root: candidate });
     assert.equal(result.valid, false);
     assert.equal(result.issues.includes("erp_readiness_binding_invalid"), true);
-    manifest.current_release_surface_status.erp.erp_readiness.live_erp = false;
-    manifest.current_release_surface_status.encode.readiness.status = "VERIFIED_READ_ONLY";
+    manifest.delivery_surfaces.erp.erp_readiness = JSON.parse(await readFile(OUTPUT_PATH, "utf8")).delivery_surfaces.erp.erp_readiness;
+    manifest.delivery_surfaces.encode.readiness.status = "VERIFIED_READ_ONLY";
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     const promoted = await verifyCurrentReleaseWorkbenchManifest({ root: candidate });
     assert.equal(promoted.valid, false);
-    assert.equal(promoted.issues.includes("surface_readiness_binding_invalid:encode"), true);
+    assert.equal(promoted.issues.includes("surface_readiness_invalid:encode"), true);
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
@@ -447,8 +446,12 @@ test("same projection retry is DUPLICATE_NOOP and changed payload is a conflict"
   assert.equal(consumeCurrentReleaseProjection(projection, ledger).state, "new");
   assert.equal(consumeCurrentReleaseProjection(projection, ledger).state, "DUPLICATE_NOOP");
   const changed = structuredClone(projection);
-  changed.projection_fingerprint = "mutated-input-not-authority";
+  changed.typed_readbacks.invoice.party_id = "mutated-erp-party";
   assert.equal(consumeCurrentReleaseProjection(changed, ledger).state, "CONFLICT_REJECT");
+  const missingKey = structuredClone(projection);
+  delete missingKey.receipt.canonical_event_key;
+  assert.equal(consumeCurrentReleaseProjection(missingKey, new Map()).state, "OPEN");
+  assert.equal(consumeCurrentReleaseProjection(missingKey, new Map()).error, "CANONICAL_EVENT_KEY_REQUIRED");
 });
 
 test("authority origin is non-vacuous and typed readbacks are independently bound", () => {
@@ -622,91 +625,46 @@ test("browser measurement contract rejects overflow, focus loss and console erro
   assert.equal(a12BrowserMeasurementContract({ scrollWidth: 1000, clientWidth: 1000, focusInsideDrawer: true, keyboardNavigable: true, consoleErrors: ["warning"] }).valid, false);
 });
 
-test("manifest freezes current five-surface status and verifier/test byte inputs", async () => {
+test("content manifest freezes product bytes while external receipts remain external", async () => {
   const manifest = JSON.parse(await readFile(OUTPUT_PATH, "utf8"));
-  assert.equal(manifest.acceptance_state, ACCEPTANCE_STATE);
-  assert.deepEqual(Object.fromEntries(Object.entries(manifest.current_release_surface_status).map(([id, value]) => [id, value.status])), {
-    github: "TRUE_RECEIPT",
+  assert.equal(manifest.schema, CONTENT_MANIFEST_SCHEMA);
+  assert.equal(manifest.release_binding.model, "content_addressed_external_receipt");
+  assert.equal(manifest.release_binding.self_authenticating_commit, false);
+  assert.equal(manifest.release_binding.github_commit, null);
+  assert.equal(manifest.release_binding.render_deployment_id, null);
+  assert.deepEqual(Object.fromEntries(Object.entries(manifest.delivery_surfaces).map(([id, value]) => [id, value.status])), {
+    github: "EXTERNAL_IMMUTABLE_RECEIPT_REQUIRED",
     render: RENDER_STATUS,
-    deck: "TRUE_RECEIPT",
-    video: "TRUE_RECEIPT",
+    deck: "PUBLISHED_BASELINE_RECEIPT",
+    video: "PUBLISHED_BASELINE_RECEIPT",
     circle_console: "BLOCKED",
     encode: "UNPROVEN",
     final: "UNPROVEN",
-    arc_testnet: "VERIFIED_CHAIN_RECEIPT_PENDING_PUBLICATION_BINDING",
+    arc_testnet: "VERIFIED_READ_ONLY_CHAIN_RECEIPT",
     erp: "VERIFIED_READ_ONLY_CANDIDATE"
   });
-  assert.deepEqual(manifest.current_release_surface_status.circle_console.blockers.sort(), ["subscription_id_missing", "webhook_history_source_missing", "event_history_source_missing", "trusted_readback_loader_not_configured"].sort());
-  assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.schema, "arc.circle-console-trusted-readback.v1");
-  assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.network, "ARC-TESTNET");
-  assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.chain_id, 5042002);
-  assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.loader.calls_external_api, false);
-  assert.equal(manifest.current_release_surface_status.github.current_release_bound, true);
-  assert.equal(manifest.current_release_surface_status.github.branch, "main");
-  assert.equal(manifest.current_release_surface_status.github.commit, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.current_release_surface_status.github.remote_main, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.current_release_surface_status.github.source_readback, "remote_main_4f26c6a_verified");
-  assert.equal(manifest.current_release_surface_status.github.current_worktree_candidate_bound, false);
-  assert.equal(manifest.current_release_surface_status.github.owner_gate_required, false);
-  assert.equal("candidate_binding" in manifest.current_release_surface_status.github, false);
-  assert.equal(manifest.worktree_truth.publication_candidate_state, PUBLICATION_CANDIDATE_STATE);
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 7);
-  assert.equal(manifest.current_release_surface_status.render.service_id, RENDER_SERVICE_ID);
-  assert.equal(manifest.current_release_surface_status.render.status, RENDER_STATUS);
-  assert.equal(manifest.current_release_surface_status.render.deployed_commit, RENDER_CURRENT_DEPLOYED_COMMIT);
-  assert.equal(manifest.current_release_surface_status.render.deployment_id, RENDER_CURRENT_DEPLOYMENT_ID);
-  assert.equal(manifest.current_release_surface_status.render.deployment_url, RENDER_CURRENT_DEPLOYMENT_URL);
-  assert.equal(manifest.current_release_surface_status.render.immutable_deploy_entity, true);
-  assert.equal(manifest.current_release_surface_status.render.current_release_bound, false);
-  assert.equal(manifest.current_release_surface_status.render.candidate.required_commit, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.current_release_surface_status.render.candidate.status, "NOT_DEPLOYED");
-  assert.equal(manifest.current_release_surface_status.render.candidate.current_release_bound, false);
-  assert.equal(manifest.current_release_surface_status.render.candidate.owner_gate, "NOT_GRANTED");
-  assert.equal(manifest.current_release_surface_status.render.current_worktree_candidate_bound, false);
-  assert.equal(manifest.current_release_surface_status.erp.owner_live_readback_binding, true);
-  assert.equal(manifest.current_release_surface_status.erp.current_worktree_candidate_bound, false);
-  assert.equal(manifest.current_release_surface_status.erp.public_current_release_bound, false);
-  assert.equal("candidate_binding" in manifest.current_release_surface_status.erp, false);
-  assert.equal("public_remote_binding" in manifest.current_release_surface_status.erp, false);
-  assert.equal(manifest.current_release_surface_status.erp.live_erp_mutation, false);
-  assert.equal(manifest.current_release_surface_status.erp.erp_readiness.status, "VERIFIED_READ_ONLY_CANDIDATE");
-  assert.equal(manifest.current_release_surface_status.erp.erp_readiness.valid, true);
-  assert.equal(manifest.current_release_surface_status.erp.erp_readiness.live_erp, false);
-  assert.equal(manifest.current_release_surface_status.erp.erp_readiness.public_current_release_bound, false);
-  assert.equal(manifest.current_release_surface_status.erp.erp_readiness.business_close, "not_proven");
+  assert.deepEqual(manifest.delivery_surfaces.circle_console.blockers.sort(), ["subscription_id_missing", "webhook_history_source_missing", "event_history_source_missing", "trusted_readback_loader_not_configured"].sort());
+  assert.equal(manifest.delivery_surfaces.circle_console.trusted_readback_contract.chain_id, 5042002);
+  assert.equal(manifest.delivery_surfaces.github.commit, null);
+  assert.equal(manifest.delivery_surfaces.render.service_id, RENDER_SERVICE_ID);
+  assert.equal(manifest.delivery_surfaces.render.deployment_id, null);
+  assert.equal(manifest.delivery_surfaces.erp.owner_live_readback_binding, true);
+  assert.equal(manifest.delivery_surfaces.erp.current_release_bound, false);
+  assert.equal(manifest.delivery_surfaces.erp.live_erp_mutation, false);
+  assert.equal(manifest.delivery_surfaces.erp.erp_readiness.status, "VERIFIED_READ_ONLY_CANDIDATE");
+  assert.equal(manifest.delivery_surfaces.erp.erp_readiness.valid, true);
+  assert.equal(manifest.delivery_surfaces.erp.erp_readiness.live_erp, false);
+  assert.equal(manifest.delivery_surfaces.erp.erp_readiness.business_close, "not_proven");
   for (const surface of ["encode", "final"]) {
-    assert.equal(manifest.current_release_surface_status[surface].readiness.status, "UNPROVEN");
-    assert.equal(manifest.current_release_surface_status[surface].readiness.current_release_bound, false);
+    assert.equal(manifest.delivery_surfaces[surface].readiness.status, "UNPROVEN");
+    assert.equal(manifest.delivery_surfaces[surface].readiness.current_release_bound, false);
   }
-  assert.equal(manifest.current_release_surface_status.arc_testnet.readiness.status, "UNPROVEN");
-  assert.equal(manifest.current_release_surface_status.arc_testnet.historical_lineage_only, false);
-  assert.match(manifest.current_release_surface_status.arc_testnet.evidence_binding, /0x2f40/);
-  assert.equal(manifest.baseline_git_commit, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.current_worktree_candidate_bound, false);
-  assert.equal(manifest.worktree_truth.baseline_commit, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.worktree_truth.current_head, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.worktree_truth.tracked_modified_count, 13);
-  assert.equal(manifest.worktree_truth.content_candidate_count, 7);
-  assert.equal(manifest.worktree_truth.mode_only_non_candidate_count, 7);
-  assert.equal(manifest.worktree_truth.self_excluded_manifest_path, "current-mvp/current-release-workbench-manifest.json");
-  assert.equal(manifest.worktree_truth.publication_candidate_state, PUBLICATION_CANDIDATE_STATE);
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 7);
-  const selfExcludedManifest = manifest.worktree_truth.publication_candidate_paths.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
-  assert.equal(selfExcludedManifest.self_excluded, true);
-  assert.equal(selfExcludedManifest.hash_excluded, true);
-  assert.equal(manifest.worktree_truth.documentation_only_content_count, 0);
-  assert.deepEqual(manifest.worktree_truth.publication_candidate_paths.filter((item) => item.documentation_only).map((item) => item.path), []);
-  assert.deepEqual(manifest.worktree_truth.mode_only_non_candidate_paths.map((item) => item.path), [
-    "outputs/ArcCircleContracts_event_history_latest.json",
-    "outputs/ArcPaymentReceipt_dual_source_monitor_latest.json",
-    "outputs/ArcPaymentReceipt_event_monitor_latest.json",
-    "tools/arc_payment_receipt_dual_monitor.mjs",
-    "tools/arc_payment_receipt_dual_monitor.test.mjs",
-    "tools/arc_payment_receipt_monitor.mjs",
-    "tools/arc_payment_receipt_viewer.html"
-  ]);
+  assert.match(manifest.delivery_surfaces.arc_testnet.evidence_binding, /PolicySettlementV1/);
+  assert.equal(manifest.boundaries.external_actions, 0);
+  assert.equal(manifest.boundaries.chain_success_implies_erp_posting, false);
+  assert.equal(manifest.boundaries.chain_success_implies_business_close, false);
   assert.equal(manifest.entries.some((item) => item.path === "current-release-final-assets-evidence.json"), true);
-  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 8);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 9);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 4);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "runtime").length, 1);
   for (const path of [
@@ -720,5 +678,7 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     "tools/current_mvp_accounting_close.test.mjs",
     "tools/current_mvp_fail_closed_lifecycle.test.mjs"
   ]) assert.equal(manifest.verification_inputs.some((item) => item.path === path), true, path);
-  assert.equal(manifest.accepted_request.id, ACCEPTED_PACKET.id);
+  assert.equal("accepted_request" in manifest, false);
+  assert.equal("worktree_truth" in manifest, false);
+  assert.equal("independent_audit" in manifest, false);
 });

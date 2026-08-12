@@ -1,14 +1,9 @@
 import { buildCanonicalArcReceipt, createSettlementCase, projectSettlementCase, rankCandidates, settlementCaseReducer } from "./settlement-case.mjs?rev=v3-a12-c15-readonly";
 import { A12_C15_ACCEPTED_ACTION_STATE_MACHINE, A12_C15_ACCEPTED_SCENARIO_PROJECTION_MATRIX } from "./c15-contract.mjs?rev=v3-2-a12-r1-exact-c15";
 import {
-  C15_UPSTREAM_AUTHORITY_RAW_OBJECT,
-  C15_UPSTREAM_AUTHORITY_OBJECT,
-  C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-  C15_UPSTREAM_AUTHORITY_FILE_SHA256,
-  C15_UPSTREAM_AUTHORITY_HANDOFF_ID,
   C15_UPSTREAM_AUTHORITY_RECORDS,
   getC15UpstreamAuthority
-} from "./c15-upstream-authority.mjs?rev=v3-2-a12-r6-c15-producer-public-authority";
+} from "./c15-upstream-authority.mjs?rev=current-release-product-authority";
 import {
   buildAuthorityObservation,
   projectCurrentReleaseWorkbench,
@@ -506,46 +501,14 @@ export { common };
  * ERP client.  Every value below is labelled as L0 local fixture data so a
  * receipt-shaped object can never be mistaken for live Arc evidence.
  */
-export const A12_HISTORICAL_BATCH_ID = "V3.2-A12-DEEP-SETTLEMENT-WORKBENCH-AND-A01H-SEALED-REPLAY-CORRECTION";
-export const A12_R7_BATCH_ID = "V3.2-A12-R7-READ-ONLY-TEST-FREEZE-MANIFEST-MACHINE-ALLOWLIST-AND-CANONICAL-RUNTIME-ANCHOR-CLOSURE";
-export const A12_R7_PACKET_ID = "arc-erp-product-construction-v3-2-a12-r6-sol-medium-revise-r7-correction-v1";
-export const A12_R7_EXCHANGE_SHA256 = "5697aa7c67213b1c05f80ffe3561f136e97b97b982adaee0ccc62467c445829e";
-export const A12_R7_VERDICT_ARTIFACT_SHA256 = "23e4c6d40afd7b906298b8d2f791b9918786bc14ce482886ac05e2e372b7d6ed";
-export const A12_BATCH_ID = A12_R7_BATCH_ID;
-export const A12_CORRECTION_BATCH_ID = A12_R7_BATCH_ID;
+export const A12_BATCH_ID = "current-release-workbench";
+export const A12_CORRECTION_BATCH_ID = A12_BATCH_ID;
 export const A12_EVIDENCE_LEVEL = "L0_LOCAL_FIXTURE";
-/* R7 is the only active local runtime/freeze anchor. R6 is retained solely as
- * the accepted producer upstream input; R1-R5/A01H are historical values. */
-export const A12_R6_HANDOFF_ID = "arc-erp-product-construction-v3-2-c15-r6-producer-public-authority-root-accepted-a12-r6-v1";
-export const A12_R6_EXCHANGE_SHA256 = "049db0e7e02520713d36a4d1d4c235e4e6262aad558b6f108142b2d14d206450";
-export const A12_R6_C15_AUTHORITY_OBJECT_SHA256 = "503586c7774820eabda1f12282d6b6511cf64b57f3a00e80ca743122f3314232";
-export const A12_R6_C15_AUTHORITY_FILE_SHA256 = "35169551a29cc9f6c17bfeebb8554363ba5b5bf60c49b4b5c51210bca271b249";
-export const A12_R6_PRODUCER_EVIDENCE_SHA256 = "56801bcc6a3e2e296384907a50336c521b93d0ea4a9861a122ad7e35057a3604";
-export const A12_R6_PRODUCER_RUNTIME_SHA256 = "1571f9d2da76ea2d208c21f1b6672c57fc789284e47e42a70496f99809eefd04";
-export const A12_R6_PUBLIC_PROJECTION_SHA256 = "92998ff18d6bc46d4ba37059561ee32d4b95025efa7b1067e8dbca3eab735819";
-export const A12_R5_PRE_REVIEW_EXCHANGE_SHA256 = "d3a202a246954ec44c9af6a116e85acf1d7fab40c05ad2a6f778e23caf13c5ff";
-export const A12_R5_ACCEPTED_C15_PACKET_OBJECT_SHA256 = "5d16399b4cff1d08f5a7bc61fc914b038e190ae5390ebc37c247c17a8984ac47";
-export const A12_R5_CORRECTION_PACKET_OBJECT_SHA256 = "ce224ce6b1b1f952f5df3dc721b8f839a9fbb185b2fe1b939b27296c7db44b2b";
-export const A12_R5_SCENARIO_PROJECTION_SHA256 = "b587a6d29d654a0b71fea1452bcd5258e7e4aa471d61805e9612c64b9c6c0dff";
-export const A12_R5_FULL_SCENARIO_PROJECTION_SHA256 = "4cd52166f76e398e6e264e6e458e2f3c2caaf531fa55d713b538c5fe1a40d581";
-export const A12_R5_C15_AUTHORITY_OBJECT_SHA256 = "e3475290f091beca4dab62689201e8c0fca8006dae07464da3626002f03677bd";
-export const A12_R5_C15_AUTHORITY_HANDOFF_ID = "arc-erp-product-construction-v3-2-c15-r20-upstream-authority-provenance-a12-r5-v1";
 export const A12_C15_INTERFACE_BINDING = Object.freeze({
-  packet: A12_R7_PACKET_ID,
-  exchangeSha256: A12_R7_EXCHANGE_SHA256,
-  packetObjectSha256: A12_R7_VERDICT_ARTIFACT_SHA256,
-  interfacePath: "projects/2026-07_Arc_Chain/programme/verified-milestone-close/arc_erp_bridge/scenario_projection.py",
-  interfaceSha256: A12_R6_PUBLIC_PROJECTION_SHA256,
-  machineContractSha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-  r7ExchangeSha256: A12_R7_EXCHANGE_SHA256,
-  r7VerdictArtifactSha256: A12_R7_VERDICT_ARTIFACT_SHA256,
-  consumedUpstreamExchangeSha256: A12_R6_EXCHANGE_SHA256,
-  upstreamAuthorityObjectSha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256,
-  upstreamAuthorityFileSha256: A12_R6_C15_AUTHORITY_FILE_SHA256,
-  upstreamAuthorityHandoffId: A12_R6_HANDOFF_ID,
-  producerEvidenceSha256: A12_R6_PRODUCER_EVIDENCE_SHA256,
-  producerRuntimeSha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-  readOnlyUpstreamAuthority: true,
+  interfacePath: "web/c15-contract.mjs",
+  producer: "product contract",
+  consumer: "settlement workbench",
+  status: "read_only_product_input",
   readOnly: true
 });
 
@@ -604,7 +567,7 @@ const A12_REFUND_OUTGOING_DAPP = Object.freeze({
 
 /*
  * The C15 producer object is the only authority source for active A12 cases.
- * This index is a read-only view over the generated exchange handoff; it is
+ * This index is a read-only view over the bundled product authority; it is
  * intentionally created before presentation profiles so profile labels cannot
  * become a second authority store.
  */
@@ -848,32 +811,31 @@ function createA12ProjectionFixture({ scenario = "supplier_payable", matcherStat
   const normalizedState = A12_MATCHER_STATES.includes(matcherState) ? matcherState : "pending";
   const boundary = a12StateBoundary(normalizedState);
   if (!authority && profile.id === "unresolved_incoming_outgoing") {
-    const unresolvedCaseId = "A12-R6-UNRESOLVED-HOLD-001";
+    const unresolvedCaseId = "A12-UNRESOLVED-HOLD-001";
     return a12DeepFreeze({
       batchId: A12_BATCH_ID, evidenceLevel: A12_EVIDENCE_LEVEL, localOnly: true, liveArc: false, liveErp: false, externalActions: 0,
       scenario: profile.id, legacyProfileId: profile.legacyProfileId, caseId: unresolvedCaseId, origin: "unresolved", authorityId: null,
-      authorityEnvelopeSha256: A12_AUTHORITY_ENVELOPE_SHA256, packetObjectSha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256, scenarioProjectionSha256: A12_R6_PRODUCER_RUNTIME_SHA256, upstreamAuthorityObjectSha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
       matcherState: "pending", matcherLabel: "Not evaluated", matcherTone: "neutral", selectedStage, profile: a12Clone(profile), fields: a12FieldProjection(profile, "pending"), dappObjects: a12DappObjects(profile, "pending", null, boundary), receiptProjection: null, receiptRecords: [], causalRail: a12CausalRail(profile, "pending", selectedStage), actionObjects: a12ActionObjects(profile, "pending"), boundary,
       source: { documentNumber: profile.documentNumber, sourceDocument: profile.sourceDocument, party: profile.party, direction: "unresolved", amount6: profile.amount6, amount: profile.amount, openItem: profile.openItem, truthClass: "unresolved_no_upstream_authority" },
       accounting: { status: "not_available", paymentEntry: "Not prepared", bankTransaction: "Not prepared", ledger: "Not available", outstanding: "OPEN", businessClose: "OPEN", principal: { amount6: profile.amount6, display: profile.amount, unit: "amount6", status: "unresolved" }, networkFee: { amount: "Not observed", unit: "native18", status: "separate" } },
       inspector: { activeTab: "Business", tabs: ["Business", "Arc", "ERP", "Ledger", "Audit"], claims: { observedReceipt: "not evaluated", erpPosting: "not posted", businessClose: "OPEN" } },
       localClaims: { isLiveArcGate: false, isLiveErpGate: false, chainSuccessImpliesErpPosting: false, chainSuccessImpliesBusinessClose: false, fixtureCanSatisfyLiveGate: false },
-      replay: { a01h: "historical_only", upstream: "r6_no_authority_unresolved", sourceInterfaceReadOnly: true }
+      replay: { sealed_fixture: "historical_only", product_authority: "unavailable", sourceInterfaceReadOnly: true }
     });
   }
-  if (!authority) throw new Error(`A12_R7_ACTIVE_PRODUCER_SCENARIO_UNAVAILABLE:${profile.id}`);
+  if (!authority) throw new Error(`A12_PRODUCT_AUTHORITY_SCENARIO_UNAVAILABLE:${profile.id}`);
   const resolvedOrigin = authority.origin;
   const caseId = authority.case_id;
   const receiptProjection = a12ReceiptProjection(profile, normalizedState, caseId, resolvedOrigin);
   const records = a12ReceiptRecords(profile, normalizedState);
   const state = {
     batchId: A12_BATCH_ID, evidenceLevel: A12_EVIDENCE_LEVEL, localOnly: true, liveArc: false, liveErp: false, externalActions: 0,
-    scenario: profile.id, legacyProfileId: profile.legacyProfileId, caseId, origin: resolvedOrigin, authorityId: authority.authority_id, authorityEnvelopeSha256: A12_AUTHORITY_ENVELOPE_SHA256, packetObjectSha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256, scenarioProjectionSha256: A12_R6_PRODUCER_RUNTIME_SHA256, upstreamAuthorityObjectSha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256, upstreamAuthorityFileSha256: C15_UPSTREAM_AUTHORITY_FILE_SHA256, producerEvidenceSha256: A12_R6_PRODUCER_EVIDENCE_SHA256, matcherState: normalizedState, matcherLabel: a12StateLabel(normalizedState), matcherTone: a12StateTone(normalizedState), selectedStage, profile: a12Clone(profile), fields: a12FieldProjection(profile, normalizedState), dappObjects: a12DappObjects(profile, normalizedState, receiptProjection, boundary), receiptProjection, receiptRecords: records, causalRail: a12CausalRail(profile, normalizedState, selectedStage), actionObjects: a12ActionObjects(profile, normalizedState), boundary,
+    scenario: profile.id, legacyProfileId: profile.legacyProfileId, caseId, origin: resolvedOrigin, authorityId: authority.authority_id, matcherState: normalizedState, matcherLabel: a12StateLabel(normalizedState), matcherTone: a12StateTone(normalizedState), selectedStage, profile: a12Clone(profile), fields: a12FieldProjection(profile, normalizedState), dappObjects: a12DappObjects(profile, normalizedState, receiptProjection, boundary), receiptProjection, receiptRecords: records, causalRail: a12CausalRail(profile, normalizedState, selectedStage), actionObjects: a12ActionObjects(profile, normalizedState), boundary,
     source: { documentNumber: profile.documentNumber, sourceDocument: profile.sourceDocument, party: profile.party, direction: profile.direction, amount6: profile.amount6, amount: profile.amount, openItem: profile.openItem, truthClass: "local_fixture" },
     accounting: { status: boundary.accountingConsequence, paymentEntry: normalizedState === "matched" ? "Draft / typed readback required" : "Not prepared", bankTransaction: normalizedState === "matched" ? "Draft / reconciliation required" : "Not prepared", ledger: normalizedState === "matched" ? "Projected balanced GL / PLED" : "Not available", outstanding: normalizedState === "matched" ? "Before → after projection; remains owner-controlled" : "OPEN", businessClose: boundary.businessClose, principal: { amount6: profile.amount6, display: profile.amount, unit: "amount6", status: "separate" }, networkFee: { amount: normalizedState === "pending" ? "Not observed" : "0.00022 native18", unit: "native18", status: "separate" } },
     inspector: { activeTab: "Business", tabs: ["Business", "Arc", "ERP", "Ledger", "Audit"], claims: { observedReceipt: normalizedState === "pending" ? "not evaluated" : "local typed receipt fixture", erpPosting: "not posted", businessClose: "OPEN" } },
     localClaims: { isLiveArcGate: false, isLiveErpGate: false, chainSuccessImpliesErpPosting: false, chainSuccessImpliesBusinessClose: false, fixtureCanSatisfyLiveGate: false },
-    replay: { a01h: "historical_only", upstream: "r6_accepted_read_only", sourceInterfaceReadOnly: true }
+    replay: { sealed_fixture: "historical_only", product_authority: "read_only", sourceInterfaceReadOnly: true }
   };
   return a12DeepFreeze(state);
 }
@@ -1147,15 +1109,12 @@ export function a12Sha256(value) {
 }
 
 export function verifyA12C15UpstreamAuthorityObject() {
-  const { object_sha256: declared, ...body } = C15_UPSTREAM_AUTHORITY_RAW_OBJECT;
-  if (declared !== C15_UPSTREAM_AUTHORITY_OBJECT_SHA256 || a12Sha256(body) !== declared) return { ok: false, reason: "C15_R7_CONSUMED_R6_OBJECT_HASH_INVALID" };
-  if (C15_UPSTREAM_AUTHORITY_RAW_OBJECT.schema !== "arc-erp.product-construction.v3.2.c15.producer-public-authority.v1" || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.object_id !== "arc-erp-product-construction-v3-2-c15-r6-producer-public-projection-authority-v1" || C15_UPSTREAM_AUTHORITY_HANDOFF_ID !== A12_R6_HANDOFF_ID) return { ok: false, reason: "C15_R7_CONSUMED_R6_OBJECT_IDENTITY_INVALID" };
-  if (C15_UPSTREAM_AUTHORITY_RAW_OBJECT.producer !== "09_Circle" || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.consumer !== "Root" || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.external_actions !== 0 || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.local_fixture_only !== true || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.live_arc !== false || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.live_erp !== false || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.chain_success_implies_erp_posting !== false || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.chain_success_implies_business_close !== false) return { ok: false, reason: "C15_R7_CONSUMED_R6_BOUNDARY_INVALID" };
-  if (C15_UPSTREAM_AUTHORITY_RECORDS.length !== 7 || C15_UPSTREAM_AUTHORITY_RAW_OBJECT.profiles?.length !== 7) return { ok: false, reason: "C15_R7_CONSUMED_R6_RECORD_COUNT_INVALID" };
+  if (C15_UPSTREAM_AUTHORITY_RECORDS.length !== 7) return { ok: false, reason: "PRODUCT_AUTHORITY_RECORD_COUNT_INVALID" };
   for (const record of C15_UPSTREAM_AUTHORITY_RECORDS) {
-    if (!record.authority_id || !record.case_id || !record.scenario || record.profile_id !== record.scenario || !record.origin || record.receipt_authority?.authority_id !== record.authority_id || record.receipt_authority?.case_id !== record.case_id || record.receipt_authority?.scenario !== record.scenario || record.receipt_authority?.profile_id !== record.profile_id || record.receipt_authority?.origin !== record.origin) return { ok: false, reason: `C15_UPSTREAM_AUTHORITY_RECORD_IDENTITY_INVALID:${record.authority_id ?? "unknown"}` };
+    if (!record.authority_id || !record.case_id || !record.scenario || record.profile_id !== record.scenario || !record.origin || record.receipt_authority?.authority_id !== record.authority_id || record.receipt_authority?.case_id !== record.case_id || record.receipt_authority?.scenario !== record.scenario || record.receipt_authority?.profile_id !== record.profile_id || record.receipt_authority?.origin !== record.origin) return { ok: false, reason: `PRODUCT_AUTHORITY_RECORD_IDENTITY_INVALID:${record.authority_id ?? "unknown"}` };
+    if (record.receipt_authority?.projection?.external_actions !== 0 || record.receipt_authority?.projection?.local_fixture_only !== true) return { ok: false, reason: `PRODUCT_AUTHORITY_BOUNDARY_INVALID:${record.authority_id}` };
   }
-  return { ok: true, object_sha256: declared, handoff_id: C15_UPSTREAM_AUTHORITY_HANDOFF_ID, record_count: C15_UPSTREAM_AUTHORITY_RECORDS.length, producer: C15_UPSTREAM_AUTHORITY_OBJECT.producer, consumer: C15_UPSTREAM_AUTHORITY_OBJECT.consumer, external_actions: 0 };
+  return { ok: true, record_count: C15_UPSTREAM_AUTHORITY_RECORDS.length, source: "bundled read-only product authority", external_actions: 0 };
 }
 
 export function sealA01HReplay(state) {
@@ -1225,98 +1184,12 @@ function a12TypedStatusFor(outcome) {
 }
 
 /*
- * R5 authority boundary.  C15 owns the typed authority object.  A12 keeps
- * only read-only references and binding metadata; it never creates an
- * authority seed, case identity, receipt projection or receipt truth.
+ * Product authority boundary. The workbench consumes typed read-only records;
+ * it never creates an authority seed, case identity, receipt projection or
+ * receipt truth.
  */
-export const A12_AUTHORITY_INPUTS = Object.freeze({
-  accepted_c15_packet: Object.freeze({
-    id: A12_C15_INTERFACE_BINDING.packet,
-    packet_object_sha256: A12_R7_VERDICT_ARTIFACT_SHA256,
-    hash_algorithm: "sha256(raw Sol verdict artifact bytes; read-only pointer)"
-  }),
-  pre_review_exchange: Object.freeze({
-    path: "projects/2026-07_Arc_Chain/shared/arc_circle_exchange_v1.json",
-    bytes_sha256: A12_R7_EXCHANGE_SHA256,
-    append_only: true,
-    consumer_read_only: true
-  }),
-  scenario_projection: Object.freeze({
-    scope: "accepted C15 runtime scenario projection matrix without field_contract/dapp_object_contract",
-    runtime_sha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-    full_matrix_sha256: A12_R6_PUBLIC_PROJECTION_SHA256
-  }),
-  c15_interface: Object.freeze({
-    path: A12_C15_INTERFACE_BINDING.interfacePath,
-    sha256: A12_C15_INTERFACE_BINDING.interfaceSha256,
-    machine_contract_sha256: A12_C15_INTERFACE_BINDING.machineContractSha256,
-    read_only: true
-  }),
-  upstream_c15_authority: Object.freeze({
-    handoff_id: C15_UPSTREAM_AUTHORITY_HANDOFF_ID,
-    object_sha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-    object_path: "projects/2026-07_Arc_Chain/programme/verified-milestone-close/artifacts/v3-c15/c15-r6-producer-public-authority.json",
-    producer: C15_UPSTREAM_AUTHORITY_OBJECT.producer,
-    consumer: C15_UPSTREAM_AUTHORITY_OBJECT.consumer,
-    status: C15_UPSTREAM_AUTHORITY_OBJECT.status,
-    record_count: C15_UPSTREAM_AUTHORITY_RECORDS.length,
-    read_only_for_a12: true,
-    root_acceptance_required: true,
-    file_sha256: A12_R6_C15_AUTHORITY_FILE_SHA256,
-    producer_evidence_sha256: A12_R6_PRODUCER_EVIDENCE_SHA256,
-    producer_runtime_sha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-    handoff_id: A12_R6_HANDOFF_ID
-  }),
-  historical_namespaces: Object.freeze({
-    R3: Object.freeze({ status: "historical_only", active: false }),
-    R4: Object.freeze({ status: "historical_only", active: false }),
-    R5: Object.freeze({ status: "historical_only", active: false }),
-    R6: Object.freeze({ status: "historical_upstream_input", active: false, handoff_id: A12_R6_HANDOFF_ID, exchange_sha256: A12_R6_EXCHANGE_SHA256 }),
-    A01H: Object.freeze({ status: "historical_only", active: false })
-  }),
-  historical_r4_verdict_packet: Object.freeze({
-    id: "arc-erp-product-construction-v3-2-a12-r4-sol-medium-revise-r5-correction-v1",
-    packet_object_sha256: A12_R5_CORRECTION_PACKET_OBJECT_SHA256,
-    status: "revise",
-    only_next_batch: A12_CORRECTION_BATCH_ID
-  })
-});
-
 const A12_AUTHORITY_BY_ID = Object.freeze(Object.fromEntries(C15_UPSTREAM_AUTHORITY_RECORDS.map((record) => [record.authority_id, record])));
-
-const A12_AUTHORITY_BINDING_METADATA = Object.freeze(Object.fromEntries(C15_UPSTREAM_AUTHORITY_RECORDS.map((record) => [record.authority_id, Object.freeze({
-  authority_id: record.authority_id,
-  case_id: record.case_id,
-  scenario: record.scenario,
-  profile_id: record.profile_id,
-  origin: record.origin,
-  authority_fingerprint: record.authority_fingerprint,
-  projection_output_sha256: a12Sha256(record.projection_output),
-  receipt_authority_sha256: a12Sha256(record.receipt_authority)
-})])));
-
-const A12_AUTHORITY_ENVELOPE_BODY = a12DeepFreeze({
-  schema: "arc-erp.product-construction.v3.2.a12.c15-upstream-authority-binding.v2",
-  batch_id: A12_CORRECTION_BATCH_ID,
-  authority_source: {
-    schema: C15_UPSTREAM_AUTHORITY_OBJECT.schema,
-    object_id: C15_UPSTREAM_AUTHORITY_OBJECT.object_id,
-    object_sha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-    producer: C15_UPSTREAM_AUTHORITY_OBJECT.producer,
-    consumer: C15_UPSTREAM_AUTHORITY_OBJECT.consumer,
-    read_only: true
-  },
-  allowlisted_authority_ids: Object.keys(A12_AUTHORITY_BY_ID),
-  consumed_inputs: A12_AUTHORITY_INPUTS,
-  bindings: A12_AUTHORITY_BINDING_METADATA
-});
-
-export const A12_AUTHORITY_ENVELOPE_SHA256 = a12Sha256(A12_AUTHORITY_ENVELOPE_BODY);
 export const A12_AUTHORITY_ID_ALLOWLIST = Object.freeze(Object.keys(A12_AUTHORITY_BY_ID));
-export const A12_ACCEPTED_C15_AUTHORITY_ENVELOPE = a12DeepFreeze({
-  ...a12Clone(A12_AUTHORITY_ENVELOPE_BODY),
-  authority_envelope_sha256: A12_AUTHORITY_ENVELOPE_SHA256
-});
 
 export function getA12AcceptedAuthority(authorityId) {
   return getC15UpstreamAuthority(authorityId) ?? null;
@@ -1479,17 +1352,6 @@ export function createA12TypedEvidence(input, outcome = "matched") {
     local_fixture_only: true,
     external_actions: 0,
     authority_id: acceptedAuthority.authority_id,
-    packet_object_sha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256,
-    scenario_projection_sha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-    upstream_authority_object_sha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-    authority_envelope_sha256: A12_AUTHORITY_ENVELOPE_SHA256,
-    authority_input_hashes: {
-      packet_object_sha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256,
-      scenario_projection_sha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-      pre_review_exchange_sha256: A12_R6_EXCHANGE_SHA256,
-      upstream_authority_object_sha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-      authority_envelope_sha256: A12_AUTHORITY_ENVELOPE_SHA256
-    },
     case_id: acceptedAuthority.case_id,
     scenario,
     profile_id: authority.context.profile_id,
@@ -1526,25 +1388,7 @@ export function validateA12C15TypedEvidence(state, evidence) {
   if (!upstreamVerification.ok) return { ok: false, reason: upstreamVerification.reason };
   const authorityCandidate = getA12AcceptedAuthority(evidence.authority_id);
   if (!authorityCandidate) return { ok: false, reason: "A12_AUTHORITY_UNKNOWN" };
-  const { authority_envelope_sha256: declaredEnvelopeHash, ...authorityEnvelopeBody } = A12_ACCEPTED_C15_AUTHORITY_ENVELOPE;
-  if (declaredEnvelopeHash !== A12_AUTHORITY_ENVELOPE_SHA256 || a12Sha256(authorityEnvelopeBody) !== declaredEnvelopeHash) return { ok: false, reason: "A12_AUTHORITY_ENVELOPE_HASH_INVALID" };
-  const expectedHashes = {
-    packet_object_sha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256,
-    scenario_projection_sha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-    upstream_authority_object_sha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-    authority_envelope_sha256: A12_AUTHORITY_ENVELOPE_SHA256
-  };
-  for (const [fieldId, expected] of Object.entries(expectedHashes)) {
-    if (evidence[fieldId] !== expected) return { ok: false, reason: `A12_AUTHORITY_HASH_INVALID:${fieldId}` };
-  }
-  const expectedInputHashes = {
-    packet_object_sha256: A12_R6_C15_AUTHORITY_OBJECT_SHA256,
-    scenario_projection_sha256: A12_R6_PRODUCER_RUNTIME_SHA256,
-    pre_review_exchange_sha256: A12_R6_EXCHANGE_SHA256,
-    upstream_authority_object_sha256: C15_UPSTREAM_AUTHORITY_OBJECT_SHA256,
-    authority_envelope_sha256: A12_AUTHORITY_ENVELOPE_SHA256
-  };
-  if (!a12TypedObjectsEqual(evidence.authority_input_hashes, expectedInputHashes)) return { ok: false, reason: "A12_AUTHORITY_INPUT_HASHES_INVALID" };
+  if (Object.keys(evidence).some((fieldId) => /(?:packet|exchange|handoff|runtime|authority.*(?:hash|sha)|(?:hash|sha).*authority)/i.test(fieldId))) return { ok: false, reason: "A12_INTERNAL_GOVERNANCE_METADATA_FORBIDDEN" };
   const authorityResolution = a12ResolveAcceptedAuthority({ authorityId: evidence.authority_id, caseId: evidence.case_id, scenario: evidence.scenario, profileId: evidence.profile_id, origin: evidence.origin });
   if (!authorityResolution.ok) return { ok: false, reason: authorityResolution.reason };
   const authority = authorityResolution.authority;
@@ -1763,7 +1607,7 @@ export function createA12WorkbenchState({ scenario = "supplier_payable" } = {}) 
     route: { workspace: "milestone-desk", scenario: selected, stage: "source", tab: "Business", searchQuery: "" },
     sealedReplay: null
   };
-  // A01H remains historical-only.  Active R6 state never seals or renders it.
+  // Historical fixture replay remains isolated from the active product state.
   state.sealedReplay = null;
   return state;
 }
@@ -2039,8 +1883,8 @@ export function reduceA12Workbench(input, action = {}) {
     return next({ workspace: state.selectedWorkspace, scenario: state.selectedScenario, stage: state.selectedStage, tab: state.inspectorTab, route_restore: true, reset_dependencies: scenarioChanged });
   }
   if (type === "REPLAY_SEALED") {
-    state.lastNotice = "Historical-only A01H replay is isolated; active R7 uses the accepted producer public projection only.";
-    return next({ action_blocked: true, reason: "A01H_HISTORICAL_ONLY", upstream_handoff: A12_R6_HANDOFF_ID });
+    state.lastNotice = "Historical fixture replay is isolated from the current product workflow.";
+    return next({ action_blocked: true, reason: "HISTORICAL_FIXTURE_ONLY" });
   }
   state.lastNotice = `Ignored untyped interaction: ${String(type)}.`;
   return state;

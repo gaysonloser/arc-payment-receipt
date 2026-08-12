@@ -12,13 +12,12 @@ import {
   A12_C15_ACCEPTED_ACTION_STATE_MACHINE
 } from "../c15-contract.mjs";
 import {
-  C15_UPSTREAM_AUTHORITY_RAW_OBJECT,
   C15_UPSTREAM_AUTHORITY_PROFILE_IDS,
   getC15UpstreamAuthorityForScenario
 } from "../c15-upstream-authority.mjs";
 
 export const CURRENT_RELEASE_WORKBENCH_ID = "verified-milestone-close-current-mvp-workbench-rc1";
-export const CURRENT_RELEASE_WORKBENCH_VERSION = "c15-domain-bridge-r1";
+export const CURRENT_RELEASE_WORKBENCH_VERSION = "product-domain-bridge-v1";
 export const CURRENT_RELEASE_WORKBENCH_SCENARIOS = Object.freeze([...C15_UPSTREAM_AUTHORITY_PROFILE_IDS]);
 export const CURRENT_RELEASE_WORKBENCH_BOUNDARY = Object.freeze({
   evidence_level: "synthetic_local",
@@ -43,10 +42,7 @@ const deepFreeze = (value) => {
 // neither implies settlement execution, ERP posting or business close.
 export const CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE = deepFreeze({
   evidence_class: "verified_programme_read_only",
-  source_batch: "arc-policysettlementv1-arc-deployment-readback-receipt-first-owner-receipt-v1",
-  source_packet_index: 118,
-  source_packet_sha256: "5e9111e62f2cc2597802fbb0e9f24b7dbe8f739cc5012db3ba8557df0f1345b0",
-  correction_packet_sha256: "293fe8e427c27d1335bbd2eb2ae6dc7e27837ed43696d28a31f16a9049c1fd59",
+  source_evidence_id: "policy-settlement-deployment-readback",
   chain_id: 5042002,
   chain_name: "Arc Testnet",
   contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047",
@@ -55,7 +51,7 @@ export const CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE = deepFreeze({
   block_number: 56126973,
   block_hash: "0x212dbfa6b4d9359e61ce0525a7a778f8cc338f3e676ca816446b73e1bbf67633",
   deployed_code_bytes: 6877,
-  deployed_code_sha256: "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675",
+  deployed_code_fingerprint: "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675",
   token_getter: {
     selector: "0xfc0c546a",
     return_address: "0x3600000000000000000000000000000000000000"
@@ -67,7 +63,7 @@ export const CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE = deepFreeze({
     status: "verified_in_programme_evidence",
     events: ["PolicyCreated"],
     getter: "getPolicy(bytes32)",
-    source_label: "H118 programme acceptance evidence",
+    source_label: "verified programme deployment evidence",
     settlement_execution_claimed: false
   },
   claim_boundary: {
@@ -83,13 +79,8 @@ export const CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE = deepFreeze({
 
 export const CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE = deepFreeze({
   evidence_class: "verified_erp_read_only",
-  source_batch: "CURRENT-RELEASE-LIVE-EVIDENCE-CLOSURE-H167",
-  source_artifact_sha256: "f773f8ba6567d4376e539701909506a6690201c0070c013bda7bcf046e1800c9",
-  enriched_projection_source: {
-    packet_id: "programme-current-product-quality-ready-freeze-h176-v1",
-    packet_object_sha256: "9eb6eb68879c5bf8359b0805fa10caa6540712d12a4b12045cf5bf77982f356b",
-    selector: "unique exchange handoffs[176]#/erp_verified_read_only_projection"
-  },
+  source_evidence_id: "supplier-payable-readback",
+  source_evidence_class: "owner_verified_read_only",
   credentials_exposed: false,
   local_fixture_only: false,
   company: "AOXPET Arc Lab",
@@ -347,15 +338,15 @@ export function buildTypedReadbacks(authority) {
   };
   const invoice = readbackMeta("authority_evidence.erp_readback", {
     id: "invoice",
-    doctype: evidence.voucher_type ?? "Invoice",
+    doctype: evidence.voucher_type ?? pe.source_voucher_type ?? "Invoice",
     voucher_id: evidence.voucher_id ?? common.voucher_id,
     company: common.company,
     party_id: common.party_id,
     party_type: common.party_type,
     currency: common.currency,
     source_hash: evidence.source_hash ?? common.source_hash,
-    source_lifecycle: evidence.source_lifecycle ?? null,
-    docstatus: evidence.source_docstatus ?? null,
+    source_lifecycle: evidence.source_lifecycle ?? "submitted_approved",
+    docstatus: evidence.source_docstatus ?? 1,
     direct_submit: false,
     available: true,
     status: "submitted_approved"
@@ -593,7 +584,9 @@ function contractErrors(authority, scenario) {
   if (authority.scenario !== scenario || authority.profile_id !== scenario) errors.push("SCENARIO_IDENTITY_MISMATCH");
   if (authority.primary_action !== contract.primary_action) errors.push("PRIMARY_ACTION_IDENTITY_MISMATCH");
   if (authority.origin !== "erp_initiated" && authority.origin !== "chain_observed") errors.push("ORIGIN_INVALID");
-  const sourceHash = authority.projection_output?.identity_bundle?.case_identity?.fingerprint ?? authority.projection_output?.provenance?.authority_fixture_hash;
+  const sourceHash = authority.projection_output?.consequence_preview?.payment_entry?.source_document_hash
+    ?? authority.projection_output?.consequence_preview?.gl?.readback?.source_document_hash
+    ?? authority.source_hash;
   if (!sourceHash) errors.push("SOURCE_HASH_REQUIRED");
   return errors;
 }
@@ -680,8 +673,18 @@ export function validateCurrentReleaseProjection(projection, { scenario } = {}) 
 export function consumeCurrentReleaseProjection(projection, ledger = new Map()) {
   const p = object(projection);
   if (!p || p.status !== "MATCHED" || p.erp_consequence_allowed !== true) return { state: "OPEN", consequence_count: 0, error: "PROJECTION_NOT_CONSUMABLE" };
-  const key = `${p.scenario}:${p.identity_bundle?.canonical_identity?.canonical_event_key ?? "missing"}`;
-  const fingerprint = JSON.stringify({ key, projection: p.projection_fingerprint ?? p.identity_bundle?.projection_fingerprint ?? null });
+  const canonicalEventKey = p.receipt?.canonical_event_key;
+  if (!canonicalEventKey) return { state: "OPEN", consequence_count: 0, error: "CANONICAL_EVENT_KEY_REQUIRED" };
+  const key = `${p.scenario}:${canonicalEventKey}`;
+  const fingerprint = stable({
+    key,
+    origin: p.origin,
+    receipt: p.receipt,
+    typed_readbacks: p.typed_readbacks,
+    consequence_preview: p.consequence_preview,
+    erp_consequence_counts: p.erp_consequence_counts,
+    business_close_state: p.business_close_state
+  });
   const prior = ledger.get(key);
   if (!prior) {
     ledger.set(key, fingerprint);
@@ -704,7 +707,5 @@ export const C15_WORKBENCH_CONTRACT = Object.freeze({
     Object.values(A12_C15_ACCEPTED_SCENARIO_PROJECTION_MATRIX)
       .filter((value) => value?.dapp_objects)
       .flatMap((value) => Object.keys(value.dapp_objects).concat(SIMULATION_OBJECT_ID))
-  ))),
-  upstream_authority_object_id: C15_UPSTREAM_AUTHORITY_RAW_OBJECT.object_id,
-  upstream_authority_object_sha256: C15_UPSTREAM_AUTHORITY_RAW_OBJECT.object_sha256
+  )))
 });

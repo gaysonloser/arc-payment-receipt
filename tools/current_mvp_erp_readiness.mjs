@@ -22,8 +22,6 @@ const TRUTH_CLASS = Object.freeze({
   posting_readback: "live_erp_posting_readback",
   business_close_readback: "live_erp_business_close_readback"
 });
-const H167_ERP_SOURCE_SHA256 = "f773f8ba6567d4376e539701909506a6690201c0070c013bda7bcf046e1800c9";
-const H176_ENRICHED_PROJECTION_PACKET_SHA256 = "9eb6eb68879c5bf8359b0805fa10caa6540712d12a4b12045cf5bf77982f356b";
 const H167_ERP_EXACT = Object.freeze({
   company: "AOXPET Arc Lab",
   company_abbr: "AAL",
@@ -154,9 +152,7 @@ export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}
   if (source?.external_actions !== 0) sourceErrors.push("ERP_PROJECTION_EXTERNAL_ACTIONS_INVALID");
   if (!source?.company || !source?.company_abbr) sourceErrors.push("ERP_PROJECTION_COMPANY_REQUIRED");
   if (source?.company !== H167_ERP_EXACT.company || source?.company_abbr !== H167_ERP_EXACT.company_abbr || source?.currency !== H167_ERP_EXACT.currency) sourceErrors.push("ERP_PROJECTION_H167_COMPANY_BINDING_INVALID");
-  if (source?.source_batch !== "CURRENT-RELEASE-LIVE-EVIDENCE-CLOSURE-H167" || source?.source_artifact_sha256 !== H167_ERP_SOURCE_SHA256) sourceErrors.push("ERP_PROJECTION_H167_SOURCE_BINDING_INVALID");
-  const enrichedSource = object(source?.enriched_projection_source);
-  if (enrichedSource?.packet_id !== "programme-current-product-quality-ready-freeze-h176-v1" || enrichedSource?.packet_object_sha256 !== H176_ENRICHED_PROJECTION_PACKET_SHA256 || enrichedSource?.selector !== "unique exchange handoffs[176]#/erp_verified_read_only_projection") sourceErrors.push("ERP_PROJECTION_H176_ENRICHED_SOURCE_BINDING_INVALID");
+  if (source?.source_evidence_id !== "supplier-payable-readback" || source?.source_evidence_class !== "owner_verified_read_only") sourceErrors.push("ERP_PROJECTION_SOURCE_EVIDENCE_BINDING_INVALID");
   const invoice = object(source?.purchase_invoice);
   const invoiceGl = object(invoice?.gl);
   if (invoice?.selector !== H167_ERP_EXACT.invoice.selector || invoice?.supplier !== H167_ERP_EXACT.invoice.supplier || invoice?.supplier_invoice !== H167_ERP_EXACT.invoice.supplier_invoice || invoice.status !== "Paid" || invoiceGl?.creditors_account !== "Creditors - AAL" || invoiceGl?.creditors_side !== "credit" || invoiceGl?.creditors_amount !== "1.00" || invoiceGl?.stock_received_not_billed_account !== "Stock Received But Not Billed - AAL" || invoiceGl?.stock_received_not_billed_side !== "debit" || invoiceGl?.stock_received_not_billed_amount !== "1.00" || invoiceGl?.total_debit !== "1.00" || invoiceGl?.total_credit !== "1.00" || invoiceGl?.closing !== "0") sourceErrors.push("ERP_PROJECTION_PAID_INVOICE_OR_GL_INVALID");
@@ -208,9 +204,8 @@ export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}
       release,
       source: source ? {
         evidence_class: source.evidence_class,
-        source_batch: source.source_batch,
-        source_artifact_sha256: source.source_artifact_sha256,
-        enriched_projection_source: source.enriched_projection_source,
+        source_evidence_id: source.source_evidence_id,
+        source_evidence_class: source.source_evidence_class,
         company: source.company,
         company_abbr: source.company_abbr,
         payment_ledger: source.payment_ledger,

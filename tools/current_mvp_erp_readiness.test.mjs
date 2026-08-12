@@ -132,20 +132,15 @@ test("embedded H167 ERP projection requires exact paid invoice, submitted paymen
   unbalanced.purchase_invoice.gl.total_credit = "0.99";
   assert.equal(verifyEmbeddedCurrentMvpErpProjection({ release: embeddedRelease, evidence: unbalanced }).valid, false);
   const wrongSource = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
-  wrongSource.source_artifact_sha256 = "a".repeat(64);
+  wrongSource.source_evidence_id = "historical-readback";
   const wrongSourceResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: wrongSource });
   assert.equal(wrongSourceResult.current_release_bound, false);
   assert.equal(wrongSourceResult.public_current_release_bound, false);
   const wrongBatch = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
-  wrongBatch.source_batch = "HISTORICAL-ERP-EVIDENCE";
+  wrongBatch.source_evidence_class = "unverified_fixture";
   const wrongBatchResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: wrongBatch });
   assert.equal(wrongBatchResult.current_release_bound, false);
   assert.equal(wrongBatchResult.public_current_release_bound, false);
-  const wrongEnrichedSource = structuredClone(CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE);
-  wrongEnrichedSource.enriched_projection_source.packet_object_sha256 = "b".repeat(64);
-  const wrongEnrichedSourceResult = bindVerifiedEmbeddedErpProjectionToPublicRelease({ release: embeddedRelease, evidence: wrongEnrichedSource });
-  assert.equal(wrongEnrichedSourceResult.current_release_bound, false);
-  assert.equal(wrongEnrichedSourceResult.public_current_release_bound, false);
   for (const mutate of [
     (value) => { value.purchase_invoice.selector = "ACC-PINV-FORGED"; },
     (value) => { value.purchase_invoice.supplier = "FORGED-SUPPLIER"; },
