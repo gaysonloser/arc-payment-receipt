@@ -33,7 +33,7 @@ const WORKBENCH_ENTRIES = Object.freeze([
   ["current-release-final-assets-evidence.json", "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json"]
 ]);
 const DOCUMENTATION_ONLY_PATHS = Object.freeze(["docs/ARCHITECTURE.md", "docs/INTERACTION_TRAIL.md"]);
-export const H186_BASELINE_COMMIT = "4f1f4b99cd12084cadb28e851d8a47e2913e9118";
+export const H187_PUBLISHED_BASELINE_COMMIT = "afce1f22c1f6b069d47b25106b71ab13f33d4670";
 const SELF_EXCLUDED_MANIFEST_PATH = "current-mvp/current-release-workbench-manifest.json";
 
 function sha256(bytes) {
@@ -72,10 +72,10 @@ async function git(args) {
 
 async function worktreeTruth() {
   const [numstatOutput, rawOutput, statusOutput, baselineCommit] = await Promise.all([
-    git(["diff", H186_BASELINE_COMMIT, "--numstat", "--"]),
-    git(["diff", H186_BASELINE_COMMIT, "--raw", "--no-renames", "--"]),
+    git(["diff", H187_PUBLISHED_BASELINE_COMMIT, "--numstat", "--"]),
+    git(["diff", H187_PUBLISHED_BASELINE_COMMIT, "--raw", "--no-renames", "--"]),
     git(["status", "--porcelain=v1", "--untracked-files=all", "--"]),
-    Promise.resolve(`${H186_BASELINE_COMMIT}\n`)
+    Promise.resolve(`${H187_PUBLISHED_BASELINE_COMMIT}\n`)
   ]);
   const numstat = new Map();
   for (const line of numstatOutput.trim().split("\n").filter(Boolean)) {
@@ -112,7 +112,14 @@ async function worktreeTruth() {
     snapshots.push(snapshot);
   }
   const untrackedPaths = statusOutput.split("\n").filter((line) => line.startsWith("?? ")).map((line) => line.slice(3)).filter(Boolean).sort();
-  const contentCandidates = snapshots.filter((item) => item.content_delta);
+  const allowedUntracked = new Set(["outputs/Arc_Current_Release_PolicySettlementV1_Readback.json"]);
+  const untrackedCandidates = [];
+  for (const path of untrackedPaths.filter((path) => allowedUntracked.has(path))) {
+    const bytes = await readFile(join(RELEASE_ROOT, path));
+    untrackedCandidates.push({ path, mode_head: null, mode_worktree: "100644", mode_changed: false, content_delta: true, excluded: false, untracked: true, bytes: bytes.length, sha256: sha256(bytes) });
+  }
+  const undeclaredUntrackedPaths = untrackedPaths.filter((path) => !allowedUntracked.has(path));
+  const contentCandidates = [...snapshots.filter((item) => item.content_delta), ...untrackedCandidates].sort((a, b) => a.path.localeCompare(b.path));
   const publicationCandidatePaths = contentCandidates.map((item) => ({
     ...item,
     documentation_only: DOCUMENTATION_ONLY_PATHS.includes(item.path)
@@ -128,14 +135,14 @@ async function worktreeTruth() {
     documentation_only_content_count: contentCandidates.filter((item) => DOCUMENTATION_ONLY_PATHS.includes(item.path)).length,
     documentation_only_paths: contentCandidates.filter((item) => DOCUMENTATION_ONLY_PATHS.includes(item.path)),
     mode_only_non_candidate_paths: snapshots.filter((item) => !item.content_delta),
-    untracked_paths: untrackedPaths,
-    publication_candidate_state: "H187_CONTENT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
+    untracked_paths: undeclaredUntrackedPaths,
+    publication_candidate_state: "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
     publication_candidate_count: publicationCandidatePaths.length,
     publication_candidate_paths: publicationCandidatePaths,
     untracked_policy: "must_be_empty_before_manifest_freeze",
     current_worktree_candidate_bound: false,
     self_excluded_manifest_path: "current-mvp/current-release-workbench-manifest.json",
-    clean_worktree_rule: "The complete H187 release delta is classified from git diff against the immutable 4f1f4b9 comparison baseline: every content-changing path is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
+    clean_worktree_rule: "The H188 Arc receipt release delta is classified against immutable published main@afce1f2: every content-changing path and the single declared Arc readback evidence file is a candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
   };
 }
 
@@ -193,12 +200,12 @@ export async function buildManifest() {
     direct_erp_mutation: false,
     stable_terminal_freeze: true,
     writer_idle: true,
-    acceptance_state: "H187_CONTENT_CANDIDATE_PENDING_GITHUB_OWNER_GATE",
+    acceptance_state: "H188_ARC_CURRENT_RECEIPT_CANDIDATE_PENDING_GITHUB_OWNER_GATE",
     baseline_git_commit: worktree.baseline_commit,
     current_worktree_candidate_bound: false,
     current_release_surface_status: {
-      github: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, baseline_commit: worktree.baseline_commit, current_worktree_candidate_bound: false, current_worktree_dirty: worktree.tracked_modified_count > 0, source_readback: "local_git_head_baseline_only; remote_public_readback_not_claimed", note: "The uncommitted H187 worktree candidate is not bound or published", owner_gate_required: true, historical_lineage_only: false },
-      render: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, baseline_commit: worktree.baseline_commit, current_worktree_candidate_bound: false, source_readback: "local_git_head_baseline_only; live_render_readback_not_claimed", note: "The uncommitted H187 worktree candidate is not deployed", owner_gate_required: true, historical_lineage_only: false },
+      github: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, baseline_commit: worktree.baseline_commit, current_worktree_candidate_bound: false, current_worktree_dirty: worktree.content_candidate_count > 0, source_readback: "remote_main_afce1f2_verified; h188_candidate_not_published", note: "Published H187 baseline is live; the H188 Arc current-receipt delta is not yet published", owner_gate_required: true, historical_lineage_only: false },
+      render: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, baseline_commit: worktree.baseline_commit, current_worktree_candidate_bound: false, source_readback: "render_afce1f2_live; h188_candidate_not_deployed", note: "Published H187 baseline is live; the H188 Arc current-receipt delta is not yet deployed", owner_gate_required: true, historical_lineage_only: false },
       deck: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
       video: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
       circle_console: {
@@ -221,7 +228,7 @@ export async function buildManifest() {
       },
       encode: { status: "UNPROVEN", readiness: surfaceReadiness.encode, historical_lineage_only: true },
       final: { status: "UNPROVEN", readiness: surfaceReadiness.final, historical_lineage_only: true },
-      arc_testnet: { status: "UNPROVEN", readiness: surfaceReadiness.arc_testnet, evidence_binding: "no current-release-bound receipt in public candidate", historical_lineage_only: true },
+      arc_testnet: { status: "VERIFIED_CHAIN_RECEIPT_PENDING_PUBLICATION_BINDING", readiness: surfaceReadiness.arc_testnet, evidence_binding: "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding activates only after GitHub and Render publish this candidate", historical_lineage_only: false },
       erp: {
         status: "VERIFIED_READ_ONLY_CANDIDATE",
         evidence_binding: "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
@@ -259,8 +266,8 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   }
   if (manifest.manifest_sha256_self_excluded !== true) issues.push("manifest_self_exclusion_missing");
   if (manifest.external_actions !== 0 || manifest.live_arc !== false || manifest.live_erp !== false || manifest.html_css_write !== false || manifest.direct_erp_mutation !== false) issues.push("unsafe_boundary");
-  if (manifest.stable_terminal_freeze !== true || manifest.writer_idle !== true || manifest.acceptance_state !== "H187_CONTENT_CANDIDATE_PENDING_GITHUB_OWNER_GATE") issues.push("freeze_state_missing");
-  if (manifest.baseline_git_commit !== H186_BASELINE_COMMIT || manifest.current_worktree_candidate_bound !== false) issues.push("h186_baseline_or_candidate_binding_invalid");
+  if (manifest.stable_terminal_freeze !== true || manifest.writer_idle !== true || manifest.acceptance_state !== "H188_ARC_CURRENT_RECEIPT_CANDIDATE_PENDING_GITHUB_OWNER_GATE") issues.push("freeze_state_missing");
+  if (manifest.baseline_git_commit !== H187_PUBLISHED_BASELINE_COMMIT || manifest.current_worktree_candidate_bound !== false) issues.push("h187_baseline_or_candidate_binding_invalid");
   if (JSON.stringify(manifest).includes("a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7") || JSON.stringify(manifest).includes("9795c442f4c80464c2d54639a638f02060265be1")) issues.push("stale_publication_commit_truth");
   if (manifest.independent_audit?.model !== "gpt-5.6-sol" || manifest.independent_audit?.reasoning_effort !== "medium" || manifest.independent_audit?.read_only !== true || manifest.independent_audit?.independent !== true || manifest.independent_audit?.status !== "PENDING" || manifest.independent_audit?.self_acceptance !== false) issues.push("audit_boundary_missing");
   if (JSON.stringify(manifest.accepted_request ?? null) !== JSON.stringify(ACCEPTED_PACKET)) issues.push("accepted_packet_binding_missing");
@@ -273,7 +280,7 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     circle_console: "BLOCKED",
     encode: "UNPROVEN",
     final: "UNPROVEN",
-    arc_testnet: "UNPROVEN",
+    arc_testnet: "VERIFIED_CHAIN_RECEIPT_PENDING_PUBLICATION_BINDING",
     erp: "VERIFIED_READ_ONLY_CANDIDATE"
   };
   for (const [surface, expectedStatus] of Object.entries(expectedSurfaces)) {
@@ -288,11 +295,11 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   const githubSurface = manifest.current_release_surface_status?.github;
   const renderSurface = manifest.current_release_surface_status?.render;
   const erpSurface = manifest.current_release_surface_status?.erp;
-  if (githubSurface?.current_release_bound !== false || githubSurface?.published_baseline_binding !== true || githubSurface?.published_baseline_current_release_bound !== true || githubSurface?.baseline_commit !== H186_BASELINE_COMMIT || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_candidate_binding_ambiguous");
-  if (renderSurface?.current_release_bound !== false || renderSurface?.published_baseline_binding !== true || renderSurface?.published_baseline_current_release_bound !== true || renderSurface?.baseline_commit !== H186_BASELINE_COMMIT || renderSurface?.current_worktree_candidate_bound !== false) issues.push("render_candidate_binding_ambiguous");
+  if (githubSurface?.current_release_bound !== false || githubSurface?.published_baseline_binding !== true || githubSurface?.published_baseline_current_release_bound !== true || githubSurface?.baseline_commit !== H187_PUBLISHED_BASELINE_COMMIT || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_candidate_binding_ambiguous");
+  if (renderSurface?.current_release_bound !== false || renderSurface?.published_baseline_binding !== true || renderSurface?.published_baseline_current_release_bound !== true || renderSurface?.baseline_commit !== H187_PUBLISHED_BASELINE_COMMIT || renderSurface?.current_worktree_candidate_bound !== false) issues.push("render_candidate_binding_ambiguous");
   if (erpSurface?.current_worktree_candidate_bound !== false || erpSurface?.public_current_release_bound !== false || erpSurface?.owner_live_readback_binding !== true || erpSurface?.live_erp_mutation !== false || erpSurface?.business_close !== "not_proven" || Object.hasOwn(erpSurface, "candidate_binding") || Object.hasOwn(erpSurface, "public_remote_binding")) issues.push("erp_candidate_binding_ambiguous");
   const surfaceReadiness = buildCurrentReleaseSurfaceReadinessView({ now: "2026-08-12T00:00:00.000Z" });
-  for (const surface of ["encode", "final", "arc_testnet"]) {
+  for (const surface of ["encode", "final"]) {
     const actual = manifest.current_release_surface_status?.[surface]?.readiness;
     const expected = surfaceReadiness[surface];
     if (actual?.status !== "UNPROVEN" || actual?.valid !== false || actual?.current_release_bound !== false || JSON.stringify(actual?.errors) !== JSON.stringify(expected.errors) || actual?.external_actions !== 0) issues.push(`surface_readiness_binding_invalid:${surface}`);
@@ -301,7 +308,7 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   const selfExcludedCandidate = publicationCandidate.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
   const actualTruth = await worktreeTruth();
   const actualCandidatePaths = actualTruth.publication_candidate_paths.map((item) => item.path).sort().join(",");
-  if (manifest.worktree_truth?.baseline_commit !== H186_BASELINE_COMMIT || manifest.worktree_truth?.tracked_modified_count !== actualTruth.tracked_modified_count || manifest.worktree_truth?.content_candidate_count !== actualTruth.content_candidate_count || manifest.worktree_truth?.content_candidate_count !== 11 || manifest.worktree_truth?.mode_only_non_candidate_count !== actualTruth.mode_only_non_candidate_count || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== actualTruth.documentation_only_content_count || manifest.worktree_truth?.publication_candidate_state !== "H187_CONTENT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE" || manifest.worktree_truth?.publication_candidate_count !== actualTruth.publication_candidate_count || manifest.worktree_truth?.publication_candidate_count !== 11 || publicationCandidate.map((item) => item.path).sort().join(",") !== actualCandidatePaths || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
+  if (manifest.worktree_truth?.baseline_commit !== H187_PUBLISHED_BASELINE_COMMIT || manifest.worktree_truth?.tracked_modified_count !== actualTruth.tracked_modified_count || manifest.worktree_truth?.content_candidate_count !== actualTruth.content_candidate_count || manifest.worktree_truth?.content_candidate_count !== 7 || manifest.worktree_truth?.mode_only_non_candidate_count !== actualTruth.mode_only_non_candidate_count || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== actualTruth.documentation_only_content_count || manifest.worktree_truth?.publication_candidate_state !== "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE" || manifest.worktree_truth?.publication_candidate_count !== actualTruth.publication_candidate_count || manifest.worktree_truth?.publication_candidate_count !== 7 || publicationCandidate.map((item) => item.path).sort().join(",") !== actualCandidatePaths || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
   for (const item of publicationCandidate) {
     if (item.self_excluded) continue;
     const bytes = await readFile(join(supportRoot, item.path));
@@ -338,7 +345,7 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   const expectedBase = JSON.parse((await readFile(join(root, "mvp-publication-staging-rc1-manifest.json"))).toString("utf8"));
   const expectedBaseBytes = await readFile(join(root, "mvp-publication-staging-rc1-manifest.json"));
   const expectedErpReadiness = verifyEmbeddedCurrentMvpErpProjection({
-    release: { release_id: manifest.release_id, commit_sha: H186_BASELINE_COMMIT, manifest_sha256: sha256(expectedBaseBytes) },
+    release: { release_id: manifest.release_id, commit_sha: H187_PUBLISHED_BASELINE_COMMIT, manifest_sha256: sha256(expectedBaseBytes) },
     evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE
   });
   const actualErpReadiness = manifest.current_release_surface_status?.erp?.erp_readiness;

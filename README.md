@@ -8,7 +8,7 @@
 
 **Published demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) serves the H187 product implementation. Render reported the `c5c6866` deployment live and the public product plus `/api/v1/current-release-surface-readiness` returned HTTP 200. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity.
 
-**Current-release boundary:** GitHub and Render now expose the H187 product implementation. The checked-in manifest remains the pre-publication freeze that defined its exact 11-file candidate; the later GitHub and Render receipts supersede only that publication state, not its evidence boundaries. Arc Testnet immutable facts and owner-live ERP readbacks remain separate evidence classes and do not imply settlement execution, ERP posting or business close. Circle Console remains fail-closed without a current subscription/readback; Encode and Final remain independently owner-gated. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+**Current-release boundary:** GitHub and Render expose the H187 product implementation. The H188 publication candidate adds a current-contract Arc Testnet readback for `PolicySettlementV1`: deployment code, one successful `createPolicy` transaction, its `PolicyCreated` log, and an independently matching `getPolicy` result. The public readiness endpoint binds that immutable evidence to the running Render commit and checked-in manifest; until the H188 candidate is published and deployed it remains pending publication binding. Arc Testnet facts and owner-live ERP readbacks remain separate evidence classes and do not imply settlement execution, ERP posting or business close. Circle Console remains fail-closed without a current subscription/readback; Encode and Final remain independently owner-gated. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
 
 ### Circle Console trusted readback boundary
 
@@ -18,7 +18,7 @@ The trusted loader is injected server-side and never calls Circle APIs or create
 
 ### Current-release readback readiness (local, fail-closed)
 
-`GET /api/v1/current-release-surface-readiness` exposes deterministic validators for a future authenticated Encode current-product readback, a Final late-email send receipt, and an Arc Testnet current-release receipt. Each requires the exact release ID, 40-hex commit and 64-hex manifest SHA plus its own surface fields. The default public view is `UNPROVEN`: it makes no Encode/API/email/Arc call, never contains a recipient identity, and does not turn the H118 programme Arc readback or owner ERP readback into a current public binding. A Final send receipt, when an owner supplies one, records `action_count=1` while the verifier itself remains `verifier_external_actions=0`; this is evidence of an owner action, not an action performed by the service. Arc evidence must bind deployment code/finality and separate `PolicyCreated`/`getPolicy` readbacks; missing, stale, fixture, unauthenticated or mismatched evidence stays `UNPROVEN`.
+`GET /api/v1/current-release-surface-readiness` exposes deterministic validators for an authenticated Encode current-product readback, a Final late-email send receipt, and the Arc Testnet current-release receipt. Each requires the exact release ID, 40-hex commit and 64-hex manifest SHA plus its own surface fields. The service makes no Encode/API/email/Arc write, never contains a recipient identity, and does not turn an Arc receipt or owner ERP readback into another surface's proof. A Final send receipt, when an owner supplies one, records `action_count=1` while the verifier itself remains `verifier_external_actions=0`; this is evidence of an owner action, not an action performed by the service. Arc evidence must bind deployment code/finality and separate `PolicyCreated`/`getPolicy` readbacks; missing, stale, fixture, unauthenticated or mismatched evidence stays `UNPROVEN`.
 
 ## Historical/support component: Arc Lab Enterprise OS E1
 
@@ -127,7 +127,7 @@ The separate Arc Lab Review Deck page retained below is a historical/support rev
 
 ## Historical/support implementation inventory
 
-The following inventory describes the retained `ArcPaymentReceipt` and Arc Lab support lineage. It is not evidence that the current `PolicySettlementV1` release has a verified Arc Testnet settlement receipt, ERP business close, Circle Console subscription, Encode receipt or Final submission receipt.
+The following inventory describes the retained `ArcPaymentReceipt` and Arc Lab support lineage. It is not evidence of ERP business close, a Circle Console subscription, an Encode receipt or a Final submission receipt. Current `PolicySettlementV1` Arc evidence is stated separately below and does not inherit any historical claim.
 
 - Native Arc Testnet USDC payment with no ERC-20 approval.
 - Immediate settlement to an immutable merchant; contract balance returns to zero.
@@ -170,7 +170,7 @@ The following inventory describes the retained `ArcPaymentReceipt` and Arc Lab s
 
 ## Historical/support verified evidence
 
-These receipts belong to the retained `ArcPaymentReceipt` and Arc Lab lineage. The current `PolicySettlementV1` release still has no current-release-bound Arc Testnet settlement receipt in the public candidate.
+These receipts belong to the retained `ArcPaymentReceipt` and Arc Lab lineage. They do not supply the current `PolicySettlementV1` proof. The H188 candidate instead carries a source-separated current-contract receipt: [`createPolicy` transaction `0x2f40…a9c`](https://testnet.arcscan.app/tx/0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c), its `PolicyCreated` log, and an independently matching `getPolicy` readback; public release binding remains pending until that candidate is committed and deployed.
 
 - Contract: [`0x05fd...E1Df`](https://testnet.arcscan.app/address/0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df)
 - Deployment: [`0xa880...fab1`](https://testnet.arcscan.app/tx/0xa8800b86a2d476aabc23d79cd2e7fa6b4a89ef425a594d072341304fa8c5fab1)

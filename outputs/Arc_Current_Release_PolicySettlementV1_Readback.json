@@ -1,0 +1,84 @@
+{
+  "schema": "arc.current-release-policysettlementv1-readback.v1",
+  "source": "official_arc_testnet_rpc_read_only",
+  "kind": "arc_testnet_current_release_receipt",
+  "authenticated": true,
+  "historical": false,
+  "local_fixture_only": false,
+  "external_actions": 0,
+  "verifier_external_actions": 0,
+  "observed_at": "2026-08-12T06:46:40.000Z",
+  "expires_at": "2026-08-13T06:46:40.000Z",
+  "network": "ARC-TESTNET",
+  "blockchain": "ARC-TESTNET",
+  "chain_id": 5042002,
+  "contract_address": "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+  "deployed_code_sha256": "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675",
+  "deployed_code_bytes": 6877,
+  "deployment_receipt": {
+    "tx_hash": "0xbf3e6c73e9d481c375e66c6b280da271c6831e8143a1f1b241ecac62b343a27b",
+    "status": 1,
+    "block_number": 56126973,
+    "block_hash": "0x212dbfa6b4d9359e61ce0525a7a778f8cc338f3e676ca816446b73e1bbf67633",
+    "contract_address": "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+    "finality_state": "finalized",
+    "deployed_code_sha256": "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675",
+    "deployed_code_bytes": 6877
+  },
+  "create_policy_receipt": {
+    "tx_hash": "0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c",
+    "status": 1,
+    "block_number": 56295297,
+    "block_hash": "0x52df6ea5554d4ee8015d9917f4c26ada04eed38e58d0a841af632dc889fa160d",
+    "contract_address": "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+    "finality_state": "finalized"
+  },
+  "policy_created": {
+    "status": "verified",
+    "event_signature": "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)",
+    "contract_address": "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+    "tx_hash": "0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c",
+    "block_number": 56295297,
+    "block_hash": "0x52df6ea5554d4ee8015d9917f4c26ada04eed38e58d0a841af632dc889fa160d",
+    "log_index": 12,
+    "policy_id": "0xa26b34101328a56ccea77a76075bba929a06cb0eecc0fb6ce9301a7859eba4da",
+    "args": {
+      "policy_id": "0xa26b34101328a56ccea77a76075bba929a06cb0eecc0fb6ce9301a7859eba4da",
+      "payer": "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6",
+      "recipient": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "reviewer": "0x9903e1e8c871321ee2ed80cea8a5899f0992ba9e",
+      "cap6": "10000",
+      "milestone_id": "0x950491d2921a8d4d6d61aa9b60ff89474a86ab3c1834790e4b525b1864f82164",
+      "policy_version": "0x6ad0f11ccccda0802d85e8f75de9bf9b16ab294e57793e1fbea15d2fd6f81f70",
+      "policy_expiry": "1786977458",
+      "max_attestation_ttl": "86400"
+    }
+  },
+  "get_policy_readback": {
+    "status": "verified",
+    "selector": "getPolicy(bytes32)",
+    "contract_address": "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+    "policy_id": "0xa26b34101328a56ccea77a76075bba929a06cb0eecc0fb6ce9301a7859eba4da",
+    "block_number": 56572594,
+    "block_hash": "0x40d5cd83a9b35af27021436b7ea91f7580fa14a1467c8625394f406be8978494",
+    "current_block_number": 56572594,
+    "readback_status": "current",
+    "readback_sha256": "f9f5bcf825375adea39b89581f2c16b431fc35319311ce82b384961e23ca8ebb",
+    "args": {
+      "policy_id": "0xa26b34101328a56ccea77a76075bba929a06cb0eecc0fb6ce9301a7859eba4da"
+    },
+    "result": {
+      "policy_id": "0xa26b34101328a56ccea77a76075bba929a06cb0eecc0fb6ce9301a7859eba4da",
+      "payer": "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6",
+      "recipient": "0x8aaa1fc761a8d7eb03323614f9ff7fb3218b8889",
+      "reviewer": "0x9903e1e8c871321ee2ed80cea8a5899f0992ba9e",
+      "cap6": "10000",
+      "milestone_id": "0x950491d2921a8d4d6d61aa9b60ff89474a86ab3c1834790e4b525b1864f82164",
+      "policy_version": "0x6ad0f11ccccda0802d85e8f75de9bf9b16ab294e57793e1fbea15d2fd6f81f70",
+      "policy_expiry": "1786977458",
+      "max_attestation_ttl": "86400"
+    }
+  },
+  "readback_url": "https://testnet.arcscan.app/tx/0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c",
+  "http_status": 200
+}

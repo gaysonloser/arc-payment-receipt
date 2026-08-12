@@ -56,6 +56,7 @@ export const DEFAULT_ARC_LAB_AGENT_REGISTRATION_RECEIPT_PATH = resolve(HERE, "ar
 export const DEFAULT_LOGO_PATH = resolve(HERE, "../assets/payment-receipt-logo.png");
 export const DEFAULT_FAVICON_PATH = resolve(HERE, "../assets/favicon.png");
 export const DEFAULT_FINAL_ASSETS_EVIDENCE_PATH = resolve(HERE, "../current-mvp/current-release-final-assets-evidence.json");
+export const DEFAULT_CURRENT_ARC_TESTNET_READBACK_PATH = resolve(HERE, "../outputs/Arc_Current_Release_PolicySettlementV1_Readback.json");
 export const PUBLIC_POST_ROUTES = Object.freeze([
   "/api/v1/circle-webhook",
   "/api/v1/opening-balance-fixture-validate"
@@ -1036,6 +1037,12 @@ export function buildCurrentReleaseSurfaceReadinessView({ encode = null, final =
     arc_testnet: validateArcTestnetCurrentReleaseReceipt(arc_testnet, { now, expectedRelease }),
     boundaries: { no_api_calls: true, no_credentials: true, absent_or_historical_unproven: true, final_submission_receipt_proven: false }
   };
+}
+
+export function bindArcTestnetReadbackToRelease(readback, release) {
+  return surfaceObject(readback) && surfaceObject(release)
+    ? { ...readback, release_id: release.release_id, commit_sha: release.commit_sha, manifest_sha256: release.manifest_sha256 }
+    : readback;
 }
 
 export function buildFinalDemoPlanView(readiness) {
@@ -2058,6 +2065,7 @@ export function createReceiptServer(options = {}) {
   const loadReleaseEvidenceAnchorPacket = options.loadReleaseEvidenceAnchorPacket ?? (() => loadJson(options.releaseEvidenceAnchorPacketPath ?? DEFAULT_RELEASE_EVIDENCE_ANCHOR_PACKET_PATH));
   const loadReleaseDeliveryAttestation = options.loadReleaseDeliveryAttestation ?? (() => loadJson(options.releaseDeliveryAttestationPath ?? DEFAULT_RELEASE_DELIVERY_ATTESTATION_PATH));
   const loadFinalAssetsEvidence = options.loadFinalAssetsEvidence ?? (() => loadJson(options.finalAssetsEvidencePath ?? DEFAULT_FINAL_ASSETS_EVIDENCE_PATH));
+  const loadCurrentArcTestnetReadback = options.loadCurrentArcTestnetReadback ?? (() => loadJson(options.currentArcTestnetReadbackPath ?? DEFAULT_CURRENT_ARC_TESTNET_READBACK_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
   const configuredCircleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy({
@@ -2524,7 +2532,16 @@ export function createReceiptServer(options = {}) {
       }
 
       if (url.pathname === "/api/v1/current-release-surface-readiness") {
-        json(response, 200, buildCurrentReleaseSurfaceReadinessView(), request.method);
+        const [arcTestnetReadback, manifestBytes] = await Promise.all([
+          loadCurrentArcTestnetReadback(),
+          readFile(resolve(HERE, "../current-mvp/current-release-workbench-manifest.json"))
+        ]);
+        const expectedRelease = {
+          release_id: CURRENT_SURFACE_RELEASE_ID,
+          commit_sha: options.currentReleaseCommit ?? runtimeEnvironment.RENDER_GIT_COMMIT ?? runtimeEnvironment.CURRENT_RELEASE_COMMIT ?? "",
+          manifest_sha256: createHash("sha256").update(manifestBytes).digest("hex")
+        };
+        json(response, 200, buildCurrentReleaseSurfaceReadinessView({ arc_testnet: bindArcTestnetReadbackToRelease(arcTestnetReadback, expectedRelease), expectedRelease }), request.method);
         return;
       }
 

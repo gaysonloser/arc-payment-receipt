@@ -20,8 +20,8 @@
   "direct_erp_mutation": false,
   "stable_terminal_freeze": true,
   "writer_idle": true,
-  "acceptance_state": "H187_CONTENT_CANDIDATE_PENDING_GITHUB_OWNER_GATE",
-  "baseline_git_commit": "4f1f4b99cd12084cadb28e851d8a47e2913e9118",
+  "acceptance_state": "H188_ARC_CURRENT_RECEIPT_CANDIDATE_PENDING_GITHUB_OWNER_GATE",
+  "baseline_git_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
   "current_worktree_candidate_bound": false,
   "current_release_surface_status": {
     "github": {
@@ -29,11 +29,11 @@
       "current_release_bound": false,
       "published_baseline_binding": true,
       "published_baseline_current_release_bound": true,
-      "baseline_commit": "4f1f4b99cd12084cadb28e851d8a47e2913e9118",
+      "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
       "current_worktree_candidate_bound": false,
       "current_worktree_dirty": true,
-      "source_readback": "local_git_head_baseline_only; remote_public_readback_not_claimed",
-      "note": "The uncommitted H187 worktree candidate is not bound or published",
+      "source_readback": "remote_main_afce1f2_verified; h188_candidate_not_published",
+      "note": "Published H187 baseline is live; the H188 Arc current-receipt delta is not yet published",
       "owner_gate_required": true,
       "historical_lineage_only": false
     },
@@ -42,10 +42,10 @@
       "current_release_bound": false,
       "published_baseline_binding": true,
       "published_baseline_current_release_bound": true,
-      "baseline_commit": "4f1f4b99cd12084cadb28e851d8a47e2913e9118",
+      "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
       "current_worktree_candidate_bound": false,
-      "source_readback": "local_git_head_baseline_only; live_render_readback_not_claimed",
-      "note": "The uncommitted H187 worktree candidate is not deployed",
+      "source_readback": "render_afce1f2_live; h188_candidate_not_deployed",
+      "note": "Published H187 baseline is live; the H188 Arc current-receipt delta is not yet deployed",
       "owner_gate_required": true,
       "historical_lineage_only": false
     },
@@ -133,7 +133,7 @@
       "historical_lineage_only": true
     },
     "arc_testnet": {
-      "status": "UNPROVEN",
+      "status": "VERIFIED_CHAIN_RECEIPT_PENDING_PUBLICATION_BINDING",
       "readiness": {
         "kind": "arc_testnet_current_release_receipt",
         "valid": false,
@@ -146,8 +146,8 @@
         ],
         "readback_url": null
       },
-      "evidence_binding": "no current-release-bound receipt in public candidate",
-      "historical_lineage_only": true
+      "evidence_binding": "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding activates only after GitHub and Render publish this candidate",
+      "historical_lineage_only": false
     },
     "erp": {
       "status": "VERIFIED_READ_ONLY_CANDIDATE",
@@ -175,39 +175,19 @@
           "business_close_readback"
         ],
         "errors": [],
-        "verification_fingerprint": "dda53745faab4a04727f2fc7c88f4944daa694aa874027b771dfbfd63d791ebf"
+        "verification_fingerprint": "344c4718256e113eb6fa012bfd92665556382092efc6cf9966c43915f4d8e926"
       },
       "business_close": "not_proven",
       "historical_lineage_only": false
     }
   },
   "worktree_truth": {
-    "baseline_commit": "4f1f4b99cd12084cadb28e851d8a47e2913e9118",
-    "current_head": "4f1f4b99cd12084cadb28e851d8a47e2913e9118",
-    "tracked_modified_count": 18,
-    "content_candidate_count": 11,
+    "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
+    "current_head": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
+    "tracked_modified_count": 13,
+    "content_candidate_count": 7,
     "mode_only_non_candidate_count": 7,
     "content_candidate_paths": [
-      {
-        "path": "README.md",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 30142,
-        "sha256": "f2deb922069422d1c3491ea422bc6a6e3d2db95d4a83bc7237dd39f790994a0a"
-      },
-      {
-        "path": "SECURITY.md",
-        "mode_head": "100755",
-        "mode_worktree": "100755",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 4511,
-        "sha256": "53f7fce6646c1689425e8ec8474238a8d705276dfcb98b0d6773fa49906f71ae"
-      },
       {
         "path": "current-mvp/current-release-workbench-manifest.json",
         "mode_head": "100755",
@@ -219,24 +199,45 @@
         "hash_excluded": true
       },
       {
+        "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
+        "mode_head": null,
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "untracked": true,
+        "bytes": 4007,
+        "sha256": "43f5367c3abf32698c8fc5c5a7f8e72ceec3be2304dd8e56544878d741f90c37"
+      },
+      {
+        "path": "README.md",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 30656,
+        "sha256": "a5261311a05fadd0e8c942ac1fb8495e6a86306c79a9b9bc1fbeedb386e205e5"
+      },
+      {
         "path": "tools/arc_payment_receipt_server.mjs",
         "mode_head": "100644",
         "mode_worktree": "100644",
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 141605,
-        "sha256": "de717cdefabec55757e9119e5babd4ec2bb34951f163a633c5e688eab1e84491"
+        "bytes": 142845,
+        "sha256": "836a77c41f25b53e65f36bc162629d1975ed8385a58f511c9b16b2a770f23a9d"
       },
       {
         "path": "tools/arc_payment_receipt_server.test.mjs",
         "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
+        "mode_worktree": "100755",
+        "mode_changed": true,
         "content_delta": true,
         "excluded": false,
-        "bytes": 88935,
-        "sha256": "006927b1aef0f9304dc53005e237c6c8bf7f26e9da1ee1d4eef029d0e16ea2e5"
+        "bytes": 90525,
+        "sha256": "a1b45222b0d3c285dbedf54ef76aee9165d7f31e920f0040f3f9defd3e5eb56e"
       },
       {
         "path": "tools/build_current_release_workbench_manifest.mjs",
@@ -245,48 +246,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 27263,
-        "sha256": "14d22a6ef81b85ea9664113b6b5fcd7e33978ebfa4adad230f3637a6b7740f8a"
-      },
-      {
-        "path": "tools/circle_console_receipt.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 20044,
-        "sha256": "cc8149d70a7d60d137ba123ea7f7b4c2067205563301277c73bf81a83962a18b"
-      },
-      {
-        "path": "tools/circle_console_server.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 8059,
-        "sha256": "a649a0f95e7a4b519e4a55ccb89e537cbb9c90a8047e11e201f8fe0abb663837"
-      },
-      {
-        "path": "tools/circle_contract_webhook_gate.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 24924,
-        "sha256": "7b2c5ab64c363dfbaadcd89ea27e57b131ed88fdff0de1e867396a1aa860e054"
-      },
-      {
-        "path": "tools/current_mvp_erp_readiness.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 13391,
-        "sha256": "b65e47fa4e6176c69d4fa785403978c3ac94a0c52fad6cad9b04e03991838a62"
+        "bytes": 28355,
+        "sha256": "d75b54508554edc171c0ce5c6d8992155125d78f2cdbb501b71aa9213361bd79"
       },
       {
         "path": "tools/current_release_workbench.test.mjs",
@@ -295,8 +256,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 39892,
-        "sha256": "cf9a88471e0ce072a74fe93051d6b1eeb69db53780b725202bd0ec3d5af3ea83"
+        "bytes": 40255,
+        "sha256": "633bb95236b7e088f6caaa0cc8de7c80b45b6e1e115a990f1bd53c48dc788d1d"
       }
     ],
     "documentation_only_content_count": 0,
@@ -374,31 +335,9 @@
       }
     ],
     "untracked_paths": [],
-    "publication_candidate_state": "H187_CONTENT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
-    "publication_candidate_count": 11,
+    "publication_candidate_state": "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
+    "publication_candidate_count": 7,
     "publication_candidate_paths": [
-      {
-        "path": "README.md",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 30142,
-        "sha256": "f2deb922069422d1c3491ea422bc6a6e3d2db95d4a83bc7237dd39f790994a0a",
-        "documentation_only": false
-      },
-      {
-        "path": "SECURITY.md",
-        "mode_head": "100755",
-        "mode_worktree": "100755",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 4511,
-        "sha256": "53f7fce6646c1689425e8ec8474238a8d705276dfcb98b0d6773fa49906f71ae",
-        "documentation_only": false
-      },
       {
         "path": "current-mvp/current-release-workbench-manifest.json",
         "mode_head": "100755",
@@ -411,25 +350,48 @@
         "documentation_only": false
       },
       {
+        "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
+        "mode_head": null,
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "untracked": true,
+        "bytes": 4007,
+        "sha256": "43f5367c3abf32698c8fc5c5a7f8e72ceec3be2304dd8e56544878d741f90c37",
+        "documentation_only": false
+      },
+      {
+        "path": "README.md",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 30656,
+        "sha256": "a5261311a05fadd0e8c942ac1fb8495e6a86306c79a9b9bc1fbeedb386e205e5",
+        "documentation_only": false
+      },
+      {
         "path": "tools/arc_payment_receipt_server.mjs",
         "mode_head": "100644",
         "mode_worktree": "100644",
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 141605,
-        "sha256": "de717cdefabec55757e9119e5babd4ec2bb34951f163a633c5e688eab1e84491",
+        "bytes": 142845,
+        "sha256": "836a77c41f25b53e65f36bc162629d1975ed8385a58f511c9b16b2a770f23a9d",
         "documentation_only": false
       },
       {
         "path": "tools/arc_payment_receipt_server.test.mjs",
         "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
+        "mode_worktree": "100755",
+        "mode_changed": true,
         "content_delta": true,
         "excluded": false,
-        "bytes": 88935,
-        "sha256": "006927b1aef0f9304dc53005e237c6c8bf7f26e9da1ee1d4eef029d0e16ea2e5",
+        "bytes": 90525,
+        "sha256": "a1b45222b0d3c285dbedf54ef76aee9165d7f31e920f0040f3f9defd3e5eb56e",
         "documentation_only": false
       },
       {
@@ -439,52 +401,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 27263,
-        "sha256": "14d22a6ef81b85ea9664113b6b5fcd7e33978ebfa4adad230f3637a6b7740f8a",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/circle_console_receipt.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 20044,
-        "sha256": "cc8149d70a7d60d137ba123ea7f7b4c2067205563301277c73bf81a83962a18b",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/circle_console_server.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 8059,
-        "sha256": "a649a0f95e7a4b519e4a55ccb89e537cbb9c90a8047e11e201f8fe0abb663837",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/circle_contract_webhook_gate.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 24924,
-        "sha256": "7b2c5ab64c363dfbaadcd89ea27e57b131ed88fdff0de1e867396a1aa860e054",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/current_mvp_erp_readiness.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 13391,
-        "sha256": "b65e47fa4e6176c69d4fa785403978c3ac94a0c52fad6cad9b04e03991838a62",
+        "bytes": 28355,
+        "sha256": "d75b54508554edc171c0ce5c6d8992155125d78f2cdbb501b71aa9213361bd79",
         "documentation_only": false
       },
       {
@@ -494,28 +412,28 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 39892,
-        "sha256": "cf9a88471e0ce072a74fe93051d6b1eeb69db53780b725202bd0ec3d5af3ea83",
+        "bytes": 40255,
+        "sha256": "633bb95236b7e088f6caaa0cc8de7c80b45b6e1e115a990f1bd53c48dc788d1d",
         "documentation_only": false
       }
     ],
     "untracked_policy": "must_be_empty_before_manifest_freeze",
     "current_worktree_candidate_bound": false,
     "self_excluded_manifest_path": "current-mvp/current-release-workbench-manifest.json",
-    "clean_worktree_rule": "The complete H187 release delta is classified from git diff against the immutable 4f1f4b9 comparison baseline: every content-changing path is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
+    "clean_worktree_rule": "The H188 Arc receipt release delta is classified against immutable published main@afce1f2: every content-changing path and the single declared Arc readback evidence file is a candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
   },
   "verification_inputs": [
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 39892,
-      "sha256": "cf9a88471e0ce072a74fe93051d6b1eeb69db53780b725202bd0ec3d5af3ea83"
+      "bytes": 40255,
+      "sha256": "633bb95236b7e088f6caaa0cc8de7c80b45b6e1e115a990f1bd53c48dc788d1d"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 27263,
-      "sha256": "14d22a6ef81b85ea9664113b6b5fcd7e33978ebfa4adad230f3637a6b7740f8a"
+      "bytes": 28355,
+      "sha256": "d75b54508554edc171c0ce5c6d8992155125d78f2cdbb501b71aa9213361bd79"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -544,14 +462,14 @@
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 141605,
-      "sha256": "de717cdefabec55757e9119e5babd4ec2bb34951f163a633c5e688eab1e84491"
+      "bytes": 142845,
+      "sha256": "836a77c41f25b53e65f36bc162629d1975ed8385a58f511c9b16b2a770f23a9d"
     },
     {
       "path": "tools/arc_payment_receipt_server.test.mjs",
       "role": "test",
-      "bytes": 88935,
-      "sha256": "006927b1aef0f9304dc53005e237c6c8bf7f26e9da1ee1d4eef029d0e16ea2e5"
+      "bytes": 90525,
+      "sha256": "a1b45222b0d3c285dbedf54ef76aee9165d7f31e920f0040f3f9defd3e5eb56e"
     },
     {
       "path": "tools/circle_console_server.test.mjs",

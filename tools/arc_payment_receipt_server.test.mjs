@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { after, before, test as nodeTest } from "node:test";
 
 import {
@@ -15,6 +16,7 @@ import {
   buildFinalDemoPlanView,
   buildFinalSubmissionReadinessView,
   buildCurrentReleaseSurfaceReadinessView,
+  bindArcTestnetReadbackToRelease,
   validateEncodeAuthenticatedReadback,
   validateFinalLateEmailSendReceipt,
   validateArcTestnetCurrentReleaseReceipt,
@@ -122,6 +124,29 @@ test("current-release surface validators remain unproven by default and bind exa
     platform_observed_at: surfaceBase.observed_at
   };
   assert.equal(validateEncodeAuthenticatedReadback(missingEncodeReceiptFields, surfaceTime).status, "UNPROVEN");
+});
+
+test("current PolicySettlementV1 deployment, PolicyCreated and getPolicy readback bind one release without a new chain write", async () => {
+  const evidence = JSON.parse(await readFile(new URL("../outputs/Arc_Current_Release_PolicySettlementV1_Readback.json", import.meta.url), "utf8"));
+  const release = {
+    release_id: "verified-milestone-close-current-mvp-workbench-rc1",
+    commit_sha: "afce1f22c1f6b069d47b25106b71ab13f33d4670",
+    manifest_sha256: "84134fa68833b409fb85ff1c77f5cc804d889ae634e23c04b1c20a030486ed6a"
+  };
+  const result = validateArcTestnetCurrentReleaseReceipt(bindArcTestnetReadbackToRelease(evidence, release), {
+    now: "2026-08-12T06:46:40.000Z",
+    expectedRelease: release
+  });
+  assert.equal(result.status, "VERIFIED_READ_ONLY", JSON.stringify(result.errors));
+  assert.equal(result.current_release_bound, true);
+  assert.equal(result.external_actions, 0);
+  assert.equal(result.deployment_tx_hash, "0xbf3e6c73e9d481c375e66c6b280da271c6831e8143a1f1b241ecac62b343a27b");
+  assert.equal(result.create_policy_tx_hash, "0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c");
+  const wrongContractReceipt = {
+    ...evidence,
+    create_policy_receipt: { ...evidence.create_policy_receipt, contract_address: "0x112a2b37c8ab5ee82512acfb523a97ad3acd21a2" }
+  };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(bindArcTestnetReadbackToRelease(wrongContractReceipt, release), { now: evidence.observed_at, expectedRelease: release }).status, "UNPROVEN");
 });
 
 test("final late-email and Arc readbacks require privacy-safe typed fields and exact release", () => {
