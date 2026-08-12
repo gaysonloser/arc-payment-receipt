@@ -15,7 +15,7 @@ Arc House membership, points, event registrations, and contribution history are 
 ## Lane 2: Arc Testnet and receipt-first settlement
 
 Arc Testnet is the settlement fact layer. The current product binds
-PolicySettlementV1 policy/attestation data to three independent receipt records
+PolicySettlementV1 policy/attestation data to three correlated, independently decoded log records from one canonical receipt
 and finality/replay/reorg controls. The older `ArcPaymentReceipt` contract and
 `PaymentReceived` monitor remain historical lineage, not current-release proof.
 

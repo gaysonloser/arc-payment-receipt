@@ -897,8 +897,8 @@ function a12ReplayActionLog() {
   ];
   let state = initial;
   for (const action of actions) state = settlementCaseReducer(state, action);
-  const receipt = buildCanonicalArcReceipt({ policyContract: "0x1000000000000000000000000000000000000001", payer: "0x2000000000000000000000000000000000000002", recipient: "0x3000000000000000000000000000000000000003", policyId: state.policy.policyId, transferId: state.policy.transferId, attestationDigest: state.policy.attestationDigest, attestationNonce: state.policy.attestationNonce, amount6: A12_REPLAY_CASE.amount6, transactionHash: A12_LEGACY_REPLAY_VALUE.txHash, caseBinding: { caseId: state.caseId, companyId: state.companyId, profileId: state.profileId, origin: state.origin, sourceDocument: A12_REPLAY_CASE.sourceDocument, treasuryId: state.treasuryId, policyId: state.policy.policyId, transferId: state.policy.transferId } });
-  actions.push({ type: "READ_ARC_RECEIPT", receipt, evidence: a12ReplayEvidence(state, "A") });
+  const receipt = buildCanonicalArcReceipt({ policyContract: "0x1000000000000000000000000000000000000001", payer: "0x2000000000000000000000000000000000000002", recipient: "0x3000000000000000000000000000000000000003", policyId: state.policy.policyId, transferId: state.policy.transferId, attestationDigest: state.policy.attestationDigest, attestationNonce: state.policy.attestationNonce, amount6: A12_REPLAY_CASE.amount6, transactionHash: A12_LEGACY_REPLAY_VALUE.txHash, observedAt: "2026-08-10T12:00:00.000Z", validUntil: "2026-08-10T13:00:00.000Z", caseBinding: { caseId: state.caseId, companyId: state.companyId, profileId: state.profileId, origin: state.origin, sourceDocument: A12_REPLAY_CASE.sourceDocument, treasuryId: state.treasuryId, policyId: state.policy.policyId, transferId: state.policy.transferId } });
+  actions.push({ type: "READ_ARC_RECEIPT", now: "2026-08-10T12:30:00.000Z", receipt, evidence: a12ReplayEvidence(state, "A") });
   return actions;
 }
 function a12ReplayApply(actions) {

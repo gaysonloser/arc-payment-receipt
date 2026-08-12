@@ -1834,7 +1834,7 @@ export function createReceiptServer(options = {}) {
           response.writeHead(200, {
             "content-type": currentMvpContentType(currentMvpRequest.file_path),
             "cache-control": isHtml ? "no-store" : isModule ? "no-cache" : "public, max-age=3600",
-            "content-security-policy": "default-src 'self'; connect-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+            "content-security-policy": "default-src 'self'; connect-src 'none'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
             ...SECURITY_HEADERS
           });
           response.end(request.method === "HEAD" ? "" : body);

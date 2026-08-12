@@ -96,11 +96,24 @@ test("refund allocation requires explicit exchange rate and resolved difference"
   }
   const state = createSettlementCase({ profileId: "receipt_refund" });
   const authority = { role: "operator", operatorId: "local-operator" };
-  const missingRate = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, differenceAmount6: "0" } });
+  const missingRate = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, originalPrincipalAmount6: "250000000", priorRefundedAmount6: "0", differenceAmount6: "0" } });
   assert.equal(missingRate.unresolvedReason, "REFUND_EXCHANGE_RATE_REQUIRED");
-  const unresolvedDifference = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, exchangeRate: "1", differenceAmount6: "50" } });
+  const unresolvedDifference = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, originalPrincipalAmount6: "250000000", priorRefundedAmount6: "0", exchangeRate: "1", differenceAmount6: "50" } });
   assert.equal(unresolvedDifference.unresolvedReason, "REFUND_DIFFERENCE_UNRESOLVED");
-  const accepted = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, exchangeRate: "1", differenceAmount6: "0" } });
+  const accepted = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, originalPrincipalAmount6: "250000000", priorRefundedAmount6: "0", exchangeRate: "1", differenceAmount6: "0" } });
   assert.equal(accepted.allocation.exchangeRate, "1");
   assert.equal(accepted.allocation.differenceAmount6, "0");
+  const arithmeticMismatch = settlementCaseReducer(state, { type: "SET_ALLOCATION", allocation: { amount6: "250000000", authority, originalPrincipalAmount6: "250000000", priorRefundedAmount6: "0", exchangeRate: "1.1", differenceAmount6: "0" } });
+  assert.equal(arithmeticMismatch.unresolvedReason, "REFUND_ARITHMETIC_MISMATCH");
+});
+
+test("ledger generation requires a separate typed GL/PLED readback", () => {
+  const state = createSettlementCase();
+  state.erp.submitGate = "OWNER_REVIEW_REQUIRED";
+  state.erp.reconciliation = { status: "Reconciled" };
+  state.erp.gl = { rows: [], totals: { balanced: true } };
+  const missing = settlementCaseReducer(state, { type: "GENERATE_LEDGER" });
+  assert.equal(missing.unresolvedReason, "LEDGER_INDEPENDENT_READBACK_REQUIRED");
+  const accepted = settlementCaseReducer(state, { type: "GENERATE_LEDGER", readback: { source: "typed_local_erp_readback", local_fixture_only: true, live_erp: false, external_actions: 0, company: state.companyId, gl_balanced: true, payment_ledger_status: "OPEN" } });
+  assert.equal(accepted.erp.gl.status, "Readback verified");
 });

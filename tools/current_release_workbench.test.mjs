@@ -66,6 +66,8 @@ test("canonical Arc receipt decoder round-trips and fails closed on every raw/ty
     attestationDigest: `0x${"33".repeat(32)}`,
     attestationNonce: 7,
     amount6: 100,
+    observedAt: "2026-08-10T12:00:00.000Z",
+    validUntil: "2026-08-10T13:00:00.000Z",
     caseBinding
   });
   const decoded = decodeRawArcReceipt(valid);
@@ -74,7 +76,7 @@ test("canonical Arc receipt decoder round-trips and fails closed on every raw/ty
     { variant: "ARC_SYSTEM", logIndex: 5 },
     { variant: "SettlementExecuted", logIndex: 9 }
   ]);
-  assert.equal(validateCanonicalArcReceipt(valid, { amount6: 100, caseBinding }).valid, true);
+  assert.equal(validateCanonicalArcReceipt(valid, { amount6: 100, caseBinding, now: "2026-08-10T12:30:00.000Z" }).valid, true);
 
   const rawMutations = [
     ["RAW_RECEIPT_NOT_SUCCESS", (receipt) => { receipt.status = 0; }],
@@ -87,7 +89,7 @@ test("canonical Arc receipt decoder round-trips and fails closed on every raw/ty
     const candidate = structuredClone(valid);
     mutate(candidate);
     assert.throws(() => decodeRawArcReceipt(candidate), new RegExp(expected), expected);
-    const checked = validateCanonicalArcReceipt(candidate, { amount6: 100, caseBinding });
+    const checked = validateCanonicalArcReceipt(candidate, { amount6: 100, caseBinding, now: "2026-08-10T12:30:00.000Z" });
     assert.equal(checked.valid, false, expected);
     const expectedCode = expected === "RAW_TRANSFER_EMITTER"
       ? "ARC_IDENTITY_PROVENANCE"
@@ -115,7 +117,7 @@ test("canonical Arc receipt decoder round-trips and fails closed on every raw/ty
   for (const [expected, mutate] of typedMutations) {
     const candidate = structuredClone(typed);
     mutate(candidate);
-    const checked = validateCanonicalArcReceipt(candidate, { amount6: 100, caseBinding });
+    const checked = validateCanonicalArcReceipt(candidate, { amount6: 100, caseBinding, now: "2026-08-10T12:30:00.000Z" });
     assert.equal(checked.valid, false, expected);
     assert.equal(checked.code, expected, expected);
   }
@@ -202,6 +204,9 @@ test("deep UI contract binds seven schemas, five inspectors, seven causal stages
   assert.match(navigation, /clientWidth/);
   assert.match(navigation, /SET_SEARCH_QUERY/);
   assert.match(navigation, /a12UiFilteredQueue/);
+  for (const label of ["Work queue", "Match funds", "Post to ERP", "Ledger & close", "Evidence"]) {
+    assert.match(navigation, new RegExp(`aria-label="\\$\\{a12UiEscape\\(label\\)\\}"`), `collapsed navigation keeps an accessible name for ${label}`);
+  }
   assert.match(navigation, /\.a12-primary:disabled\{opacity:1;background:#c7d0dd;color:#3f4d5e;cursor:not-allowed\}/);
   assert.match(navigation, /\.a12-queue-list\{max-height:360px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable\}/);
   assert.equal(A12_SEVEN_SCENARIO_IDS.length, 7);
@@ -507,17 +512,47 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     erp: "VERIFIED_READ_ONLY_CANDIDATE"
   });
   assert.deepEqual(manifest.current_release_surface_status.circle_console.blockers.sort(), ["subscription_id_missing", "trusted_readback_loader_not_configured"].sort());
-  assert.equal(manifest.current_release_surface_status.github.current_release_bound, true);
+  assert.equal(manifest.current_release_surface_status.github.current_release_bound, false);
+  assert.equal(manifest.current_release_surface_status.github.published_baseline_binding, true);
+  assert.equal(manifest.current_release_surface_status.github.published_baseline_current_release_bound, true);
+  assert.equal(manifest.current_release_surface_status.github.current_worktree_candidate_bound, false);
+  assert.equal("candidate_binding" in manifest.current_release_surface_status.github, false);
   assert.equal(manifest.current_release_surface_status.github.product_commit, "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7");
   assert.equal(manifest.current_release_surface_status.github.receipt_observed_remote_main, "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7");
-  assert.equal(manifest.current_release_surface_status.github.owner_gate_required, false);
-  assert.equal(manifest.current_release_surface_status.render.observed_commit, "dc239d696d9b6dea1fe8edec483e94fc72581dbd");
+  assert.equal(manifest.current_release_surface_status.github.owner_gate_required, true);
+  assert.equal(manifest.current_release_surface_status.render.observed_commit, "9795c442f4c80464c2d54639a638f02060265be1");
   assert.equal(manifest.current_release_surface_status.render.current_release_bound, false);
-  assert.equal(manifest.current_release_surface_status.erp.candidate_binding, true);
-  assert.equal(manifest.current_release_surface_status.erp.public_remote_binding, true);
+  assert.equal(manifest.current_release_surface_status.render.published_baseline_binding, true);
+  assert.equal(manifest.current_release_surface_status.render.published_baseline_current_release_bound, true);
+  assert.equal(manifest.current_release_surface_status.render.current_worktree_candidate_bound, false);
+  assert.equal(manifest.current_release_surface_status.erp.owner_live_readback_binding, true);
+  assert.equal(manifest.current_release_surface_status.erp.current_worktree_candidate_bound, false);
+  assert.equal(manifest.current_release_surface_status.erp.public_current_release_bound, false);
+  assert.equal("candidate_binding" in manifest.current_release_surface_status.erp, false);
+  assert.equal("public_remote_binding" in manifest.current_release_surface_status.erp, false);
   assert.equal(manifest.current_release_surface_status.erp.live_erp_mutation, false);
+  assert.equal(manifest.worktree_truth.tracked_modified_count, 7);
+  assert.equal(manifest.worktree_truth.content_candidate_count, 0);
+  assert.equal(manifest.worktree_truth.mode_only_non_candidate_count, 7);
+  assert.equal(manifest.worktree_truth.self_excluded_manifest_path, "current-mvp/current-release-workbench-manifest.json");
+  assert.equal(manifest.worktree_truth.publication_candidate_state, "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK");
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 14);
+  const selfExcludedManifest = manifest.worktree_truth.publication_candidate_paths.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
+  assert.equal(selfExcludedManifest.self_excluded, true);
+  assert.equal(selfExcludedManifest.hash_excluded, true);
+  assert.equal(manifest.worktree_truth.documentation_only_content_count, 0);
+  assert.deepEqual(manifest.worktree_truth.publication_candidate_paths.filter((item) => item.documentation_only).map((item) => item.path), ["docs/ARCHITECTURE.md", "docs/INTERACTION_TRAIL.md"]);
+  assert.deepEqual(manifest.worktree_truth.mode_only_non_candidate_paths.map((item) => item.path), [
+    "outputs/ArcCircleContracts_event_history_latest.json",
+    "outputs/ArcPaymentReceipt_dual_source_monitor_latest.json",
+    "outputs/ArcPaymentReceipt_event_monitor_latest.json",
+    "tools/arc_payment_receipt_dual_monitor.mjs",
+    "tools/arc_payment_receipt_dual_monitor.test.mjs",
+    "tools/arc_payment_receipt_monitor.mjs",
+    "tools/arc_payment_receipt_viewer.html"
+  ]);
   assert.equal(manifest.entries.some((item) => item.path === "current-release-final-assets-evidence.json"), true);
-  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 5);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 7);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 4);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "runtime").length, 1);
   for (const path of [
@@ -526,7 +561,9 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     "tools/arc_payment_receipt_server.mjs",
     "tools/circle_console_server.test.mjs",
     "tools/current_mvp_erp_readiness.mjs",
-    "tools/current_mvp_erp_readiness.test.mjs"
+    "tools/current_mvp_erp_readiness.test.mjs",
+    "tools/current_mvp_accounting_close.test.mjs",
+    "tools/current_mvp_fail_closed_lifecycle.test.mjs"
   ]) assert.equal(manifest.verification_inputs.some((item) => item.path === path), true, path);
   assert.equal(manifest.accepted_request.id, "programme-current-release-product-completion-sprint-14-owner-09-domain-bridge-negative-test-request-v1");
 });

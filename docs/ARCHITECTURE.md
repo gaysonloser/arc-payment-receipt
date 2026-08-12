@@ -23,8 +23,8 @@ Historical/support lineage (not current product):
 
 ## Reconciliation model
 
-The current matcher consumes a receipt only after the three independent records
-are correlated and the case/source/party/registry identities agree. Missing,
+The current matcher consumes a receipt only after the three correlated, independently decoded log records from one canonical receipt
+(PolicySettlementV1/SettlementExecuted, ERC-20 Transfer and Arc system Transfer) are correlated and the case/source/party/registry identities agree. Missing,
 stale, replayed, replaced or reorged evidence stays OPEN with zero consequence.
 The historical ArcPaymentReceipt monitor still decodes `PaymentReceived`; that
 lineage is kept separate and cannot satisfy a current PolicySettlementV1 gate.

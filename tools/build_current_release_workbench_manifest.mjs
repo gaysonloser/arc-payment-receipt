@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const execFileAsync = promisify(execFile);
 export const RELEASE_ROOT = resolve(HERE, "..");
 export const CURRENT_MVP_ROOT = join(RELEASE_ROOT, "current-mvp");
 export const OUTPUT_PATH = join(CURRENT_MVP_ROOT, "current-release-workbench-manifest.json");
@@ -26,6 +29,23 @@ const WORKBENCH_ENTRIES = Object.freeze([
   ["web/workbench/workbench-projection.mjs", "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs"],
   ["current-release-final-assets-evidence.json", "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json"]
 ]);
+const DOCUMENTATION_ONLY_PATHS = Object.freeze(["docs/ARCHITECTURE.md", "docs/INTERACTION_TRAIL.md"]);
+const EXACT_COMMIT_CANDIDATE_PATHS = Object.freeze([
+  "README.md",
+  "artifacts/PolicySettlementV1.sol/PolicySettlementV1.json",
+  "current-mvp/current-release-workbench-manifest.json",
+  "current-mvp/web/fixture-engine.mjs",
+  "current-mvp/web/navigation-workspace.mjs",
+  "current-mvp/web/settlement-case.mjs",
+  "docs/ARCHITECTURE.md",
+  "docs/INTERACTION_TRAIL.md",
+  "tools/arc_payment_receipt_server.mjs",
+  "tools/build_current_release_workbench_manifest.mjs",
+  "tools/current_mvp_accounting_close.test.mjs",
+  "tools/current_mvp_fail_closed_lifecycle.test.mjs",
+  "tools/current_mvp_source_binding.test.mjs",
+  "tools/current_release_workbench.test.mjs"
+]);
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -34,7 +54,8 @@ function sha256(bytes) {
 async function entry(path, sourceReference) {
   const destination = join(CURRENT_MVP_ROOT, path);
   const bytes = await readFile(destination);
-  const item = { path, bytes: bytes.length, sha256: sha256(bytes) };
+  const fileStat = await stat(destination);
+  const item = { path, bytes: bytes.length, sha256: sha256(bytes), mode: (fileStat.mode & 0o111) ? "100755" : "100644" };
   if (sourceReference) item.source_reference = sourceReference;
   if (sourceReference && sourceReference.startsWith("release/")) item.source_is_candidate = true;
   return item;
@@ -53,6 +74,84 @@ async function listFiles(root, current = root) {
     else if (item.isFile()) files.push(relative(root, path).split(sep).join("/"));
   }
   return files.sort();
+}
+
+async function git(args) {
+  const result = await execFileAsync("git", args, { cwd: RELEASE_ROOT, encoding: "utf8" });
+  return result.stdout;
+}
+
+async function worktreeTruth() {
+  const [numstatOutput, rawOutput, statusOutput] = await Promise.all([
+    git(["diff", "--numstat", "--"]),
+    git(["diff", "--raw", "--no-renames", "--"]),
+    git(["status", "--porcelain=v1", "--untracked-files=all", "--"])
+  ]);
+  const numstat = new Map();
+  for (const line of numstatOutput.trim().split("\n").filter(Boolean)) {
+    const [additions, deletions, ...pathParts] = line.split("\t");
+    numstat.set(pathParts.join("\t"), { additions, deletions });
+  }
+  const modes = new Map();
+  for (const line of rawOutput.trim().split("\n").filter(Boolean)) {
+    const match = line.match(/^:(\d{6}) (\d{6}) [0-9a-f]+ [0-9a-f]+ [A-Z]\t(.+)$/);
+    if (match) modes.set(match[3], { mode_head: match[1], mode_worktree: match[2] });
+  }
+  const modifiedPaths = [...numstat.keys()].filter((path) => !EXACT_COMMIT_CANDIDATE_PATHS.includes(path)).sort();
+  const snapshots = [];
+  for (const path of modifiedPaths) {
+    const fileStat = await stat(join(RELEASE_ROOT, path));
+    const mode = modes.get(path) ?? { mode_head: null, mode_worktree: (fileStat.mode & 0o111) ? "100755" : "100644" };
+    const contentDelta = !(numstat.get(path).additions === "0" && numstat.get(path).deletions === "0");
+    const snapshot = {
+      path,
+      mode_head: mode.mode_head,
+      mode_worktree: mode.mode_worktree,
+      mode_changed: mode.mode_head !== mode.mode_worktree,
+      content_delta: contentDelta,
+      excluded: !contentDelta
+    };
+    if (path === "current-mvp/current-release-workbench-manifest.json") {
+      snapshot.self_excluded = true;
+      snapshot.hash_excluded = true;
+    } else {
+      const bytes = await readFile(join(RELEASE_ROOT, path));
+      snapshot.bytes = bytes.length;
+      snapshot.sha256 = sha256(bytes);
+    }
+    snapshots.push(snapshot);
+  }
+  const untrackedPaths = statusOutput.split("\n").filter((line) => line.startsWith("?? ")).map((line) => line.slice(3)).filter(Boolean).sort();
+  const publicationCandidatePaths = [];
+  for (const path of EXACT_COMMIT_CANDIDATE_PATHS) {
+    const item = { path, documentation_only: DOCUMENTATION_ONLY_PATHS.includes(path) };
+    if (path === "current-mvp/current-release-workbench-manifest.json") {
+      item.self_excluded = true;
+      item.hash_excluded = true;
+    } else {
+      const bytes = await readFile(join(RELEASE_ROOT, path));
+      item.bytes = bytes.length;
+      item.sha256 = sha256(bytes);
+    }
+    publicationCandidatePaths.push(item);
+  }
+  return {
+    tracked_modified_count: snapshots.length,
+    content_candidate_count: snapshots.filter((item) => item.content_delta && !DOCUMENTATION_ONLY_PATHS.includes(item.path)).length,
+    mode_only_non_candidate_count: snapshots.filter((item) => !item.content_delta).length,
+    content_candidate_paths: snapshots.filter((item) => item.content_delta && !DOCUMENTATION_ONLY_PATHS.includes(item.path)),
+    documentation_only_content_count: snapshots.filter((item) => item.content_delta && DOCUMENTATION_ONLY_PATHS.includes(item.path)).length,
+    documentation_only_paths: snapshots.filter((item) => item.content_delta && DOCUMENTATION_ONLY_PATHS.includes(item.path)),
+    mode_only_non_candidate_paths: snapshots.filter((item) => !item.content_delta),
+    untracked_paths: untrackedPaths,
+    publication_candidate_state: "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK",
+    publication_candidate_count: publicationCandidatePaths.length,
+    publication_candidate_paths: publicationCandidatePaths,
+    untracked_policy: "must_be_empty_before_manifest_freeze",
+    current_worktree_candidate_bound: false,
+    self_excluded_manifest_path: "current-mvp/current-release-workbench-manifest.json",
+    clean_worktree_rule: "The exact 14-path publication candidate is byte-bound independently of worktree dirtiness; the manifest self-excludes its own bytes to avoid a cycle. Outside that candidate, untracked paths must be empty and only the seven declared mode-only paths may remain."
+  };
 }
 
 export async function buildManifest() {
@@ -82,7 +181,9 @@ export async function buildManifest() {
     supportInput("tools/arc_payment_receipt_server.mjs", "runtime"),
     supportInput("tools/circle_console_server.test.mjs", "test"),
     supportInput("tools/current_mvp_erp_readiness.mjs", "verifier"),
-    supportInput("tools/current_mvp_erp_readiness.test.mjs", "test")
+    supportInput("tools/current_mvp_erp_readiness.test.mjs", "test"),
+    supportInput("tools/current_mvp_accounting_close.test.mjs", "test"),
+    supportInput("tools/current_mvp_fail_closed_lifecycle.test.mjs", "test")
   ]);
   return {
     schema: "arc-erp.current-release-workbench-manifest.v1",
@@ -100,10 +201,10 @@ export async function buildManifest() {
     writer_idle: true,
     acceptance_state: "GITHUB_TRUE_RECEIPT_ACCEPTED_RELEASE_BINDING_CORRECTION_AUDIT_PENDING",
     current_release_surface_status: {
-      github: { status: "TRUE_RECEIPT", current_release_bound: true, candidate_binding: true, product_commit: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_observed_remote_main: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_parent: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", receipt_tree: "51a9083f0954f1b064b37925c2926c38e6632af9", note: "GitHub main accepted the independently audited exact 20-file product commit by non-force fast-forward; later receipt-only metadata commits do not change the product commit; Render deployment and readback remain separate", owner_gate_required: false, historical_lineage_only: false },
-      render: { status: "TRUE_RECEIPT", current_release_bound: false, observed_commit: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", note: "Render dashboard and public-file readback show the live baseline at dc239d6; deployment and readback of the current GitHub product commit remain required", historical_lineage_only: true },
-      deck: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
-      video: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
+      github: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, product_commit: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_observed_remote_main: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_parent: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", receipt_tree: "51a9083f0954f1b064b37925c2926c38e6632af9", observed_main_tip: "9795c442f4c80464c2d54639a638f02060265be1", observed_main_parent: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", observed_main_tip_semantics: "receipt_only_metadata_commit", current_worktree_candidate_bound: false, current_worktree_dirty: true, source_readback: "local_git_readback_only; live_remote_dns_unavailable", note: "This is a published baseline receipt only; the dirty local worktree candidate is not bound or published", owner_gate_required: true, historical_lineage_only: false },
+      render: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, observed_commit: "9795c442f4c80464c2d54639a638f02060265be1", comparison: { main_tip: "9795c442f4c80464c2d54639a638f02060265be1", render_commit: "9795c442f4c80464c2d54639a638f02060265be1", aligned: true }, current_worktree_candidate_bound: false, note: "This is a published baseline receipt only; the dirty local worktree candidate is not bound or deployed", owner_gate_required: true, historical_lineage_only: false },
+      deck: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
+      video: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
       circle_console: { status: "BLOCKED", blockers: ["subscription_id_missing", "trusted_readback_loader_not_configured"], historical_lineage_only: false },
       encode: { status: "UNPROVEN", historical_lineage_only: true },
       final: { status: "UNPROVEN", historical_lineage_only: true },
@@ -111,12 +212,14 @@ export async function buildManifest() {
       erp: {
         status: "VERIFIED_READ_ONLY_CANDIDATE",
         evidence_binding: "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
-        candidate_binding: true,
-        public_remote_binding: true,
+        owner_live_readback_binding: true,
+        current_worktree_candidate_bound: false,
+        public_current_release_bound: false,
         live_erp_mutation: false,
         historical_lineage_only: false
       }
     },
+    worktree_truth: await worktreeTruth(),
     verification_inputs: verificationInputs,
     independent_audit: { model: "gpt-5.6-sol", reasoning_effort: "medium", read_only: true, independent: true, status: "PENDING", self_acceptance: false },
     entry_count: baseEntries.length + workbenchEntries.length,
@@ -163,6 +266,21 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   const consoleBlockers = manifest.current_release_surface_status?.circle_console?.blockers ?? [];
   if (!consoleBlockers.includes("subscription_id_missing") || !consoleBlockers.includes("trusted_readback_loader_not_configured")) issues.push("circle_console_blockers_missing");
   if (manifest.current_release_surface_status?.final?.status === "TRUE_RECEIPT" || manifest.current_release_surface_status?.encode?.status === "TRUE_RECEIPT") issues.push("unproven_surface_promoted");
+  const githubSurface = manifest.current_release_surface_status?.github;
+  const renderSurface = manifest.current_release_surface_status?.render;
+  const erpSurface = manifest.current_release_surface_status?.erp;
+  if (githubSurface?.current_release_bound !== false || githubSurface?.published_baseline_binding !== true || githubSurface?.published_baseline_current_release_bound !== true || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_candidate_binding_ambiguous");
+  if (renderSurface?.current_release_bound !== false || renderSurface?.published_baseline_binding !== true || renderSurface?.published_baseline_current_release_bound !== true || renderSurface?.current_worktree_candidate_bound !== false) issues.push("render_candidate_binding_ambiguous");
+  if (erpSurface?.current_worktree_candidate_bound !== false || erpSurface?.public_current_release_bound !== false || erpSurface?.owner_live_readback_binding !== true || Object.hasOwn(erpSurface, "candidate_binding") || Object.hasOwn(erpSurface, "public_remote_binding")) issues.push("erp_candidate_binding_ambiguous");
+  const publicationCandidate = manifest.worktree_truth?.publication_candidate_paths ?? [];
+  const selfExcludedCandidate = publicationCandidate.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
+  if (manifest.worktree_truth?.tracked_modified_count !== 7 || manifest.worktree_truth?.content_candidate_count !== 0 || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== 0 || manifest.worktree_truth?.publication_candidate_state !== "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK" || manifest.worktree_truth?.publication_candidate_count !== 14 || publicationCandidate.map((item) => item.path).sort().join(",") !== EXACT_COMMIT_CANDIDATE_PATHS.slice().sort().join(",") || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
+  for (const item of publicationCandidate) {
+    if (item.self_excluded) continue;
+    const bytes = await readFile(join(supportRoot, item.path));
+    if (bytes.length !== item.bytes) issues.push(`publication_candidate_bytes_mismatch:${item.path}`);
+    if (sha256(bytes) !== item.sha256) issues.push(`publication_candidate_sha256_mismatch:${item.path}`);
+  }
   const expectedInputs = [
     ["tools/current_release_workbench.test.mjs", "test"],
     ["tools/build_current_release_workbench_manifest.mjs", "verifier"],
@@ -173,7 +291,9 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     ["tools/arc_payment_receipt_server.mjs", "runtime"],
     ["tools/circle_console_server.test.mjs", "test"],
     ["tools/current_mvp_erp_readiness.mjs", "verifier"],
-    ["tools/current_mvp_erp_readiness.test.mjs", "test"]
+    ["tools/current_mvp_erp_readiness.test.mjs", "test"],
+    ["tools/current_mvp_accounting_close.test.mjs", "test"],
+    ["tools/current_mvp_fail_closed_lifecycle.test.mjs", "test"]
   ];
   if (!Array.isArray(manifest.verification_inputs) || manifest.verification_inputs.length !== expectedInputs.length) issues.push("verification_inputs_missing");
   for (const [path, role] of expectedInputs) {
@@ -199,6 +319,9 @@ export async function verifyCurrentReleaseWorkbenchManifest({
       const bytes = await readFile(destination);
       if (bytes.length !== item.bytes) issues.push(`bytes_mismatch:${path}`);
       if (sha256(bytes) !== item.sha256) issues.push(`sha256_mismatch:${path}`);
+      const fileStat = await stat(destination);
+      const mode = (fileStat.mode & 0o111) ? "100755" : "100644";
+      if (item.mode !== mode) issues.push(`mode_mismatch:${path}`);
     } catch (error) {
       issues.push(`missing_file:${path}:${error.code ?? error.message}`);
     }

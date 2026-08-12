@@ -3,7 +3,9 @@ import { test } from "node:test";
 
 import {
   createSettlementCase,
+  exportSettlementLifecycleLedger,
   projectSettlementCase,
+  restoreSettlementLifecycleLedger,
   settlementCaseReducer
 } from "../current-mvp/web/settlement-case.mjs";
 
@@ -22,6 +24,30 @@ const typedEvidence = (state, tier) => ({
     tier,
     roles: { reviewer: "reviewer-fixture", payer: "payer-fixture", distinct: true }
   }
+});
+
+test("typed replay ledger restores idempotency across reducer instances and rejects tampering", () => {
+  const action = { type: "REVOKE", operationKey: "revoke:portable:001", reason: "Withdraw typed evidence.", authority: operator, appliedAt: "2026-08-10T12:00:00Z" };
+  const applied = settlementCaseReducer(createSettlementCase(), action);
+  const ledger = exportSettlementLifecycleLedger(applied);
+  assert.equal(ledger.livePersistence, false);
+  const restored = restoreSettlementLifecycleLedger(createSettlementCase(), ledger);
+  assert.equal(settlementCaseReducer(restored, action).lastLifecycleResult.state, "DUPLICATE_NOOP");
+  assert.equal(settlementCaseReducer(restored, { ...action, type: "REVERSAL" }).lastLifecycleResult.state, "CONFLICT_REJECT");
+  const tampered = structuredClone(ledger);
+  tampered.entries[0].reason = "tampered";
+  assert.throws(() => restoreSettlementLifecycleLedger(createSettlementCase(), tampered), /LIFECYCLE_LEDGER_INTEGRITY_INVALID/);
+});
+
+test("candidate ranking stops on missing and multiple candidates", () => {
+  let state = settlementCaseReducer(createSettlementCase(), { type: "SET_SEARCH", party: "Pixel", document: "" });
+  state = settlementCaseReducer(state, { type: "RANK_CANDIDATES", candidates: [{ id: "a" }, { id: "b" }] });
+  assert.equal(state.candidateResolution, "ambiguous");
+  assert.equal(settlementCaseReducer(state, { type: "SELECT_CANDIDATE", candidateId: "a" }).unresolvedReason, "CANDIDATE_AMBIGUOUS");
+  let none = settlementCaseReducer(createSettlementCase(), { type: "SET_SEARCH", party: "Nobody", document: "missing" });
+  none = settlementCaseReducer(none, { type: "RANK_CANDIDATES" });
+  assert.equal(none.candidateResolution, "ambiguous");
+  assert.equal(none.stage, "work-queue");
 });
 
 const operator = { role: "reviewer", operatorId: "reviewer-fixture" };

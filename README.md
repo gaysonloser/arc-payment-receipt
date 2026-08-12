@@ -4,11 +4,11 @@
 
 **Presentation name:** Arc Enterprise Settlement Control. Verified Milestone Close is the current release: a receipt-first Arc/USDC workbench for a treasury operator reviewing a supplier payable and its customer-receipt/refund counterpart. `PolicySettlementV1` supplies the programmable-money boundary; the workbench separately displays typed ERPNext Invoice, Payment Entry, Bank Transaction, GL, Payment Ledger, Accounting Period and close readbacks. Chain success never implies ERP posting or business close.
 
-**Current product source:** [GitHub commit `a63fbce`](https://github.com/gaysonloser/arc-payment-receipt/tree/a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7), published on `main` by non-force fast-forward.
+**Current product source:** the published baseline is [GitHub `main@9795c44`](https://github.com/gaysonloser/arc-payment-receipt/commit/9795c442f4c80464c2d54639a638f02060265be1). The H183 quality candidate closes receipt TTL, candidate ambiguity, durable replay, lifecycle, refund, accounting-readback and provenance gaps; it becomes the current public release only after its non-force `main` push and Render deployment are independently read back.
 
-**Published baseline demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) currently serves commit `dc239d696d9b6dea1fe8edec483e94fc72581dbd`. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity. Deployment and live readback of current GitHub commit `a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7` remain separately owner-gated; the baseline URL must not yet be read as runtime evidence for the new source release.
+**Published demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) serves the last independently read-back Render deployment. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity. A GitHub push alone does not prove Render has deployed the H183 candidate; the live service commit and response must be read back separately.
 
-**Current-release boundary:** GitHub `main` contains product commit `a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7`; Render remains on the older `dc239d696d9b6dea1fe8edec483e94fc72581dbd` runtime until a separately approved deployment and readback complete. Arc Testnet provides immutable receipt facts; ERPNext remains the authoritative business/ledger/close system. Circle Console, Encode and Final submission remain separate owner-gated surfaces. The local fixture, read-only UI, historical receipts and public chain deployment do not claim a signer, wallet action, ERP posting or business close. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+**Current-release boundary:** source and deployment become aligned only when GitHub remote-main and Render readback identify the same H183 commit. Arc Testnet provides immutable deployment/readback facts; ERPNext remains the authoritative business/ledger/close system. Circle Console remains fail-closed without a current subscription/readback; Encode is closed and Final remains a separate owner-gated late-email path. The local fixture, read-only UI, historical receipts and public chain deployment do not claim a signer, wallet action, ERP posting or business close. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
 
 ## Historical/support component: Arc Lab Enterprise OS E1
 
@@ -91,7 +91,7 @@ Stablecoin settlement alone does not give an application a privacy-aware order r
 ## Current release controls
 
 The current workbench binds both entry journeys to a canonical case, policy,
-receipt and ERP source. It requires three independently checked receipt records,
+receipt and ERP source. It requires three typed records decoded from one canonical receipt,
 TTL/finality/replay/reorg controls and typed readbacks before a local, unsigned
 proposal is shown. Missing or conflicting facts remain OPEN with zero ERP/GL/
 PLED/close consequence. Refund, revoke and reversal paths preserve the original
@@ -106,11 +106,12 @@ claims.
 
 ## Current release materials
 
-- Product source: [`a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7`](https://github.com/gaysonloser/arc-payment-receipt/commit/a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7)
+- Product content ancestor: [`a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7`](https://github.com/gaysonloser/arc-payment-receipt/commit/a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7)
+- Publication base: [`9795c442f4c80464c2d54639a638f02060265be1`](https://github.com/gaysonloser/arc-payment-receipt/commit/9795c442f4c80464c2d54639a638f02060265be1); current `main` is established only by post-push remote readback.
 - Three-minute demo video: [`arc-enterprise-settlement-control-programme-final-3min.mp4`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4)
 - Reviewer deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf)
 - Editable deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx)
-- Published runtime baseline: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/) at `dc239d696d9b6dea1fe8edec483e94fc72581dbd`; current product deployment remains pending.
+- Published runtime: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/); H183 alignment requires a separate deployment and live response readback after the GitHub push.
 
 The separate Arc Lab Review Deck page retained below is a historical/support reviewer artifact. It is not the final three-minute demo video and does not replace the current PDF/PPTX deck above.
 
@@ -250,7 +251,7 @@ node tools/arc_settlement_evidence_manifest.mjs
 node tools/arc_settlement_evidence_manifest.mjs --verify outputs/ArcPaymentReceipt_settlement_evidence_manifest_latest.json
 ```
 
-The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, accounting precision rejection, manifest verification, SettlementEvent contract validation, and the bounded Review Packet. The Foundry suite covers payment settlement, receipt storage, duplicate protection, rollback, and Arc Testnet fork behavior.
+The Node suite covers event decoding, overlap-window reconciliation, missing-event alerts, the read-only API, fail-closed enterprise controls, payload minimization, journal balance, accounting precision rejection, manifest verification, SettlementEvent contract validation, and the bounded Review Packet. The scoped Foundry suite covers local payment settlement, receipt storage, duplicate protection and rollback; it does not claim an Arc Testnet fork run.
 
 ## Read-only API
 

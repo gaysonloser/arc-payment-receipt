@@ -24,32 +24,50 @@
   "current_release_surface_status": {
     "github": {
       "status": "TRUE_RECEIPT",
-      "current_release_bound": true,
-      "candidate_binding": true,
+      "current_release_bound": false,
+      "published_baseline_binding": true,
+      "published_baseline_current_release_bound": true,
       "product_commit": "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7",
       "receipt_observed_remote_main": "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7",
       "receipt_parent": "dc239d696d9b6dea1fe8edec483e94fc72581dbd",
       "receipt_tree": "51a9083f0954f1b064b37925c2926c38e6632af9",
-      "note": "GitHub main accepted the independently audited exact 20-file product commit by non-force fast-forward; later receipt-only metadata commits do not change the product commit; Render deployment and readback remain separate",
-      "owner_gate_required": false,
+      "observed_main_tip": "9795c442f4c80464c2d54639a638f02060265be1",
+      "observed_main_parent": "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7",
+      "observed_main_tip_semantics": "receipt_only_metadata_commit",
+      "current_worktree_candidate_bound": false,
+      "current_worktree_dirty": true,
+      "source_readback": "local_git_readback_only; live_remote_dns_unavailable",
+      "note": "This is a published baseline receipt only; the dirty local worktree candidate is not bound or published",
+      "owner_gate_required": true,
       "historical_lineage_only": false
     },
     "render": {
       "status": "TRUE_RECEIPT",
       "current_release_bound": false,
-      "observed_commit": "dc239d696d9b6dea1fe8edec483e94fc72581dbd",
-      "note": "Render dashboard and public-file readback show the live baseline at dc239d6; deployment and readback of the current GitHub product commit remain required",
-      "historical_lineage_only": true
+      "published_baseline_binding": true,
+      "published_baseline_current_release_bound": true,
+      "observed_commit": "9795c442f4c80464c2d54639a638f02060265be1",
+      "comparison": {
+        "main_tip": "9795c442f4c80464c2d54639a638f02060265be1",
+        "render_commit": "9795c442f4c80464c2d54639a638f02060265be1",
+        "aligned": true
+      },
+      "current_worktree_candidate_bound": false,
+      "note": "This is a published baseline receipt only; the dirty local worktree candidate is not bound or deployed",
+      "owner_gate_required": true,
+      "historical_lineage_only": false
     },
     "deck": {
       "status": "TRUE_RECEIPT",
       "current_release_bound": true,
+      "published_baseline_binding": true,
       "tag": "programme-final-20260810",
       "historical_lineage_only": false
     },
     "video": {
       "status": "TRUE_RECEIPT",
       "current_release_bound": true,
+      "published_baseline_binding": true,
       "tag": "programme-final-20260810",
       "historical_lineage_only": false
     },
@@ -77,24 +95,198 @@
     "erp": {
       "status": "VERIFIED_READ_ONLY_CANDIDATE",
       "evidence_binding": "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
-      "candidate_binding": true,
-      "public_remote_binding": true,
+      "owner_live_readback_binding": true,
+      "current_worktree_candidate_bound": false,
+      "public_current_release_bound": false,
       "live_erp_mutation": false,
       "historical_lineage_only": false
     }
+  },
+  "worktree_truth": {
+    "tracked_modified_count": 7,
+    "content_candidate_count": 0,
+    "mode_only_non_candidate_count": 7,
+    "content_candidate_paths": [],
+    "documentation_only_content_count": 0,
+    "documentation_only_paths": [],
+    "mode_only_non_candidate_paths": [
+      {
+        "path": "outputs/ArcCircleContracts_event_history_latest.json",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 1562,
+        "sha256": "9d36122dba07ce0b0d9704283df6c4d922a10e9a7f17610ac9dcc2582cf87242"
+      },
+      {
+        "path": "outputs/ArcPaymentReceipt_dual_source_monitor_latest.json",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 1273,
+        "sha256": "c47b9407323343947f05b0f7fee1adc3c0beb35f42309bf9b7635d0b61fee968"
+      },
+      {
+        "path": "outputs/ArcPaymentReceipt_event_monitor_latest.json",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 3505,
+        "sha256": "64d991bfd8522e1439eb7d0b63d7de944f46f369513c6cd84d648c3b5ab38574"
+      },
+      {
+        "path": "tools/arc_payment_receipt_dual_monitor.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 6528,
+        "sha256": "c457bf533e4d12b06f8315f346a8140d17ecfb976e3e40c2c199e80f5c2697d5"
+      },
+      {
+        "path": "tools/arc_payment_receipt_dual_monitor.test.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 2058,
+        "sha256": "51517926a85613538cd40d172753c3a86c226418aacc071d4c466d64efc14b3c"
+      },
+      {
+        "path": "tools/arc_payment_receipt_monitor.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 12289,
+        "sha256": "fa31cb702d0da74aa9fe3a612325969d91df9a8856d23bb6b26be988a0d5a7e0"
+      },
+      {
+        "path": "tools/arc_payment_receipt_viewer.html",
+        "mode_head": "100644",
+        "mode_worktree": "100755",
+        "mode_changed": true,
+        "content_delta": false,
+        "excluded": true,
+        "bytes": 59825,
+        "sha256": "51b3dfd2c0cc7bed8337e9563568406b4e5b314f4ea72eaf3882ee2a86110821"
+      }
+    ],
+    "untracked_paths": [],
+    "publication_candidate_state": "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK",
+    "publication_candidate_count": 14,
+    "publication_candidate_paths": [
+      {
+        "path": "README.md",
+        "documentation_only": false,
+        "bytes": 27670,
+        "sha256": "93b5d200be14241f76d5d09ba22d83808b0f0179e44e8871d4a471d08298b0b5"
+      },
+      {
+        "path": "artifacts/PolicySettlementV1.sol/PolicySettlementV1.json",
+        "documentation_only": false,
+        "bytes": 77206,
+        "sha256": "d6ed1ddd0a042e9a94dcc4a15b3a0e1ec49eec48ab089d17b8c731a27e5b4e1b"
+      },
+      {
+        "path": "current-mvp/current-release-workbench-manifest.json",
+        "documentation_only": false,
+        "self_excluded": true,
+        "hash_excluded": true
+      },
+      {
+        "path": "current-mvp/web/fixture-engine.mjs",
+        "documentation_only": false,
+        "bytes": 159057,
+        "sha256": "a419334dc0560ba80e37d295dc7401a45917f7300a5065ac07921be46f877d11"
+      },
+      {
+        "path": "current-mvp/web/navigation-workspace.mjs",
+        "documentation_only": false,
+        "bytes": 129044,
+        "sha256": "74bd6cf18258da46b6baae54492b3f8af3ea0879f3d11dabb6ee3d3add95fd5a"
+      },
+      {
+        "path": "current-mvp/web/settlement-case.mjs",
+        "documentation_only": false,
+        "bytes": 66796,
+        "sha256": "3a9f71febebf46c47a452f232276697cd7ccd068efc1ccfd13d845a282d0f58b"
+      },
+      {
+        "path": "docs/ARCHITECTURE.md",
+        "documentation_only": true,
+        "bytes": 2637,
+        "sha256": "97c46797232c3113a490df905f2ae39397b5a188f4163c9edba863c962291c70"
+      },
+      {
+        "path": "docs/INTERACTION_TRAIL.md",
+        "documentation_only": true,
+        "bytes": 4215,
+        "sha256": "3e96d821ffed72dfca0ecb684efae48a47e911e8413a67ee10ab2b4382284522"
+      },
+      {
+        "path": "tools/arc_payment_receipt_server.mjs",
+        "documentation_only": false,
+        "bytes": 117954,
+        "sha256": "1572afc47379a426a8201578f99ce105f046623b4728d88061cb35509a797610"
+      },
+      {
+        "path": "tools/build_current_release_workbench_manifest.mjs",
+        "documentation_only": false,
+        "bytes": 22754,
+        "sha256": "4b194bc9342df39d591f085fab830f29065edda4eb6111deff85acbcbb6a535b"
+      },
+      {
+        "path": "tools/current_mvp_accounting_close.test.mjs",
+        "documentation_only": false,
+        "bytes": 6158,
+        "sha256": "96d2a72ffe85803be81345fc53a502a904fb240d330e23de3398922bef1b880a"
+      },
+      {
+        "path": "tools/current_mvp_fail_closed_lifecycle.test.mjs",
+        "documentation_only": false,
+        "bytes": 6506,
+        "sha256": "7266516342dbbb56783bf6e0ea307c2422ec5e46c0a2dfdcf76ecf7a91d2d0d3"
+      },
+      {
+        "path": "tools/current_mvp_source_binding.test.mjs",
+        "documentation_only": false,
+        "bytes": 5362,
+        "sha256": "5af6eadfa08f844257e56e46e7f8f4b19736f47dfbabf8d04c81b468157598ff"
+      },
+      {
+        "path": "tools/current_release_workbench.test.mjs",
+        "documentation_only": false,
+        "bytes": 35144,
+        "sha256": "f14aa6bd2fe895339bfc4b38455f439e5645098b6a0524e6cb3a4baae4a50bde"
+      }
+    ],
+    "untracked_policy": "must_be_empty_before_manifest_freeze",
+    "current_worktree_candidate_bound": false,
+    "self_excluded_manifest_path": "current-mvp/current-release-workbench-manifest.json",
+    "clean_worktree_rule": "The exact 14-path publication candidate is byte-bound independently of worktree dirtiness; the manifest self-excludes its own bytes to avoid a cycle. Outside that candidate, untracked paths must be empty and only the seven declared mode-only paths may remain."
   },
   "verification_inputs": [
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 32005,
-      "sha256": "d42878e615dc1251f1fe30b8bd6673be55b906a102e16468e6d15de66558b1b5"
+      "bytes": 35144,
+      "sha256": "f14aa6bd2fe895339bfc4b38455f439e5645098b6a0524e6cb3a4baae4a50bde"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 13793,
-      "sha256": "cc09980ad653ea2e1d73b39eb9282eb495f64929be7ec57524f0368762627376"
+      "bytes": 22754,
+      "sha256": "4b194bc9342df39d591f085fab830f29065edda4eb6111deff85acbcbb6a535b"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -105,8 +297,8 @@
     {
       "path": "tools/current_mvp_source_binding.test.mjs",
       "role": "test",
-      "bytes": 4958,
-      "sha256": "c60107845d8538dad2491e05160c4d3277db68ff924d88eed32846101095c77d"
+      "bytes": 5362,
+      "sha256": "5af6eadfa08f844257e56e46e7f8f4b19736f47dfbabf8d04c81b468157598ff"
     },
     {
       "path": "tools/circle_contract_webhook_gate.mjs",
@@ -123,8 +315,8 @@
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 117915,
-      "sha256": "c1297388d74eb3a7469f794651c001ed2a6a02b0e1e70176e15284ce9e9435a4"
+      "bytes": 117954,
+      "sha256": "1572afc47379a426a8201578f99ce105f046623b4728d88061cb35509a797610"
     },
     {
       "path": "tools/circle_console_server.test.mjs",
@@ -143,6 +335,18 @@
       "role": "test",
       "bytes": 8015,
       "sha256": "ad47635d803eebd892633fe95f9296a83bfefd085da10dffdda1ba7e97864253"
+    },
+    {
+      "path": "tools/current_mvp_accounting_close.test.mjs",
+      "role": "test",
+      "bytes": 6158,
+      "sha256": "96d2a72ffe85803be81345fc53a502a904fb240d330e23de3398922bef1b880a"
+    },
+    {
+      "path": "tools/current_mvp_fail_closed_lifecycle.test.mjs",
+      "role": "test",
+      "bytes": 6506,
+      "sha256": "7266516342dbbb56783bf6e0ea307c2422ec5e46c0a2dfdcf76ecf7a91d2d0d3"
     }
   ],
   "independent_audit": {
@@ -160,6 +364,7 @@
       "path": "current-release-final-assets-evidence.json",
       "bytes": 2147,
       "sha256": "d7dfbe4e0a6a9e7ddbcd3eeddeccc56d629d075c5e1552479a373c1fb8394ecf",
+      "mode": "100644",
       "source_reference": "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json",
       "source_is_candidate": true
     },
@@ -167,6 +372,7 @@
       "path": "web/assets/brand/arc-icon-navy-official.svg",
       "bytes": 974,
       "sha256": "eb03f8cac4bcb23fae4ee04429daf29a9bd60269fc9293eccc4119913b81213d",
+      "mode": "100644",
       "historical_sha256": "eb03f8cac4bcb23fae4ee04429daf29a9bd60269fc9293eccc4119913b81213d",
       "historical_bytes": 974,
       "current_release_override": false
@@ -175,6 +381,7 @@
       "path": "web/assets/brand/arc-logo-navy-official.svg",
       "bytes": 2666,
       "sha256": "84d9b3b7ca11a0b19956a0622440e646c188907ffe8fa6598a5553d00e1890db",
+      "mode": "100644",
       "historical_sha256": "84d9b3b7ca11a0b19956a0622440e646c188907ffe8fa6598a5553d00e1890db",
       "historical_bytes": 2666,
       "current_release_override": false
@@ -183,6 +390,7 @@
       "path": "web/assets/brand/usdc-token-official.svg",
       "bytes": 1309,
       "sha256": "fe4f9d5f34ef4ebeb5d80e1f5ff63dcaf5a0d5495f4adf206e4c3011d1f5c57d",
+      "mode": "100644",
       "historical_sha256": "fe4f9d5f34ef4ebeb5d80e1f5ff63dcaf5a0d5495f4adf206e4c3011d1f5c57d",
       "historical_bytes": 1309,
       "current_release_override": false
@@ -191,6 +399,7 @@
       "path": "web/assets/gayson-lion-brand-reference.png",
       "bytes": 1661602,
       "sha256": "09f227bc92e0aa6af3089303791894d6ff96d5d6a58d903f0a3ea8aab46c0805",
+      "mode": "100644",
       "historical_sha256": "09f227bc92e0aa6af3089303791894d6ff96d5d6a58d903f0a3ea8aab46c0805",
       "historical_bytes": 1661602,
       "current_release_override": false
@@ -199,6 +408,7 @@
       "path": "web/assets/gayson-receipt-assistant-reference.png",
       "bytes": 641975,
       "sha256": "44f0459a9f8344e09f7f48e0f6eba1b5d9abffec7f84ec50a28de52e131b67ee",
+      "mode": "100644",
       "historical_sha256": "44f0459a9f8344e09f7f48e0f6eba1b5d9abffec7f84ec50a28de52e131b67ee",
       "historical_bytes": 641975,
       "current_release_override": false
@@ -207,6 +417,7 @@
       "path": "web/assets/icons/book-open.svg",
       "bytes": 755,
       "sha256": "bbd0f7a90fe63750bcbacadde63e76a6a6a4b731a7ab34a20fc28f0c49f4131c",
+      "mode": "100644",
       "historical_sha256": "bbd0f7a90fe63750bcbacadde63e76a6a6a4b731a7ab34a20fc28f0c49f4131c",
       "historical_bytes": 755,
       "current_release_override": false
@@ -215,6 +426,7 @@
       "path": "web/assets/icons/calendar-check.svg",
       "bytes": 687,
       "sha256": "0ab35737c368203ad832b5af0fee81505b1784a45c8c69d7997ebb1ef0c271a6",
+      "mode": "100644",
       "historical_sha256": "0ab35737c368203ad832b5af0fee81505b1784a45c8c69d7997ebb1ef0c271a6",
       "historical_bytes": 687,
       "current_release_override": false
@@ -223,6 +435,7 @@
       "path": "web/assets/icons/chart-line.svg",
       "bytes": 648,
       "sha256": "9100c634433b9983696c6f2e270b1e4220d9d2b1c1fa15b8a9833fee2bd8c972",
+      "mode": "100644",
       "historical_sha256": "9100c634433b9983696c6f2e270b1e4220d9d2b1c1fa15b8a9833fee2bd8c972",
       "historical_bytes": 648,
       "current_release_override": false
@@ -231,6 +444,7 @@
       "path": "web/assets/icons/circle-check.svg",
       "bytes": 484,
       "sha256": "c2c10f625e45e8a918a6d74a063670394ad0a5078b6dd88d92f9a5ac7cb6d612",
+      "mode": "100644",
       "historical_sha256": "c2c10f625e45e8a918a6d74a063670394ad0a5078b6dd88d92f9a5ac7cb6d612",
       "historical_bytes": 484,
       "current_release_override": false
@@ -239,6 +453,7 @@
       "path": "web/assets/icons/circle-dollar-to-slot.svg",
       "bytes": 1639,
       "sha256": "435c1b49cfb546c1f9a8843ab0a83a424feda41166ad7c4d2bbfc7d68dc9f439",
+      "mode": "100644",
       "historical_sha256": "435c1b49cfb546c1f9a8843ab0a83a424feda41166ad7c4d2bbfc7d68dc9f439",
       "historical_bytes": 1639,
       "current_release_override": false
@@ -247,6 +462,7 @@
       "path": "web/assets/icons/file-contract.svg",
       "bytes": 1041,
       "sha256": "8516915385c9d28d156d97ee55e97a3d6ec9de6ae2fe8f886c92ef7d7249c0d4",
+      "mode": "100644",
       "historical_sha256": "8516915385c9d28d156d97ee55e97a3d6ec9de6ae2fe8f886c92ef7d7249c0d4",
       "historical_bytes": 1041,
       "current_release_override": false
@@ -255,6 +471,7 @@
       "path": "web/assets/icons/file-invoice-dollar.svg",
       "bytes": 1472,
       "sha256": "f3fdb653742fef71b88b40fe21ad58038c9b9b50b8ac06940f2f0fce527f9d68",
+      "mode": "100644",
       "historical_sha256": "f3fdb653742fef71b88b40fe21ad58038c9b9b50b8ac06940f2f0fce527f9d68",
       "historical_bytes": 1472,
       "current_release_override": false
@@ -263,6 +480,7 @@
       "path": "web/assets/icons/house.svg",
       "bytes": 775,
       "sha256": "a2f39593246f7bd7dfcecbe8cf4a0b93926756bbabdd6089b1326545d9389391",
+      "mode": "100644",
       "historical_sha256": "a2f39593246f7bd7dfcecbe8cf4a0b93926756bbabdd6089b1326545d9389391",
       "historical_bytes": 775,
       "current_release_override": false
@@ -271,6 +489,7 @@
       "path": "web/assets/icons/link.svg",
       "bytes": 1069,
       "sha256": "457e42a7322ec454c3ae81e07d998e7521726a805b61515c6b29443f0f0bbc21",
+      "mode": "100644",
       "historical_sha256": "457e42a7322ec454c3ae81e07d998e7521726a805b61515c6b29443f0f0bbc21",
       "historical_bytes": 1069,
       "current_release_override": false
@@ -279,6 +498,7 @@
       "path": "web/assets/icons/money-bill-transfer.svg",
       "bytes": 1133,
       "sha256": "c9dc33106599970d28fba86471c7c5da1f615b3df0d085c0979f4525111d839b",
+      "mode": "100644",
       "historical_sha256": "c9dc33106599970d28fba86471c7c5da1f615b3df0d085c0979f4525111d839b",
       "historical_bytes": 1133,
       "current_release_override": false
@@ -287,6 +507,7 @@
       "path": "web/assets/icons/paperclip.svg",
       "bytes": 734,
       "sha256": "830be1674aa37b63e36cee237f1b8c84d6e38544ddc447104f2b97bb063c5cfe",
+      "mode": "100644",
       "historical_sha256": "830be1674aa37b63e36cee237f1b8c84d6e38544ddc447104f2b97bb063c5cfe",
       "historical_bytes": 734,
       "current_release_override": false
@@ -295,6 +516,7 @@
       "path": "web/assets/icons/receipt.svg",
       "bytes": 958,
       "sha256": "21abd1cc3c0d95e67bc5aa80520fe1f9214589476b0227d9556abdc325ae34aa",
+      "mode": "100644",
       "historical_sha256": "21abd1cc3c0d95e67bc5aa80520fe1f9214589476b0227d9556abdc325ae34aa",
       "historical_bytes": 958,
       "current_release_override": false
@@ -303,6 +525,7 @@
       "path": "web/assets/icons/scale-balanced.svg",
       "bytes": 1046,
       "sha256": "205521372c7997ec2778900f033877660a673a6dcfa79f98bc40f6f5a8beeef0",
+      "mode": "100644",
       "historical_sha256": "205521372c7997ec2778900f033877660a673a6dcfa79f98bc40f6f5a8beeef0",
       "historical_bytes": 1046,
       "current_release_override": false
@@ -311,6 +534,7 @@
       "path": "web/assets/icons/shield-halved.svg",
       "bytes": 562,
       "sha256": "047f2d9eda8a9a2758eb5465ff6da85eaf91ffa3013d419331b7ff1338ef932e",
+      "mode": "100644",
       "historical_sha256": "047f2d9eda8a9a2758eb5465ff6da85eaf91ffa3013d419331b7ff1338ef932e",
       "historical_bytes": 562,
       "current_release_override": false
@@ -319,6 +543,7 @@
       "path": "web/assets/icons/users.svg",
       "bytes": 908,
       "sha256": "54748bc3c0b2da7a65e982e0ff14fed16ec959bb42aeaa137862a97d16a95a57",
+      "mode": "100644",
       "historical_sha256": "54748bc3c0b2da7a65e982e0ff14fed16ec959bb42aeaa137862a97d16a95a57",
       "historical_bytes": 908,
       "current_release_override": false
@@ -327,18 +552,21 @@
       "path": "web/c15-contract.mjs",
       "bytes": 49997,
       "sha256": "c77b926c70f2a6d3e1643bde88605b27b91d0095fc2b9dab742d2eb485de5a9d",
+      "mode": "100644",
       "source_reference": "programme/verified-milestone-close/web/c15-contract.mjs"
     },
     {
       "path": "web/c15-upstream-authority.mjs",
       "bytes": 610268,
       "sha256": "d0c793a5eab893fdcd21ff08562cc58a5fc38d6fa289c769f0e8f7fee43308c1",
+      "mode": "100644",
       "source_reference": "programme/verified-milestone-close/web/c15-upstream-authority.mjs"
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 158944,
-      "sha256": "5fb65655771aa4773e1fcce85edd642704309cd6eac69ceaa8c5675a93c4e514",
+      "bytes": 159057,
+      "sha256": "a419334dc0560ba80e37d295dc7401a45917f7300a5065ac07921be46f877d11",
+      "mode": "100644",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
       "current_release_override": true
@@ -347,28 +575,32 @@
       "path": "web/index.html",
       "bytes": 24751,
       "sha256": "eebc323cb5e541c112755340946c8504fe3068e9bd0d4ccd61a0f1378608c9c9",
+      "mode": "100644",
       "historical_sha256": "c06819266a08bef7a3541921b43a235e0968c048bd2c533ab85b74fac2d0646a",
       "historical_bytes": 67534,
       "current_release_override": true
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 128896,
-      "sha256": "fac029e6b24079cb5344acf69060655b7628fe31dfa012bb14a3d85fcce6dc1d",
+      "bytes": 129044,
+      "sha256": "74bd6cf18258da46b6baae54492b3f8af3ea0879f3d11dabb6ee3d3add95fd5a",
+      "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,
       "current_release_override": true
     },
     {
       "path": "web/settlement-case.mjs",
-      "bytes": 56237,
-      "sha256": "a6d19296be63b6a30d3e44d4e69fd577ee9f475158317247b387c9746e3151f7",
+      "bytes": 66796,
+      "sha256": "3a9f71febebf46c47a452f232276697cd7ccd068efc1ccfd13d845a282d0f58b",
+      "mode": "100644",
       "source_reference": "programme/verified-milestone-close/web/settlement-case.mjs"
     },
     {
       "path": "web/workbench/workbench-projection.mjs",
       "bytes": 32622,
       "sha256": "4b4580eef995a213b18fd096f57c7738e83044c3ee41b92fd80c8801e49f57bc",
+      "mode": "100644",
       "source_reference": "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs",
       "source_is_candidate": true
     }

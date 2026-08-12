@@ -81,6 +81,12 @@ test("serves current MVP routes without replacing the historical root and preser
   assert.equal(current.status, 200);
   assert.match(currentBody, /Arc Enterprise · Settlement Workbench/);
   assert.notEqual(currentBody, rootBody);
+  const contentSecurityPolicy = current.headers.get("content-security-policy");
+  assert.match(contentSecurityPolicy, /object-src 'none'/);
+  assert.match(contentSecurityPolicy, /frame-ancestors 'none'/);
+  assert.match(contentSecurityPolicy, /form-action 'none'/);
+  assert.equal(current.headers.get("x-frame-options"), "DENY");
+  assert.equal(current.headers.get("x-content-type-options"), "nosniff");
 
   const deepLink = await fetch(`${origin}/current-mvp/reconciliation`);
   assert.equal(deepLink.status, 200);

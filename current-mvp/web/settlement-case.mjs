@@ -47,10 +47,75 @@ export const SETTLEMENT_ACTIONS = Object.freeze([
   "SET_ALLOCATION", "RECORD_REVIEWER_ATTESTATION", "REVIEW_PAYER_APPROVAL", "CONFIRM_TIER_C",
   "READ_ARC_RECEIPT", "PREPARE_ERP_PROPOSAL", "SUBMIT_ERP_REVIEW", "RECONCILE_BANK",
   "GENERATE_LEDGER", "CLOSE_OPERATIONAL", "CLOSE_ACCOUNTING_PERIOD", "CLOSE_BUSINESS",
-  "REVOKE", "REVERSAL", "RECOVER", "REVISE", "SET_ROUTE", "SET_EVIDENCE", "RESET_DEPENDENTS"
+  "REVOKE", "REVERSAL", "RESTORE_LIFECYCLE_LEDGER", "RECOVER", "REVISE", "SET_ROUTE", "SET_EVIDENCE", "RESET_DEPENDENTS"
 ]);
 
 const clone = (value) => structuredClone(value);
+export const DEFAULT_RECEIPT_TTL_MS = 60 * 60 * 1000;
+const receiptDate = (value) => {
+  const parsed = value instanceof Date ? value.getTime() : typeof value === "number" ? value : Date.parse(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+/**
+ * Validate the observation window carried by a typed receipt.  A receipt
+ * without TTL fields remains compatible with historical local fixtures, but
+ * once either field is present both are required and the caller must provide
+ * a deterministic `now` when replaying it.  This keeps stale evidence from
+ * being promoted by a dead `ARC_RECEIPT_STALE` branch.
+ */
+export function validateReceiptFreshness(receipt, { now, ttlMs = DEFAULT_RECEIPT_TTL_MS, required = false } = {}) {
+  const observedAt = receipt?.observedAt ?? receipt?.observed_at ?? null;
+  const validUntil = receipt?.validUntil ?? receipt?.valid_until ?? null;
+  if (observedAt == null && validUntil == null) return required ? { valid: false, code: "ARC_TTL_FIELDS_REQUIRED" } : { valid: true, code: "ARC_TTL_NOT_APPLICABLE" };
+  const observedMs = receiptDate(observedAt);
+  const validUntilMs = receiptDate(validUntil);
+  const nowMs = receiptDate(now);
+  if (observedMs == null || validUntilMs == null || nowMs == null) return { valid: false, code: "ARC_TTL_TIMESTAMP_INVALID" };
+  if (validUntilMs <= observedMs || validUntilMs - observedMs > ttlMs) return { valid: false, code: "ARC_TTL_WINDOW_INVALID" };
+  if (observedMs > nowMs) return { valid: false, code: "ARC_RECEIPT_OBSERVATION_FUTURE" };
+  if (validUntilMs <= nowMs) return { valid: false, code: "ARC_RECEIPT_STALE" };
+  return { valid: true, code: "ARC_TTL_FRESH" };
+}
+
+const refundAmounts = (allocation, state) => {
+  const original = String(allocation.originalPrincipalAmount6 ?? state.allocation.originalPrincipalAmount6 ?? "");
+  const prior = String(allocation.priorRefundedAmount6 ?? state.allocation.priorRefundedAmount6 ?? "0");
+  if (!/^\d+$/.test(original) || !/^\d+$/.test(prior)) return { valid: false, code: "REFUND_ORIGINAL_AUTHORITY_REQUIRED" };
+  const originalBig = BigInt(original);
+  const priorBig = BigInt(prior);
+  if (priorBig > originalBig) return { valid: false, code: "REFUND_PRIOR_EXCEEDS_PRINCIPAL" };
+  return { valid: true, original, prior, remainingBefore: String(originalBig - priorBig) };
+};
+const canonicalJson = (value) => Array.isArray(value) ? `[${value.map(canonicalJson).join(",")}]` : value && typeof value === "object" ? `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}` : JSON.stringify(value);
+const fnv1a = (value) => {
+  let hash = 0x811c9dc5;
+  for (const char of String(value)) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 0x01000193) >>> 0; }
+  return hash.toString(16).padStart(8, "0");
+};
+const lifecycleIndex = (entries) => Object.fromEntries(entries.map((entry) => [entry.operationKey, entry]));
+const appendLifecycle = (ledger, entry) => {
+  const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
+  const previousHash = entries.at(-1)?.hash ?? "00000000";
+  const next = { ...entry, seq: entries.length + 1, previousHash };
+  next.hash = fnv1a(`${previousHash}:${canonicalJson(next)}`);
+  const appended = [...entries, next];
+  return { schema: "settlement.lifecycle.replay.v1", version: 1, livePersistence: false, entries: appended, rootHash: next.hash };
+};
+export function exportSettlementLifecycleLedger(state) { return clone(state?.lifecycleLedger ?? { schema: "settlement.lifecycle.replay.v1", version: 1, livePersistence: false, entries: [], rootHash: "00000000" }); }
+export function restoreSettlementLifecycleLedger(state, ledger) {
+  if (ledger?.schema !== "settlement.lifecycle.replay.v1" || ledger.version !== 1 || ledger.livePersistence !== false || !Array.isArray(ledger.entries)) throw new Error("LIFECYCLE_LEDGER_SCHEMA_INVALID");
+  let previousHash = "00000000";
+  const seen = new Set();
+  for (const [index, entry] of ledger.entries.entries()) {
+    if (entry.seq !== index + 1 || entry.previousHash !== previousHash || !["REVOKE", "REVERSAL"].includes(entry.type) || !entry.operationKey || seen.has(entry.operationKey)) throw new Error("LIFECYCLE_LEDGER_SEQUENCE_INVALID");
+    const candidate = { ...entry }; delete candidate.hash;
+    if (entry.hash !== fnv1a(`${previousHash}:${canonicalJson(candidate)}`)) throw new Error("LIFECYCLE_LEDGER_INTEGRITY_INVALID");
+    seen.add(entry.operationKey); previousHash = entry.hash;
+  }
+  if ((ledger.entries.at(-1)?.hash ?? "00000000") !== ledger.rootHash) throw new Error("LIFECYCLE_LEDGER_ROOT_INVALID");
+  return { ...clone(state), lifecycleLedger: clone(ledger), lifecycleOperations: lifecycleIndex(ledger.entries) };
+}
 const emptyReceipt = () => ({ status: "not_evaluated", records: [], logicalPaymentId: null, finality: "unknown", reorg: "unknown", getterReadback: null, caseBinding: null });
 const emptyErp = () => ({ paymentEntry: null, bankTransaction: null, reconciliation: null, gl: null, pled: null, outstanding: null, readback: null, createGate: "MATCHER_REQUIRED", submitGate: "NOT_READY", diff: null });
 const invalidateDownstream = (state, reason = "Upstream case facts changed; downstream evidence and ERP projections were invalidated.") => ({
@@ -134,13 +199,24 @@ export function createSettlementCase(seed = {}) {
     search: { party: "", document: "" },
     candidates: [],
     candidate: null,
-    allocation: { requestedAmount6: defaultAmount6, allocatedAmount6: "0", remainingAmount6: defaultAmount6, ceilingAmount6: refundProfile ? defaultAmount6 : null, originalReference: refundProfile ? (profileId === "payment_refund" ? "PAY-AP-2026-1187" : "RCPT-2026-072") : null },
+    allocation: {
+      requestedAmount6: defaultAmount6,
+      allocatedAmount6: "0",
+      remainingAmount6: defaultAmount6,
+      ceilingAmount6: refundProfile ? defaultAmount6 : null,
+      originalReference: refundProfile ? (profileId === "payment_refund" ? "PAY-AP-2026-1187" : "RCPT-2026-072") : null,
+      originalPrincipalAmount6: refundProfile ? null : null,
+      priorRefundedAmount6: refundProfile ? "0" : null,
+      remainingRefundableAmount6: refundProfile ? null : null
+    },
+    candidateResolution: "unresolved",
     reviewerAttested: false,
     payerApproved: false,
     receipt: emptyReceipt(),
     erp: emptyErp(),
     close: { business: "OPEN", operational: "OPEN", accountingPeriod: "OPEN", periodClosingVoucher: "NOT_APPLICABLE" },
     lifecycleOperations: {},
+    lifecycleLedger: { schema: "settlement.lifecycle.replay.v1", version: 1, livePersistence: false, entries: [], rootHash: "00000000" },
     lastLifecycleResult: null,
     outcome: "not_evaluated",
     unresolvedReason: "Evidence tier D requires a typed observation before allocation.",
@@ -212,12 +288,33 @@ export function projectSettlementCase(caseState) {
 }
 
 
-export function rankCandidates({ profileId, origin = "erp_initiated", party = "", document = "" } = {}) {
+export function rankCandidates({ profileId, origin = "erp_initiated", party = "", document = "", candidates = null } = {}) {
   const profile = SETTLEMENT_PROFILES[profileId];
   if (!profile) return [];
+  if (candidates !== null) {
+    if (!Array.isArray(candidates)) return [];
+    return candidates.map((entry) => ({
+      ...entry,
+      profileId: entry?.profileId ?? profileId,
+      origin: entry?.origin ?? origin,
+      amount6: String(entry?.amount6 ?? (profile.refund ? "250000000" : "1250000000")),
+      currency: entry?.currency ?? "USDC",
+      direction: entry?.direction ?? profile.direction,
+      evidenceRequired: profile.sourceRequired ? "A|B|C" : "A|B|C",
+      reason: "authority candidate supplied; uniqueness is required before selection"
+    })).filter((entry) => entry.id && entry.profileId === profileId && entry.origin === origin);
+  }
   const query = `${party} ${document}`.trim().toLowerCase();
-  const source = [{ id: `${profileId}-source-001`, party: profile.counterparty, document: V3_PROFILE_SOURCE[profileId] || (profile.sourceRequired ? "source-document-required" : "advance-or-bank-reference"), score: query ? (query.includes(profile.counterparty.split("|")[0].toLowerCase()) ? 100 : 40) : 0 }];
-  return source.map((entry) => ({ ...entry, profileId, origin, amount6: profile.refund ? "250000000" : "1250000000", currency: "USDC", direction: profile.direction, evidenceRequired: profile.sourceRequired ? "A|B|C" : "A|B|C", reason: entry.score >= 100 ? "party, document and company identity agree" : "candidate requires explicit operator confirmation" }));
+  if (!query) return [];
+  const canonical = V3_PROFILE_DOCUMENTS[profileId];
+  const normalizedParty = String(party).trim().toLowerCase();
+  const normalizedDocument = String(document).trim().toLowerCase();
+  const source = [{ id: `${profileId}-source-001`, party: canonical.party, document: canonical.source }].map((entry) => {
+    const partyMatch = normalizedParty && entry.party.toLowerCase().includes(normalizedParty);
+    const documentMatch = normalizedDocument && entry.document.toLowerCase() === normalizedDocument;
+    return { ...entry, score: partyMatch && documentMatch ? 100 : documentMatch ? 90 : partyMatch ? 60 : 0 };
+  }).filter((entry) => entry.score > 0);
+  return source.map((entry) => ({ ...entry, profileId, origin, amount6: profile.refund ? "250000000" : "1250000000", currency: "USDC", direction: profile.direction, evidenceRequired: "A|B|C", reason: entry.score === 100 ? "party, document and company identity agree" : "candidate requires explicit operator confirmation" }));
 }
 
 export function settlementCaseReducer(input, action) {
@@ -251,11 +348,18 @@ export function settlementCaseReducer(input, action) {
   }
   if (action.type === "RESET_DEPENDENTS") return invalidateDownstream({ ...state, candidates: [], candidate: null, allocation: { ...state.allocation, allocatedAmount6: "0" }, revision: state.revision + 1 }, "Dependent evidence reset; source facts remain the only case authority.");
   if (action.type === "SET_SEARCH") return invalidateDownstream({ ...state, search: { party: String(action.party ?? ""), document: String(action.document ?? "") }, stage: "work-queue", route: { ...state.route, stage: "work-queue", view: "search" }, revision: state.revision + 1 }, "Search changed; candidate, receipt and ERP projections were invalidated.");
-  if (action.type === "RANK_CANDIDATES") return { ...state, candidates: rankCandidates({ profileId: state.profileId, ...state.search }), stage: "match-funds", revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "CANDIDATES_RANKED", revision: state.revision + 1 }] };
+  if (action.type === "RANK_CANDIDATES") {
+    const candidates = rankCandidates({ profileId: state.profileId, ...state.search, candidates: action.candidates ?? null });
+    const ambiguous = candidates.length !== 1;
+    const candidateResolution = ambiguous ? "ambiguous" : candidates[0].score === 100 ? "unique" : "low_confidence";
+    return { ...state, candidates, candidateResolution, stage: candidates.length === 0 ? "work-queue" : "match-funds", matcherState: ambiguous ? "not_evaluated" : state.matcherState, outcome: ambiguous ? "not_evaluated" : state.outcome, unresolvedReason: candidates.length === 0 ? "CANDIDATE_UNKNOWN" : ambiguous ? "MULTIPLE_CANDIDATES" : candidateResolution === "low_confidence" ? "CANDIDATE_LOW_CONFIDENCE" : "Candidate set is unique; select the exact authority candidate.", revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "CANDIDATES_RANKED", count: candidates.length, candidateResolution, revision: state.revision + 1 }] };
+  }
   if (action.type === "SELECT_CANDIDATE") {
+    if (state.candidates.length !== 1) return failure(state, state.candidates.length === 0 ? "CANDIDATE_UNKNOWN" : "CANDIDATE_AMBIGUOUS", "Exactly one typed candidate must be returned before selection; keep the case OPEN when candidates are missing or multiple.");
     const candidate = state.candidates.find((entry) => entry.id === action.candidateId);
     if (!candidate) return failure(state, "CANDIDATE_UNKNOWN", "Rank candidates again and select an exact returned candidate.");
     if (candidate.profileId !== state.profileId || candidate.origin !== state.origin) return failure(state, "CANDIDATE_IDENTITY_MISMATCH", "Candidate profile and origin must match the active case.");
+    if (state.candidateResolution === "low_confidence" && !(action.confirmation?.role === "operator" && action.confirmation?.operatorId && action.confirmation?.reason && action.confirmation?.confirmedAt)) return failure(state, "CANDIDATE_LOW_CONFIDENCE", "A low-confidence candidate requires a named operator, reason and timestamp; do not default-select it.");
     return invalidateDownstream({ ...state, candidate, stage: "match-funds", route: { ...state.route, stage: "match-funds", view: "candidate" }, unresolvedReason: "Candidate selected; typed server evidence still required.", revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "CANDIDATE_SELECTED", candidateId: candidate.id, revision: state.revision + 1 }] }, "Candidate changed; receipt and ERP projections were invalidated.");
   }
   if (action.type === "SET_ALLOCATION") {
@@ -264,12 +368,24 @@ export function settlementCaseReducer(input, action) {
     const amount = String(allocation.amount6 ?? "");
     if (!/^\d+$/.test(amount) || BigInt(amount) <= 0n) return failure(state, "ALLOCATION_INVALID", "Allocation must be a positive amount6 integer.");
     if (BigInt(amount) > BigInt(state.allocation.requestedAmount6)) return failure(state, "ALLOCATION_OVERPAY", "Allocation cannot exceed the requested amount6; retain the open remainder.");
-    if (state.profileId.endsWith("refund") && (!state.allocation.ceilingAmount6 || BigInt(amount) > BigInt(state.allocation.ceilingAmount6))) return failure(state, "REFUND_OVER_CEILING", "Reduce the refund to the remaining refundable ceiling and retain the original reference.");
+    if (state.profileId.endsWith("refund")) {
+      const refund = refundAmounts(allocation, state);
+      if (!refund.valid) return failure(state, refund.code, "Refund authority must bind the original principal and prior refunded amount before accepting current cash.");
+      if (!allocation.originalReference && !state.allocation.originalReference) return failure(state, "REFUND_ORIGINAL_REFERENCE_REQUIRED", "Refund must bind the authoritative original voucher/transaction before any allocation.");
+      if (BigInt(amount) > BigInt(refund.remainingBefore)) return failure(state, "REFUND_OVER_CEILING", "Current refund exceeds original principal minus prior refunds; retain the open item.");
+    }
     const exchangeRate = String(allocation.exchangeRate ?? "");
     const differenceAmount6 = String(allocation.differenceAmount6 ?? "");
     if (SETTLEMENT_PROFILES[state.profileId].refund && (!/^\d+(?:\.\d+)?$/.test(exchangeRate) || Number(exchangeRate) <= 0)) return failure(state, "REFUND_EXCHANGE_RATE_REQUIRED", "Refund allocation requires an explicit positive exchange rate; no implicit 1:1 rate is accepted.");
     if (SETTLEMENT_PROFILES[state.profileId].refund && (!/^-?\d+$/.test(differenceAmount6) || (differenceAmount6 !== "0" && !allocation.differenceAccount))) return failure(state, "REFUND_DIFFERENCE_UNRESOLVED", "Refund difference must be an explicit amount6; any non-zero difference requires a named company account.");
-    return invalidateDownstream({ ...state, allocation: { ...state.allocation, allocatedAmount6: amount, remainingAmount6: String(BigInt(state.allocation.requestedAmount6) - BigInt(amount)), originalReference: allocation.originalReference ?? state.allocation.originalReference, exchangeRate: SETTLEMENT_PROFILES[state.profileId].refund ? exchangeRate : null, differenceAmount6: SETTLEMENT_PROFILES[state.profileId].refund ? differenceAmount6 : "0", differenceAccount: allocation.differenceAccount ?? null }, stage: "match-funds", route: { ...state.route, stage: "match-funds", view: "allocation" }, revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "ALLOCATION_SET", amount6: amount, revision: state.revision + 1 }] }, "Allocation changed; raw receipt and ERP projections were invalidated.");
+    if (SETTLEMENT_PROFILES[state.profileId].refund) {
+      const [whole, fraction = ""] = exchangeRate.split(".");
+      const rate6 = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0").slice(0, 6));
+      const expectedDifference6 = (BigInt(amount) * rate6) / 1_000_000n - BigInt(amount);
+      if (BigInt(differenceAmount6) !== expectedDifference6) return failure(state, "REFUND_ARITHMETIC_MISMATCH", "Refund exchange-rate arithmetic must equal differenceAmount6 exactly; retain the original open item.");
+    }
+    const refund = SETTLEMENT_PROFILES[state.profileId].refund ? refundAmounts(allocation, state) : null;
+    return invalidateDownstream({ ...state, allocation: { ...state.allocation, allocatedAmount6: amount, remainingAmount6: String(BigInt(state.allocation.requestedAmount6) - BigInt(amount)), originalReference: allocation.originalReference ?? state.allocation.originalReference, originalPrincipalAmount6: refund?.original ?? state.allocation.originalPrincipalAmount6, priorRefundedAmount6: refund?.prior ?? state.allocation.priorRefundedAmount6, remainingRefundableAmount6: refund ? String(BigInt(refund.remainingBefore) - BigInt(amount)) : state.allocation.remainingRefundableAmount6, ceilingAmount6: refund?.remainingBefore ?? state.allocation.ceilingAmount6, exchangeRate: SETTLEMENT_PROFILES[state.profileId].refund ? exchangeRate : null, differenceAmount6: SETTLEMENT_PROFILES[state.profileId].refund ? differenceAmount6 : "0", differenceAccount: allocation.differenceAccount ?? null }, stage: "match-funds", route: { ...state.route, stage: "match-funds", view: "allocation" }, revision: state.revision + 1, caseHistory: [...(state.caseHistory ?? []), { type: "ALLOCATION_SET", amount6: amount, refund_remaining_amount6: refund?.remainingBefore ?? null, revision: state.revision + 1 }] }, "Allocation changed; raw receipt and ERP projections were invalidated.");
   }
   if (action.type === "RECORD_REVIEWER_ATTESTATION") return { ...state, reviewerAttested: true, revision: state.revision + 1 };
   if (action.type === "REVIEW_PAYER_APPROVAL") return state.reviewerAttested ? { ...state, payerApproved: true, revision: state.revision + 1 } : failure(state, "REVIEWER_REQUIRED", "Record reviewer attestation before payer approval.");
@@ -278,7 +394,7 @@ export function settlementCaseReducer(input, action) {
     const amount6 = state.allocation.allocatedAmount6 && state.allocation.allocatedAmount6 !== "0" ? state.allocation.allocatedAmount6 : "0";
     if (amount6 === "0") return failure(state, "ZERO_ALLOCATION_FORBIDDEN", "Set a positive typed allocation before reading a receipt or creating accounting objects.");
     if (!state.reviewerAttested || !state.payerApproved) return failure(state, "CONTROL_SEQUENCE_INCOMPLETE", "Record reviewer attestation and separate payer approval before receipt readback.");
-    const receiptCheck = validateCanonicalArcReceipt(action.receipt, { amount6, caseBinding: { caseId: state.caseId, companyId: state.companyId, profileId: state.profileId, origin: state.origin, sourceDocument: state.candidate?.document ?? state.allocation.originalReference, treasuryId: state.treasuryId, policyId: state.policy.policyId, transferId: state.policy.transferId } });
+    const receiptCheck = validateCanonicalArcReceipt(action.receipt, { amount6, now: action.now, requireTtl: true, caseBinding: { caseId: state.caseId, companyId: state.companyId, profileId: state.profileId, origin: state.origin, sourceDocument: state.candidate?.document ?? state.allocation.originalReference, treasuryId: state.treasuryId, policyId: state.policy.policyId, transferId: state.policy.transferId } });
     if (!receiptCheck.valid) return failure(state, receiptCheck.code, receiptCheck.recovery, receiptCheck.code === "ARC_RECEIPT_STALE" ? "stale" : "mismatch");
     const evidence = action.evidence;
     if (!evidence || !["A", "B", "C"].includes(evidence.tier) || !evidence.observationId || !evidence.source || !evidence.roles || evidence.roles.distinct !== true || Object.prototype.hasOwnProperty.call(evidence, "rolesVerified") || !typedServerEvidence(evidence, state) || (evidence.tier === "C" && !state.originObservation?.tierCConfirmed)) return failure(state, "EVIDENCE_PROVENANCE_REQUIRED", "Attach typed server reviewer/payer roles and any required Tier C confirmation before matching.");
@@ -303,7 +419,8 @@ export function settlementCaseReducer(input, action) {
   }
   if (action.type === "GENERATE_LEDGER") {
     if (state.erp.submitGate !== "OWNER_REVIEW_REQUIRED" || state.erp.reconciliation?.status !== "Reconciled") return failure(state, "LEDGER_READBACK_REQUIRED", "Verify ERP readback and Bank Transaction reconciliation before generating GL/PLED/outstanding.");
-    return { ...state, erp: { ...state.erp, pled: { status: "OPEN", amount6: state.allocation.allocatedAmount6, source: state.candidate?.document }, outstanding: { before: state.allocation.requestedAmount6, after: state.allocation.remainingAmount6, status: "OPEN" }, gl: { ...state.erp.gl, status: "Generated", readback: { typed: true, balanced: true } } }, stage: "ledger-close", route: { ...state.route, stage: "ledger-close", view: "ledger" }, revision: state.revision + 1 };
+    if (!action.readback || action.readback.source !== "typed_local_erp_readback" || action.readback.local_fixture_only !== true || action.readback.live_erp !== false || action.readback.external_actions !== 0 || action.readback.company !== state.companyId || action.readback.gl_balanced !== true || action.readback.payment_ledger_status !== "OPEN") return failure(state, "LEDGER_INDEPENDENT_READBACK_REQUIRED", "A local proposal cannot self-assert a balanced GL; attach a separately typed GL/PLED readback.");
+    return { ...state, erp: { ...state.erp, pled: { status: "OPEN", amount6: state.allocation.allocatedAmount6, source: state.candidate?.document }, outstanding: { before: state.allocation.requestedAmount6, after: state.allocation.remainingAmount6, status: "OPEN" }, gl: { ...state.erp.gl, status: "Readback verified", readback: clone(action.readback) } }, stage: "ledger-close", route: { ...state.route, stage: "ledger-close", view: "ledger" }, revision: state.revision + 1 };
   }
   if (action.type === "CLOSE_OPERATIONAL") {
     if (state.erp.gl?.readback?.balanced !== true) return failure(state, "OPERATIONAL_CLOSE_READBACK_REQUIRED", "Generate and read back a balanced GL/PLED projection before operational close.");
@@ -336,16 +453,24 @@ export function settlementCaseReducer(input, action) {
     const priorOpenItem = projectSettlementCase(state).document.openItem;
     const priorLogicalPaymentId = state.receipt?.logicalPaymentId ?? null;
     const next = invalidateDownstream({ ...state, revision: state.revision + 1 }, `${action.type} ${operationKey} retained the original open item and invalidated downstream consequences.`);
-    const entry = { type: action.type, operationKey, reason: String(action.reason), operatorId: authority.operatorId, priorLogicalPaymentId, openItem: priorOpenItem, revision: next.revision };
-    return { ...next, matcherState: "not_evaluated", outcome: action.type === "REVOKE" ? "revoked" : "reversal_recorded", lifecycleOperations: { ...(state.lifecycleOperations ?? {}), [operationKey]: entry }, lastLifecycleResult: { state: "APPLIED", operationKey, type: action.type }, caseHistory: [...next.caseHistory, entry] };
+    const entry = { type: action.type, operationKey, reason: String(action.reason), operatorId: authority.operatorId, authorityRole: authority.role, priorLogicalPaymentId, openItem: priorOpenItem, appliedAt: action.appliedAt ?? null, revisionAfter: next.revision };
+    const lifecycleLedger = appendLifecycle(state.lifecycleLedger, entry);
+    const stored = lifecycleLedger.entries.at(-1);
+    return { ...next, matcherState: "not_evaluated", outcome: action.type === "REVOKE" ? "revoked" : "reversal_recorded", lifecycleLedger, lifecycleOperations: lifecycleIndex(lifecycleLedger.entries), lastLifecycleResult: { state: "APPLIED", operationKey, type: action.type }, caseHistory: [...next.caseHistory, stored] };
+  }
+  if (action.type === "RESTORE_LIFECYCLE_LEDGER") {
+    try { return { ...restoreSettlementLifecycleLedger(state, action.ledger), lastLifecycleResult: { state: "RESTORED", rootHash: action.ledger.rootHash } }; }
+    catch (error) { return failure(state, error.message, "Reject the ledger and re-read the exact exported replay envelope; no idempotency state was restored."); }
   }
   if (action.type === "RECOVER") return { ...invalidateDownstream({ ...state, matcherState: action.matcherState === "stale" || action.matcherState === "mismatch" ? action.matcherState : "not_evaluated", outcome: action.matcherState === "stale" || action.matcherState === "mismatch" ? action.matcherState : "not_evaluated", revision: state.revision + 1 }, String(action.reason ?? "Named recovery retained the open item.")), recovery: String(action.recovery ?? "Refresh the typed source and re-run the matcher; no accounting close is inferred.") };
   if (action.type === "REVISE") return { ...state, stage: "evidence", outcome: "revision_required", revision: state.revision + 1, recovery: String(action.reason ?? "Review the linked evidence and revise the case.") };
   return state;
 }
 
-export function validateCanonicalArcReceipt(receipt, { amount6, caseBinding } = {}) {
+export function validateCanonicalArcReceipt(receipt, { amount6, caseBinding, now, ttlMs = DEFAULT_RECEIPT_TTL_MS, requireTtl = true } = {}) {
   if (!receipt || receipt.chainId !== 5042002 || receipt.status !== 1) return { valid: false, code: "ARC_RECEIPT_NOT_SUCCESS", recovery: "Retain OPEN; require Arc status 1 and a typed getter readback." };
+  const freshness = validateReceiptFreshness(receipt, { now, ttlMs, required: requireTtl });
+  if (!freshness.valid) return { valid: false, code: freshness.code, recovery: "Retain OPEN; refresh the typed attestation/receipt observation before matching." };
   let logs;
   try { logs = receipt.rawLogs ? decodeRawArcReceipt(receipt) : receipt.logs; }
   catch (error) {
@@ -405,7 +530,7 @@ export function decodeRawArcReceipt(receipt) {
   });
 }
 
-export function buildCanonicalArcReceipt({ policyContract, payer, recipient, policyId, transferId, attestationDigest, attestationNonce, amount6, transactionHash, chainId = 5042002, status = 1, caseBinding = null } = {}) {
+export function buildCanonicalArcReceipt({ policyContract, payer, recipient, policyId, transferId, attestationDigest, attestationNonce, amount6, transactionHash, chainId = 5042002, status = 1, caseBinding = null, observedAt = null, validUntil = null } = {}) {
   const n = BigInt(amount6 ?? 0);
   const tx = transactionHash ?? "0x" + "44".repeat(32);
   const padAddress = (address) => `0x${"0".repeat(24)}${String(address ?? "").replace(/^0x/, "").slice(-40)}`;
@@ -437,6 +562,8 @@ export function buildCanonicalArcReceipt({ policyContract, payer, recipient, pol
     finality: "status_1_and_getter_readback_required",
     reorg: "confirmed_no_reorg",
     getterReadback: { policyId, transferId, payer, recipient, amount6: n.toString(), attestationDigest, attestationNonce: BigInt(attestationNonce ?? 0).toString() },
-    caseBinding
+    caseBinding,
+    ...(observedAt != null ? { observedAt } : {}),
+    ...(validUntil != null ? { validUntil } : {})
   };
 }
