@@ -34,8 +34,16 @@ import {
 } from "../current-mvp/web/fixture-engine.mjs";
 import { a12BrowserMeasurementContract, a12RuntimeLayoutMetrics, a12UiFilteredQueue } from "../current-mvp/web/navigation-workspace.mjs";
 import {
+  ACCEPTANCE_STATE,
+  CURRENT_RELEASE_COMMIT,
   CURRENT_MVP_ROOT,
   OUTPUT_PATH,
+  PUBLICATION_CANDIDATE_STATE,
+  RENDER_CURRENT_DEPLOYED_COMMIT,
+  RENDER_CURRENT_DEPLOYMENT_ID,
+  RENDER_CURRENT_DEPLOYMENT_URL,
+  RENDER_STATUS,
+  RENDER_SERVICE_ID,
   verifyCurrentReleaseWorkbenchManifest
 } from "./build_current_release_workbench_manifest.mjs";
 import {
@@ -162,29 +170,30 @@ test("full current-release workbench manifest binds every shipped file and rejec
   }
 });
 
-test("published baseline manifest truth rejects stale commits and the old 14-path scope", async () => {
+test("current release manifest truth rejects stale GitHub commits and false Render deployment status", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "arc-h186-manifest-"));
   try {
     const candidate = join(temporary, "current-mvp");
     await cp(CURRENT_MVP_ROOT, candidate, { recursive: true });
     const manifestPath = join(candidate, "current-release-workbench-manifest.json");
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-    manifest.baseline_git_commit = "9795c442f4c80464c2d54639a638f02060265be1";
-    manifest.current_release_surface_status.github.baseline_commit = "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7";
-    manifest.worktree_truth.publication_candidate_count = 14;
-    manifest.worktree_truth.publication_candidate_state = "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK";
+    manifest.current_release_surface_status.github.commit = RENDER_CURRENT_DEPLOYED_COMMIT;
+    manifest.current_release_surface_status.github.remote_main = RENDER_CURRENT_DEPLOYED_COMMIT;
+    manifest.current_release_surface_status.github.current_release_bound = false;
+    manifest.current_release_surface_status.render.candidate.required_commit = RENDER_CURRENT_DEPLOYED_COMMIT;
+    manifest.current_release_surface_status.render.candidate.status = "DEPLOYED";
+    manifest.current_release_surface_status.render.candidate.owner_gate = "GRANTED";
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     const result = await verifyCurrentReleaseWorkbenchManifest({ root: candidate });
     assert.equal(result.valid, false);
-    assert.ok(result.issues.includes("h187_baseline_or_candidate_binding_invalid"));
-    assert.ok(result.issues.includes("stale_publication_commit_truth"));
-    assert.ok(result.issues.includes("worktree_candidate_scope_invalid"));
+    assert.ok(result.issues.includes("github_current_release_binding_invalid"));
+    assert.ok(result.issues.includes("render_deployment_truth_invalid"));
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
 });
 
-test("H187 manifest binds the embedded ERP read-only projection and keeps surface readbacks unproven", async () => {
+test("current release manifest binds the embedded ERP read-only projection and keeps surface readbacks unproven", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "arc-h187-manifest-"));
   try {
     const candidate = join(temporary, "current-mvp");
@@ -345,7 +354,7 @@ test("current narrative and compiler contract reject historical umbrella drift",
   assert.match(readme, /programme-final-20260810\/arc-enterprise-settlement-control-programme-final-3min\.mp4/);
   assert.match(readme, /programme-final-20260810\/Arc_Enterprise_Settlement_Programme_Deck_Current_V3\.pdf/);
   assert.match(readme, /^## Historical\/support verified evidence$/m);
-  assert.match(readme, /H188 candidate instead carries a source-separated current-contract receipt/);
+  assert.match(readme, /current `e27d847` source carries a source-separated current-contract receipt/);
   assert.match(readme, /no active subscription ID and no trusted readback loader/);
   assert.match(architecture, /Verified Milestone Close/);
   assert.match(demo, /current product/);
@@ -588,9 +597,10 @@ test("browser measurement contract rejects overflow, focus loss and console erro
 
 test("manifest freezes current five-surface status and verifier/test byte inputs", async () => {
   const manifest = JSON.parse(await readFile(OUTPUT_PATH, "utf8"));
+  assert.equal(manifest.acceptance_state, ACCEPTANCE_STATE);
   assert.deepEqual(Object.fromEntries(Object.entries(manifest.current_release_surface_status).map(([id, value]) => [id, value.status])), {
     github: "TRUE_RECEIPT",
-    render: "TRUE_RECEIPT",
+    render: RENDER_STATUS,
     deck: "TRUE_RECEIPT",
     video: "TRUE_RECEIPT",
     circle_console: "BLOCKED",
@@ -604,22 +614,27 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.network, "ARC-TESTNET");
   assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.chain_id, 5042002);
   assert.equal(manifest.current_release_surface_status.circle_console.trusted_readback_contract.loader.calls_external_api, false);
-  assert.equal(manifest.current_release_surface_status.github.current_release_bound, false);
-  assert.equal(manifest.current_release_surface_status.github.published_baseline_binding, true);
-  assert.equal(manifest.current_release_surface_status.github.published_baseline_current_release_bound, true);
-  assert.equal(manifest.current_release_surface_status.github.baseline_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
+  assert.equal(manifest.current_release_surface_status.github.current_release_bound, true);
+  assert.equal(manifest.current_release_surface_status.github.branch, "main");
+  assert.equal(manifest.current_release_surface_status.github.commit, CURRENT_RELEASE_COMMIT);
+  assert.equal(manifest.current_release_surface_status.github.remote_main, CURRENT_RELEASE_COMMIT);
+  assert.equal(manifest.current_release_surface_status.github.source_readback, "remote_main_e27d847_verified");
   assert.equal(manifest.current_release_surface_status.github.current_worktree_candidate_bound, false);
+  assert.equal(manifest.current_release_surface_status.github.owner_gate_required, false);
   assert.equal("candidate_binding" in manifest.current_release_surface_status.github, false);
-  assert.equal("product_commit" in manifest.current_release_surface_status.github, false);
-  assert.equal("receipt_observed_remote_main" in manifest.current_release_surface_status.github, false);
-  assert.equal(manifest.current_release_surface_status.github.owner_gate_required, true);
-  assert.equal(manifest.worktree_truth.publication_candidate_state, "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE");
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 15);
-  assert.equal(manifest.current_release_surface_status.render.baseline_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
-  assert.equal("observed_commit" in manifest.current_release_surface_status.render, false);
+  assert.equal(manifest.worktree_truth.publication_candidate_state, PUBLICATION_CANDIDATE_STATE);
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 4);
+  assert.equal(manifest.current_release_surface_status.render.service_id, RENDER_SERVICE_ID);
+  assert.equal(manifest.current_release_surface_status.render.status, RENDER_STATUS);
+  assert.equal(manifest.current_release_surface_status.render.deployed_commit, RENDER_CURRENT_DEPLOYED_COMMIT);
+  assert.equal(manifest.current_release_surface_status.render.deployment_id, RENDER_CURRENT_DEPLOYMENT_ID);
+  assert.equal(manifest.current_release_surface_status.render.deployment_url, RENDER_CURRENT_DEPLOYMENT_URL);
+  assert.equal(manifest.current_release_surface_status.render.immutable_deploy_entity, true);
   assert.equal(manifest.current_release_surface_status.render.current_release_bound, false);
-  assert.equal(manifest.current_release_surface_status.render.published_baseline_binding, true);
-  assert.equal(manifest.current_release_surface_status.render.published_baseline_current_release_bound, true);
+  assert.equal(manifest.current_release_surface_status.render.candidate.required_commit, CURRENT_RELEASE_COMMIT);
+  assert.equal(manifest.current_release_surface_status.render.candidate.status, "NOT_DEPLOYED");
+  assert.equal(manifest.current_release_surface_status.render.candidate.current_release_bound, false);
+  assert.equal(manifest.current_release_surface_status.render.candidate.owner_gate, "NOT_GRANTED");
   assert.equal(manifest.current_release_surface_status.render.current_worktree_candidate_bound, false);
   assert.equal(manifest.current_release_surface_status.erp.owner_live_readback_binding, true);
   assert.equal(manifest.current_release_surface_status.erp.current_worktree_candidate_bound, false);
@@ -639,16 +654,16 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal(manifest.current_release_surface_status.arc_testnet.readiness.status, "UNPROVEN");
   assert.equal(manifest.current_release_surface_status.arc_testnet.historical_lineage_only, false);
   assert.match(manifest.current_release_surface_status.arc_testnet.evidence_binding, /0x2f40/);
-  assert.equal(manifest.baseline_git_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
+  assert.equal(manifest.baseline_git_commit, CURRENT_RELEASE_COMMIT);
   assert.equal(manifest.current_worktree_candidate_bound, false);
-  assert.equal(manifest.worktree_truth.baseline_commit, "afce1f22c1f6b069d47b25106b71ab13f33d4670");
-  assert.equal(manifest.worktree_truth.current_head, "83becbb58bb88be12cabf129af784db79747e958");
-  assert.equal(manifest.worktree_truth.tracked_modified_count, 22);
-  assert.equal(manifest.worktree_truth.content_candidate_count, 15);
+  assert.equal(manifest.worktree_truth.baseline_commit, CURRENT_RELEASE_COMMIT);
+  assert.equal(manifest.worktree_truth.current_head, CURRENT_RELEASE_COMMIT);
+  assert.equal(manifest.worktree_truth.tracked_modified_count, 11);
+  assert.equal(manifest.worktree_truth.content_candidate_count, 4);
   assert.equal(manifest.worktree_truth.mode_only_non_candidate_count, 7);
   assert.equal(manifest.worktree_truth.self_excluded_manifest_path, "current-mvp/current-release-workbench-manifest.json");
-  assert.equal(manifest.worktree_truth.publication_candidate_state, "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE");
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 15);
+  assert.equal(manifest.worktree_truth.publication_candidate_state, PUBLICATION_CANDIDATE_STATE);
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 4);
   const selfExcludedManifest = manifest.worktree_truth.publication_candidate_paths.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
   assert.equal(selfExcludedManifest.self_excluded, true);
   assert.equal(selfExcludedManifest.hash_excluded, true);

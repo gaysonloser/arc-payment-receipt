@@ -20,32 +20,42 @@
   "direct_erp_mutation": false,
   "stable_terminal_freeze": true,
   "writer_idle": true,
-  "acceptance_state": "H188_ARC_CURRENT_RECEIPT_CANDIDATE_PENDING_GITHUB_OWNER_GATE",
-  "baseline_git_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
+  "acceptance_state": "H194_GITHUB_TRUE_RECEIPT_RENDER_OWNER_GATE_NOT_GRANTED",
+  "baseline_git_commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
   "current_worktree_candidate_bound": false,
   "current_release_surface_status": {
     "github": {
       "status": "TRUE_RECEIPT",
-      "current_release_bound": false,
-      "published_baseline_binding": true,
-      "published_baseline_current_release_bound": true,
-      "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
+      "current_release_bound": true,
+      "branch": "main",
+      "commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+      "remote_main": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
       "current_worktree_candidate_bound": false,
       "current_worktree_dirty": true,
-      "source_readback": "remote_main_afce1f2_verified; h188_candidate_not_published",
-      "note": "Published H187 baseline is live; the H188 Arc current-receipt delta is not yet published",
-      "owner_gate_required": true,
+      "source_readback": "remote_main_e27d847_verified",
+      "note": "GitHub main@e27d847 is the current public release; local correction candidates remain unbound",
+      "owner_gate_required": false,
       "historical_lineage_only": false
     },
     "render": {
-      "status": "TRUE_RECEIPT",
+      "status": "EXISTING_DEPLOYMENT_TRUE_RECEIPT_CURRENT_CANDIDATE_NOT_DEPLOYED",
       "current_release_bound": false,
-      "published_baseline_binding": true,
-      "published_baseline_current_release_bound": true,
-      "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
+      "service_id": "srv-d9cumml8nd3s73c9nehg",
+      "service_url": "https://arc-payment-receipt.onrender.com/",
+      "deployed_commit": "83becbb58bb88be12cabf129af784db79747e958",
+      "deployment_id": "dep-d9u4lcflk1mc73fi8o0g",
+      "deployment_url": "https://dashboard.render.com/web/srv-d9cumml8nd3s73c9nehg/deploys/dep-d9u4lcflk1mc73fi8o0g",
+      "immutable_deploy_entity": true,
       "current_worktree_candidate_bound": false,
-      "source_readback": "render_afce1f2_live; h188_candidate_not_deployed",
-      "note": "Published H187 baseline is live; the H188 Arc current-receipt delta is not yet deployed",
+      "source_readback": "render_deployment_83becbb_live; e27d847_candidate_not_deployed",
+      "note": "Render still serves immutable 83becbb; the e27d847 candidate awaits the existing deployment/readback owner gate",
+      "candidate": {
+        "required_commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+        "status": "NOT_DEPLOYED",
+        "current_release_bound": false,
+        "owner_gate": "NOT_GRANTED",
+        "owner_gate_required": true
+      },
       "owner_gate_required": true,
       "historical_lineage_only": false
     },
@@ -146,7 +156,7 @@
         ],
         "readback_url": null
       },
-      "evidence_binding": "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding activates only after GitHub and Render publish this candidate",
+      "evidence_binding": "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding remains pending until Render deploys e27d847",
       "historical_lineage_only": false
     },
     "erp": {
@@ -176,17 +186,17 @@
           "business_close_readback"
         ],
         "errors": [],
-        "verification_fingerprint": "10421fda63a0944affd142b42666e17d2e7e0b349002e291c04490146308c88e"
+        "verification_fingerprint": "2b578922cba7bf2bd58c3e38399a367d4b7e09cb317f83290d476fdb46584301"
       },
       "business_close": "not_proven",
       "historical_lineage_only": false
     }
   },
   "worktree_truth": {
-    "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
-    "current_head": "83becbb58bb88be12cabf129af784db79747e958",
-    "tracked_modified_count": 22,
-    "content_candidate_count": 15,
+    "baseline_commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+    "current_head": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+    "tracked_modified_count": 11,
+    "content_candidate_count": 4,
     "mode_only_non_candidate_count": 7,
     "content_candidate_paths": [
       {
@@ -200,74 +210,14 @@
         "hash_excluded": true
       },
       {
-        "path": "current-mvp/web/fixture-engine.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 159548,
-        "sha256": "aeaee03e154eafc4e1353f8031cf21e3105fc2063f55e17a4d0585f2e8d62376"
-      },
-      {
-        "path": "current-mvp/web/navigation-workspace.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 136434,
-        "sha256": "4c43c648971608af1ddf5b46e7b5a45641a45baf9d78d958b3c9ca5bf961f070"
-      },
-      {
-        "path": "current-mvp/web/workbench/workbench-projection.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 32907,
-        "sha256": "5a72ea1c127b532ba5ddefe8004adb42914968cc48eec1c9082bbc35654b1056"
-      },
-      {
-        "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
-        "mode_head": "000000",
-        "mode_worktree": "100644",
-        "mode_changed": true,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 4007,
-        "sha256": "43f5367c3abf32698c8fc5c5a7f8e72ceec3be2304dd8e56544878d741f90c37"
-      },
-      {
         "path": "README.md",
         "mode_head": "100644",
         "mode_worktree": "100644",
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30660,
-        "sha256": "49e42972fa860b4c226283acab2ade76d0a9f5d4846b9e88d42f86dfdd9869c0"
-      },
-      {
-        "path": "tools/arc_payment_receipt_server.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 145721,
-        "sha256": "b2925910ef6738aa44fd297ff9c77cafa358422c8ab57225dbadfce53f83332e"
-      },
-      {
-        "path": "tools/arc_payment_receipt_server.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100755",
-        "mode_changed": true,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 91598,
-        "sha256": "95ed7efc302b942a8b0218645ec949cdffd6ed2db9981bd4af7cd625316adc44"
+        "bytes": 31012,
+        "sha256": "5e17a85daf8b629212527967f788ab1704d084b7c804611549437c42b259903a"
       },
       {
         "path": "tools/build_current_release_workbench_manifest.mjs",
@@ -276,58 +226,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 28789,
-        "sha256": "4c02aede35985a5fbcbdf63e466cf8406a5dcaa87b2ffb5fe5a49a7a13951c8e"
-      },
-      {
-        "path": "tools/circle_console_receipt.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 21929,
-        "sha256": "bda5c8e50ffa00b63b1dec2687fa9899312d30b4d54e3b3920b7ba1dc1b5894a"
-      },
-      {
-        "path": "tools/circle_console_server.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 8680,
-        "sha256": "a561f05d49a4a6d7aae827e191b2d945345f4a21835df07eeb092aa83fded24f"
-      },
-      {
-        "path": "tools/circle_contract_webhook_gate.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 27810,
-        "sha256": "58b5f4cfbfdada767f910ef7718468b5cca4f413d1b55b275bb0aaa7a52780fa"
-      },
-      {
-        "path": "tools/current_mvp_erp_readiness.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 18193,
-        "sha256": "d831d8414bd9ce35f2077882f980eb3c7d2085abf76180e63045a037b608fe52"
-      },
-      {
-        "path": "tools/current_mvp_erp_readiness.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 12014,
-        "sha256": "4774bd2b9d90932e9a1231bfdb0b975f714574f45f0951b3da56940388baf0c2"
+        "bytes": 30135,
+        "sha256": "0d32568795e851b5e2a2b3d8bd7df646bb01d82a579d64a02e3bf6b51e057ee9"
       },
       {
         "path": "tools/current_release_workbench.test.mjs",
@@ -336,8 +236,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 43164,
-        "sha256": "090845a3ea75540798d4ab33700b8eb501ce7a3ab6fafe7f8cacd2390e8c3a15"
+        "bytes": 43852,
+        "sha256": "4bfd04e52ad99a78ecf881e5ecfb196e1c6b92de8b2a4ad6f3254761ff6f7519"
       }
     ],
     "documentation_only_content_count": 0,
@@ -415,8 +315,8 @@
       }
     ],
     "untracked_paths": [],
-    "publication_candidate_state": "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
-    "publication_candidate_count": 15,
+    "publication_candidate_state": "H194_CURRENT_RELEASE_CORRECTION_CANDIDATE_AGAINST_PUBLISHED_E27D847_RENDER_OWNER_GATE_PENDING",
+    "publication_candidate_count": 4,
     "publication_candidate_paths": [
       {
         "path": "current-mvp/current-release-workbench-manifest.json",
@@ -430,80 +330,14 @@
         "documentation_only": false
       },
       {
-        "path": "current-mvp/web/fixture-engine.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 159548,
-        "sha256": "aeaee03e154eafc4e1353f8031cf21e3105fc2063f55e17a4d0585f2e8d62376",
-        "documentation_only": false
-      },
-      {
-        "path": "current-mvp/web/navigation-workspace.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 136434,
-        "sha256": "4c43c648971608af1ddf5b46e7b5a45641a45baf9d78d958b3c9ca5bf961f070",
-        "documentation_only": false
-      },
-      {
-        "path": "current-mvp/web/workbench/workbench-projection.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 32907,
-        "sha256": "5a72ea1c127b532ba5ddefe8004adb42914968cc48eec1c9082bbc35654b1056",
-        "documentation_only": false
-      },
-      {
-        "path": "outputs/Arc_Current_Release_PolicySettlementV1_Readback.json",
-        "mode_head": "000000",
-        "mode_worktree": "100644",
-        "mode_changed": true,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 4007,
-        "sha256": "43f5367c3abf32698c8fc5c5a7f8e72ceec3be2304dd8e56544878d741f90c37",
-        "documentation_only": false
-      },
-      {
         "path": "README.md",
         "mode_head": "100644",
         "mode_worktree": "100644",
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30660,
-        "sha256": "49e42972fa860b4c226283acab2ade76d0a9f5d4846b9e88d42f86dfdd9869c0",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/arc_payment_receipt_server.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 145721,
-        "sha256": "b2925910ef6738aa44fd297ff9c77cafa358422c8ab57225dbadfce53f83332e",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/arc_payment_receipt_server.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100755",
-        "mode_changed": true,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 91598,
-        "sha256": "95ed7efc302b942a8b0218645ec949cdffd6ed2db9981bd4af7cd625316adc44",
+        "bytes": 31012,
+        "sha256": "5e17a85daf8b629212527967f788ab1704d084b7c804611549437c42b259903a",
         "documentation_only": false
       },
       {
@@ -513,63 +347,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 28789,
-        "sha256": "4c02aede35985a5fbcbdf63e466cf8406a5dcaa87b2ffb5fe5a49a7a13951c8e",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/circle_console_receipt.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 21929,
-        "sha256": "bda5c8e50ffa00b63b1dec2687fa9899312d30b4d54e3b3920b7ba1dc1b5894a",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/circle_console_server.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 8680,
-        "sha256": "a561f05d49a4a6d7aae827e191b2d945345f4a21835df07eeb092aa83fded24f",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/circle_contract_webhook_gate.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 27810,
-        "sha256": "58b5f4cfbfdada767f910ef7718468b5cca4f413d1b55b275bb0aaa7a52780fa",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/current_mvp_erp_readiness.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 18193,
-        "sha256": "d831d8414bd9ce35f2077882f980eb3c7d2085abf76180e63045a037b608fe52",
-        "documentation_only": false
-      },
-      {
-        "path": "tools/current_mvp_erp_readiness.test.mjs",
-        "mode_head": "100644",
-        "mode_worktree": "100644",
-        "mode_changed": false,
-        "content_delta": true,
-        "excluded": false,
-        "bytes": 12014,
-        "sha256": "4774bd2b9d90932e9a1231bfdb0b975f714574f45f0951b3da56940388baf0c2",
+        "bytes": 30135,
+        "sha256": "0d32568795e851b5e2a2b3d8bd7df646bb01d82a579d64a02e3bf6b51e057ee9",
         "documentation_only": false
       },
       {
@@ -579,28 +358,28 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 43164,
-        "sha256": "090845a3ea75540798d4ab33700b8eb501ce7a3ab6fafe7f8cacd2390e8c3a15",
+        "bytes": 43852,
+        "sha256": "4bfd04e52ad99a78ecf881e5ecfb196e1c6b92de8b2a4ad6f3254761ff6f7519",
         "documentation_only": false
       }
     ],
     "untracked_policy": "must_be_empty_before_manifest_freeze",
     "current_worktree_candidate_bound": false,
     "self_excluded_manifest_path": "current-mvp/current-release-workbench-manifest.json",
-    "clean_worktree_rule": "The H188 Arc receipt release delta is classified against immutable published main@afce1f2: every content-changing path and the single declared Arc readback evidence file is a candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
+    "clean_worktree_rule": "The current public release is immutable published main@e27d847: every content-changing path after that release is a local correction candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
   },
   "verification_inputs": [
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 43164,
-      "sha256": "090845a3ea75540798d4ab33700b8eb501ce7a3ab6fafe7f8cacd2390e8c3a15"
+      "bytes": 43852,
+      "sha256": "4bfd04e52ad99a78ecf881e5ecfb196e1c6b92de8b2a4ad6f3254761ff6f7519"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 28789,
-      "sha256": "4c02aede35985a5fbcbdf63e466cf8406a5dcaa87b2ffb5fe5a49a7a13951c8e"
+      "bytes": 30135,
+      "sha256": "0d32568795e851b5e2a2b3d8bd7df646bb01d82a579d64a02e3bf6b51e057ee9"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
