@@ -4,14 +4,14 @@
   "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
   "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
   "accepted_request": {
-    "id": "programme-current-release-product-completion-sprint-14-owner-09-domain-bridge-negative-test-request-v1",
-    "packet_object_sha256": "70a29799ff77011278b3aafdc72e6bb59a5f2dccc12a55c19a250f4a356923c7",
-    "exchange_sha256": "37c1acfcd035ee56b39167b93a069e866b32010dadac84fe818c4c169d1e3c4a"
+    "id": "programme-current-release-h199-h198-pass-consume-render-owner-gate-v1",
+    "packet_object_sha256": "a4a7f1a900e7e56b594d7965e9f2f718eabbd09cb641678cf670afbdc03af9ed",
+    "exchange_sha256": "15e8325141ca719607687b4a3482a8e75ab73d6fc520eebc5ecd0f4cb5daec30"
   },
   "source_request": {
-    "id": "programme-current-release-product-completion-sprint-root-correction-request-v1",
-    "packet_object_sha256": "577762814fd25363649a6b50c0733a5aef9e354093778981a8d84abbee095e50",
-    "exchange_sha256": "6eea4843ef52f4035c3a6ad5a3bfa87530e1cd9bf1c83ef5696a3d4d7ac78a6f"
+    "id": "programme-current-release-h198-h197-selector-transition-truth-correction-fresh-sol-medium-audit-v1",
+    "packet_object_sha256": "294abd691d6e20c60915349f5f7b2b38c9d4545c730e06815816d2d326eb9748",
+    "exchange_sha256": "0677465352fcaaafc4b356d7f9f4202528eb5a37bf0ac2fdcc9074c8db2698d0"
   },
   "external_actions": 0,
   "live_arc": false,
@@ -20,20 +20,20 @@
   "direct_erp_mutation": false,
   "stable_terminal_freeze": true,
   "writer_idle": true,
-  "acceptance_state": "H194_GITHUB_TRUE_RECEIPT_RENDER_OWNER_GATE_NOT_GRANTED",
-  "baseline_git_commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+  "acceptance_state": "H199_H198_PASS_CONSUMED_RENDER_OWNER_GATE_NOT_GRANTED_CURRENT_PRODUCT_CORRECTION_PENDING",
+  "baseline_git_commit": "4f26c6aa410547f16e82f134054c1398589540f8",
   "current_worktree_candidate_bound": false,
   "current_release_surface_status": {
     "github": {
       "status": "TRUE_RECEIPT",
       "current_release_bound": true,
       "branch": "main",
-      "commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
-      "remote_main": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+      "commit": "4f26c6aa410547f16e82f134054c1398589540f8",
+      "remote_main": "4f26c6aa410547f16e82f134054c1398589540f8",
       "current_worktree_candidate_bound": false,
       "current_worktree_dirty": true,
-      "source_readback": "remote_main_e27d847_verified",
-      "note": "GitHub main@e27d847 is the current public release; local correction candidates remain unbound",
+      "source_readback": "remote_main_4f26c6a_verified",
+      "note": "GitHub main@4f26c6a is the current public release; local product correction candidates remain unbound",
       "owner_gate_required": false,
       "historical_lineage_only": false
     },
@@ -47,10 +47,10 @@
       "deployment_url": "https://dashboard.render.com/web/srv-d9cumml8nd3s73c9nehg/deploys/dep-d9u4lcflk1mc73fi8o0g",
       "immutable_deploy_entity": true,
       "current_worktree_candidate_bound": false,
-      "source_readback": "render_deployment_83becbb_live; e27d847_candidate_not_deployed",
-      "note": "Render still serves immutable 83becbb; the e27d847 candidate awaits the existing deployment/readback owner gate",
+      "source_readback": "render_deployment_83becbb_live; 4f26c6a_candidate_not_deployed",
+      "note": "Render still serves immutable 83becbb; GitHub main@4f26c6a and the newer local correction are not deployed",
       "candidate": {
-        "required_commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
+        "required_commit": "4f26c6aa410547f16e82f134054c1398589540f8",
         "status": "NOT_DEPLOYED",
         "current_release_bound": false,
         "owner_gate": "NOT_GRANTED",
@@ -156,7 +156,7 @@
         ],
         "readback_url": null
       },
-      "evidence_binding": "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding remains pending until Render deploys e27d847",
+      "evidence_binding": "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding remains pending until Render deploys the accepted product correction",
       "historical_lineage_only": false
     },
     "erp": {
@@ -186,17 +186,17 @@
           "business_close_readback"
         ],
         "errors": [],
-        "verification_fingerprint": "2b578922cba7bf2bd58c3e38399a367d4b7e09cb317f83290d476fdb46584301"
+        "verification_fingerprint": "9294e148e26adc0c7c27f632d5aa9aed817836b620efd9dc052fa438d44c87ef"
       },
       "business_close": "not_proven",
       "historical_lineage_only": false
     }
   },
   "worktree_truth": {
-    "baseline_commit": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
-    "current_head": "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d",
-    "tracked_modified_count": 11,
-    "content_candidate_count": 4,
+    "baseline_commit": "4f26c6aa410547f16e82f134054c1398589540f8",
+    "current_head": "4f26c6aa410547f16e82f134054c1398589540f8",
+    "tracked_modified_count": 13,
+    "content_candidate_count": 7,
     "mode_only_non_candidate_count": 7,
     "content_candidate_paths": [
       {
@@ -210,14 +210,34 @@
         "hash_excluded": true
       },
       {
+        "path": "current-mvp/web/fixture-engine.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 167725,
+        "sha256": "cf84221b88c8565c069719c1509fdbc28b42bacdb7f7b53e53c261b6f06b0a3a"
+      },
+      {
+        "path": "current-mvp/web/navigation-workspace.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 149819,
+        "sha256": "e6a668b841f973e5e8a80a8d3b729dcd4c53facfcbdc16043bd3d379dcbbdf7b"
+      },
+      {
         "path": "README.md",
         "mode_head": "100644",
         "mode_worktree": "100644",
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 31012,
-        "sha256": "5e17a85daf8b629212527967f788ab1704d084b7c804611549437c42b259903a"
+        "bytes": 30902,
+        "sha256": "d409901567124152383f175d0c761a03b76a4776f6d6e18787815e12e74be66e"
       },
       {
         "path": "tools/build_current_release_workbench_manifest.mjs",
@@ -226,8 +246,19 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30135,
-        "sha256": "0d32568795e851b5e2a2b3d8bd7df646bb01d82a579d64a02e3bf6b51e057ee9"
+        "bytes": 30235,
+        "sha256": "891ddf6bcfd59f2be27b556c9464ff751c5865cb7a13201e8ef546c5fe230401"
+      },
+      {
+        "path": "tools/current_mvp_engineering_support.test.mjs",
+        "mode_head": null,
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "untracked": true,
+        "bytes": 6166,
+        "sha256": "7e58d20d4b08f6ad7be1890b3b2befd2adaf612aad0ebaf88288fb1ddc819f1b"
       },
       {
         "path": "tools/current_release_workbench.test.mjs",
@@ -236,8 +267,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 43852,
-        "sha256": "4bfd04e52ad99a78ecf881e5ecfb196e1c6b92de8b2a4ad6f3254761ff6f7519"
+        "bytes": 45246,
+        "sha256": "7b5c60ae07099d885aa35d10b1560992cc7626c0596ba00774662d7e206628f4"
       }
     ],
     "documentation_only_content_count": 0,
@@ -315,8 +346,8 @@
       }
     ],
     "untracked_paths": [],
-    "publication_candidate_state": "H194_CURRENT_RELEASE_CORRECTION_CANDIDATE_AGAINST_PUBLISHED_E27D847_RENDER_OWNER_GATE_PENDING",
-    "publication_candidate_count": 4,
+    "publication_candidate_state": "H199_CURRENT_PRODUCT_CORRECTION_CANDIDATE_AGAINST_PUBLISHED_4F26C6A_RENDER_NOT_DEPLOYED",
+    "publication_candidate_count": 7,
     "publication_candidate_paths": [
       {
         "path": "current-mvp/current-release-workbench-manifest.json",
@@ -330,14 +361,36 @@
         "documentation_only": false
       },
       {
+        "path": "current-mvp/web/fixture-engine.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 167725,
+        "sha256": "cf84221b88c8565c069719c1509fdbc28b42bacdb7f7b53e53c261b6f06b0a3a",
+        "documentation_only": false
+      },
+      {
+        "path": "current-mvp/web/navigation-workspace.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 149819,
+        "sha256": "e6a668b841f973e5e8a80a8d3b729dcd4c53facfcbdc16043bd3d379dcbbdf7b",
+        "documentation_only": false
+      },
+      {
         "path": "README.md",
         "mode_head": "100644",
         "mode_worktree": "100644",
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 31012,
-        "sha256": "5e17a85daf8b629212527967f788ab1704d084b7c804611549437c42b259903a",
+        "bytes": 30902,
+        "sha256": "d409901567124152383f175d0c761a03b76a4776f6d6e18787815e12e74be66e",
         "documentation_only": false
       },
       {
@@ -347,8 +400,20 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 30135,
-        "sha256": "0d32568795e851b5e2a2b3d8bd7df646bb01d82a579d64a02e3bf6b51e057ee9",
+        "bytes": 30235,
+        "sha256": "891ddf6bcfd59f2be27b556c9464ff751c5865cb7a13201e8ef546c5fe230401",
+        "documentation_only": false
+      },
+      {
+        "path": "tools/current_mvp_engineering_support.test.mjs",
+        "mode_head": null,
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "untracked": true,
+        "bytes": 6166,
+        "sha256": "7e58d20d4b08f6ad7be1890b3b2befd2adaf612aad0ebaf88288fb1ddc819f1b",
         "documentation_only": false
       },
       {
@@ -358,28 +423,28 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 43852,
-        "sha256": "4bfd04e52ad99a78ecf881e5ecfb196e1c6b92de8b2a4ad6f3254761ff6f7519",
+        "bytes": 45246,
+        "sha256": "7b5c60ae07099d885aa35d10b1560992cc7626c0596ba00774662d7e206628f4",
         "documentation_only": false
       }
     ],
     "untracked_policy": "must_be_empty_before_manifest_freeze",
     "current_worktree_candidate_bound": false,
     "self_excluded_manifest_path": "current-mvp/current-release-workbench-manifest.json",
-    "clean_worktree_rule": "The current public release is immutable published main@e27d847: every content-changing path after that release is a local correction candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
+    "clean_worktree_rule": "The current public release is immutable published main@4f26c6a: every content-changing path after that release is a local product correction candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
   },
   "verification_inputs": [
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 43852,
-      "sha256": "4bfd04e52ad99a78ecf881e5ecfb196e1c6b92de8b2a4ad6f3254761ff6f7519"
+      "bytes": 45246,
+      "sha256": "7b5c60ae07099d885aa35d10b1560992cc7626c0596ba00774662d7e206628f4"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 30135,
-      "sha256": "0d32568795e851b5e2a2b3d8bd7df646bb01d82a579d64a02e3bf6b51e057ee9"
+      "bytes": 30235,
+      "sha256": "891ddf6bcfd59f2be27b556c9464ff751c5865cb7a13201e8ef546c5fe230401"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -663,8 +728,8 @@
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 159548,
-      "sha256": "aeaee03e154eafc4e1353f8031cf21e3105fc2063f55e17a4d0585f2e8d62376",
+      "bytes": 167725,
+      "sha256": "cf84221b88c8565c069719c1509fdbc28b42bacdb7f7b53e53c261b6f06b0a3a",
       "mode": "100644",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
@@ -681,8 +746,8 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 136434,
-      "sha256": "4c43c648971608af1ddf5b46e7b5a45641a45baf9d78d958b3c9ca5bf961f070",
+      "bytes": 149819,
+      "sha256": "e6a668b841f973e5e8a80a8d3b729dcd4c53facfcbdc16043bd3d379dcbbdf7b",
       "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,

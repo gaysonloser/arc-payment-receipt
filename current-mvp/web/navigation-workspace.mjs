@@ -1,5 +1,5 @@
 import { buildCanonicalArcReceipt, buildSettlementRoute, parseSettlementRoute, settlementCaseReducer } from "./settlement-case.mjs?rev=v3-a01f-frozen-operator-arc-erp-browser-truth";
-import { A12_BATCH_ID, A12_CORRECTION_BATCH_ID, A12_R7_PACKET_ID, A12_R7_EXCHANGE_SHA256, A12_R7_VERDICT_ARTIFACT_SHA256, A12_C15_TABS, A12_SCENARIO_IDS, A12_C15_VIEWPORT_ORACLE, A12_R6_HANDOFF_ID, A12_R6_C15_AUTHORITY_OBJECT_SHA256, A12_R6_C15_AUTHORITY_FILE_SHA256, A12_R6_PRODUCER_EVIDENCE_SHA256, A12_R6_PRODUCER_RUNTIME_SHA256, verifyA12C15UpstreamAuthorityObject, createA12WorkbenchState, reduceA12Workbench, projectA12Workbench, a12WorkbenchRoute, parseA12WorkbenchRoute } from "./fixture-engine.mjs?rev=v3-2-a12-r7-frozen-runtime";
+import { A12_BATCH_ID, A12_CORRECTION_BATCH_ID, A12_C15_TABS, A12_SCENARIO_IDS, A12_C15_VIEWPORT_ORACLE, A12_ERP_WORKSPACE_IDS, verifyA12C15UpstreamAuthorityObject, createA12WorkbenchState, reduceA12Workbench, projectA12Workbench, a12WorkbenchRoute, parseA12WorkbenchRoute } from "./fixture-engine.mjs?rev=current-release-workbench";
 
 export { A12_BATCH_ID };
 
@@ -613,6 +613,12 @@ export function createWorkspaceController({ state, current, render, openDrawer, 
  * C15 reducer/projection; no second A12 renderer or reducer is exposed.
  */
 const A12_UI_ICONS = Object.freeze({
+  "milestone-desk": "calendar-check.svg",
+  payables: "file-invoice-dollar.svg",
+  receivables: "circle-dollar-to-slot.svg",
+  reconciliation: "scale-balanced.svg",
+  "general-ledger": "book-open.svg",
+  "audit-trail": "chart-line.svg",
   queue: "calendar-check.svg",
   classify: "scale-balanced.svg",
   post: "file-invoice-dollar.svg",
@@ -629,6 +635,33 @@ function a12UiSlug(value) { return String(value ?? "").toLowerCase().replaceAll(
 function a12UiLabel(value) { return String(value ?? "").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function a12UiState(value) { return String(value ?? "missing").replaceAll("_", " "); }
 function a12UiIcon(name) { return `assets/icons/${A12_UI_ICONS[name] ?? "circle-check.svg"}`; }
+
+const A12_PUBLIC_AUDIT_KEYS = new Set(["label", "name", "type", "objectId", "status", "state", "reason", "source", "truthClass", "value", "stage", "action"]);
+const A12_INTERNAL_AUDIT_TOKEN = /(?:^|[._-])(?:r[0-9]+|packet|runtime|producer|exchange|sha(?:256)?|artifact|handoff|manifest|commit|governance|internal)(?:$|[._:-])/i;
+
+function a12UiPublicAuditValue(value) {
+  if (value === null || value === undefined || value === "") return "Not provided";
+  if (Array.isArray(value)) return value.map(a12UiPublicAuditValue).join(", ");
+  if (typeof value === "object") {
+    const visible = Object.entries(value)
+      .filter(([key]) => A12_PUBLIC_AUDIT_KEYS.has(key) && !A12_INTERNAL_AUDIT_TOKEN.test(key))
+      .map(([key, item]) => `${a12UiLabel(key)}: ${a12UiPublicAuditValue(item)}`);
+    return visible.length ? visible.join(" · ") : "Structured event (internal details withheld)";
+  }
+  const text = String(value);
+  return A12_INTERNAL_AUDIT_TOKEN.test(text) ? "Internal governance detail withheld" : text;
+}
+
+function a12UiPublicAuditEvent(event = {}) {
+  const actor = String(event.actor ?? "Operator").toLowerCase() === "system" ? "Control service" : String(event.actor ?? "Operator");
+  return {
+    time: a12UiPublicAuditValue(event.time),
+    actor: a12UiPublicAuditValue(actor),
+    object: a12UiPublicAuditValue(event.object),
+    action: a12UiPublicAuditValue(event.action),
+    result: a12UiPublicAuditValue(event.result)
+  };
+}
 
 function a12UiStyles() {
   if (document.getElementById("a12-workbench-styles")) return;
@@ -660,6 +693,25 @@ function a12UiStyles() {
     @media(max-width:1310px) and (min-width:721px){.a12-workbench{grid-template-columns:260px minmax(0,1fr) 300px}}
     /* 200% zoom preserves the same keyboard/action order; no fixed footer covers content. */
     @media(prefers-reduced-motion:reduce){.a12-inspector{transition:none}.a12-app *{scroll-behavior:auto!important}}
+    /* Operations-desk IA: the decision canvas owns desktop width; evidence is a deliberate drawer. */
+    @media(min-width:1051px){.a12-workbench{grid-template-columns:260px minmax(0,1fr)}.a12-inspector{position:fixed;z-index:35;top:0;right:0;bottom:0;width:min(460px,calc(100vw - 208px));overflow:auto;border-left:1px solid var(--a12-border);box-shadow:-12px 0 30px rgba(23,32,51,.18);transform:translateX(105%);transition:transform .18s ease}.a12-inspector.is-open{transform:none}.a12-inspector-close{display:block}.a12-inspector-open{display:inline-flex!important}}
+    /* Current-release workspace modules: one primary job per ERP workspace, warm operations-desk hierarchy, 12px operational text floor. */
+    .a12-app{--a12-l0:#f4f0e8;--a12-l1:#fffdf8;--a12-l2:#edf3ee;--a12-selected:#e4efe8;--a12-focus:#185c48;--a12-warning:#a46d12;--a12-border:#d5cfc3;color:#242823}
+    .a12-workspace-primary{margin:16px 0;padding:16px;border:1px solid var(--a12-border);border-left:4px solid var(--a12-focus);background:#fffdf8}
+    .a12-workspace-guide{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--a12-border)}
+    .a12-workspace-guide img{width:64px;height:64px;object-fit:contain}.a12-workspace-guide h2{margin:2px 0 4px;font-size:18px}.a12-workspace-guide p{margin:0;color:var(--a12-muted);font-size:13px}
+    .a12-workspace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.a12-workspace-card{padding:12px;border:1px solid var(--a12-border);background:#fff}.a12-workspace-card b{display:block;font-size:13px}.a12-workspace-card span,.a12-workspace-card small{display:block;margin-top:4px;color:var(--a12-muted);font-size:12px;line-height:1.4}
+    .a12-workspace-table{width:100%;border-collapse:collapse;font-size:12px}.a12-workspace-table th,.a12-workspace-table td{padding:9px 8px;border-bottom:1px solid var(--a12-border);text-align:left;vertical-align:top}.a12-workspace-table th{color:var(--a12-muted);font-size:12px}.a12-workspace-table tr[data-selected="true"]{background:var(--a12-selected)}
+    .a12-app[data-current-workspace="milestone-desk"] .a12-workbench{grid-template-columns:minmax(0,1fr)}.a12-app[data-current-workspace="milestone-desk"] .a12-queue{display:none}.a12-app[data-current-workspace="milestone-desk"] .a12-canvas{padding:18px 22px 110px}
+    .a12-app[data-current-workspace="milestone-desk"] .a12-case-header h1{font-family:Georgia,"Times New Roman",serif;font-size:30px;font-weight:650}.a12-app[data-current-workspace="milestone-desk"] .a12-object-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .a12-milestone-layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(300px,.8fr);gap:18px}.a12-milestone-timeline{display:grid;gap:10px}.a12-milestone-step{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--a12-border);border-radius:8px;background:#fff}.a12-milestone-step:before{content:"";position:absolute;left:32px;top:-11px;width:2px;height:11px;background:var(--a12-border)}.a12-milestone-step:first-child:before{display:none}.a12-milestone-step img{width:30px;height:30px;object-fit:contain}.a12-milestone-step b{display:block;font-size:14px}.a12-milestone-step span{display:block;margin-top:3px;color:var(--a12-muted);font-size:12px}.a12-milestone-step[data-state="verified"]{border-color:#9bbdaa}.a12-milestone-step[data-state="current"]{border-color:#6fa5db;box-shadow:inset 3px 0 0 #2b78cc}.a12-milestone-step[data-state="held"]{border-color:#d7aa5e;box-shadow:inset 3px 0 0 #c7851c}
+    .a12-milestone-summary{display:grid;align-content:start;gap:12px}.a12-summary-panel{padding:14px;border:1px solid var(--a12-border);border-radius:8px;background:#fff}.a12-summary-panel h3{margin:0 0 10px;font-size:14px}.a12-summary-token{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--a12-border)}.a12-summary-token img{width:38px;height:38px}.a12-summary-token b{display:block;font-size:19px}.a12-summary-token span{color:var(--a12-muted);font-size:12px}.a12-summary-pairs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.a12-summary-pairs>div{padding:10px 8px;border-bottom:1px solid var(--a12-border)}.a12-summary-pairs span{display:block;color:var(--a12-muted);font-size:12px}.a12-summary-pairs b{display:block;margin-top:3px;font-size:13px}.a12-decision-row{padding:10px;border:1px solid var(--a12-border);border-radius:6px}.a12-decision-row+ .a12-decision-row{margin-top:7px}.a12-decision-row b{display:block;font-size:13px}.a12-decision-row span{display:block;margin-top:3px;color:var(--a12-muted);font-size:12px}.a12-decision-row[data-state="current"]{border-color:var(--a12-focus);background:#f2f8f4}
+    .a12-app[data-current-workspace="milestone-desk"] .a12-bottom-action{position:fixed;z-index:20;left:208px;right:0;bottom:0;min-height:88px;margin:0;padding:14px 28px;border-top:1px solid var(--a12-border);background:rgba(255,253,248,.97);box-shadow:0 -8px 22px rgba(43,48,42,.08)}.a12-app[data-current-workspace="milestone-desk"] .a12-bottom-action .a12-primary{min-width:300px;background:#287553}
+    .a12-app[data-current-workspace="milestone-desk"] .a12-live{right:24px;bottom:104px}
+    .a12-nav-label,.a12-queue-row small,.a12-queue-meta,.a12-filter-row button,.a12-unresolved,.a12-kicker,.a12-case-copy,.a12-object-ref,.a12-object-ref b,.a12-command small,.a12-section-intro,.a12-field small,.a12-consequence span,.a12-boundary,.a12-causal-stage strong,.a12-causal-stage span,.a12-causal-stage small,.a12-inspector-head p,.a12-tabs button,.a12-inspector-note,.a12-object-row b,.a12-object-row span,.a12-object-row small,.a12-provenance,.a12-provenance b,.a12-receipt-field b,.a12-receipt-field span,.a12-table,.a12-table th{font-size:12px}
+    @media(max-width:1050px){.a12-milestone-layout{grid-template-columns:1fr}.a12-app[data-current-workspace="milestone-desk"] .a12-bottom-action{left:176px}}
+    @media(max-width:900px){.a12-workspace-grid{grid-template-columns:1fr}.a12-workspace-guide{grid-template-columns:52px minmax(0,1fr)}.a12-workspace-guide img{width:52px;height:52px}}
+    @media(max-width:720px){.a12-app[data-current-workspace="milestone-desk"] .a12-bottom-action{left:0}.a12-summary-pairs{grid-template-columns:1fr}.a12-app[data-current-workspace="milestone-desk"] .a12-object-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
   `;
   document.head.append(style);
 }
@@ -717,7 +769,8 @@ function a12UiInspectorMarkup(view, state) {
     return `<section class="a12-inspector-section"><h3>Ledger / close controls</h3><div class="a12-object-list"><div class="a12-object-row"><b>Principal · ${a12UiEscape(view.canvas.principal)}</b><span>amount6 principal is separate from native18 gas</span><small>Source: C15 projection · local fixture</small></div><div class="a12-object-row"><b>Native18 network fee · separate</b><span>estimate / actual fee never enters principal</span><small>Business close remains OPEN</small></div></div></section><section class="a12-inspector-section"><h3>Three close levels</h3><div class="a12-object-list"><div class="a12-object-row"><b>Chain-final</b><span>technical receipt status only</span></div><div class="a12-object-row"><b>Operationally reconciled</b><span>requires ERP readback and matcher evidence</span></div><div class="a12-object-row"><b>Books closed</b><span>requires GL/PLED/outstanding/period controls and separate owner gate</span></div></div></section>`;
   }
   const upstreamCheck = verifyA12C15UpstreamAuthorityObject();
-  return `<section class="a12-inspector-section"><h3>Causation table</h3><div class="a12-table-wrap"><table class="a12-table" id="a12-audit-table"><thead><tr><th>Time</th><th>Actor / object</th><th>Action / result</th></tr></thead><tbody>${(view.inspector.audit.length ? view.inspector.audit : [{ time: "initial", actor: "system", object: "R7 frozen runtime", action: "case opened", result: "read-only local fixture" }]).map((event) => `<tr><td>${a12UiEscape(event.time)}</td><td>${a12UiEscape(event.actor)}<br>${a12UiEscape(event.object)}</td><td>${a12UiEscape(event.action)}<br>${a12UiEscape(event.result)}</td></tr>`).join("")}</tbody></table></div></section><section class="a12-inspector-section"><h3>R7 frozen runtime · R6 producer upstream</h3><div class="a12-replay"><b>${upstreamCheck.ok ? "Producer-owned authority verified" : "Upstream authority verification failed"}</b><code>active packet: ${a12UiEscape(A12_R7_PACKET_ID)}</code><small>R7 exchange sha256: ${a12UiEscape(A12_R7_EXCHANGE_SHA256)} · Sol verdict artifact: ${a12UiEscape(A12_R7_VERDICT_ARTIFACT_SHA256)}</small><code>consumed R6 handoff: ${a12UiEscape(A12_R6_HANDOFF_ID)}</code><small>R6 object content sha256: ${a12UiEscape(A12_R6_C15_AUTHORITY_OBJECT_SHA256)} · file sha256: ${a12UiEscape(A12_R6_C15_AUTHORITY_FILE_SHA256)}</small><small>R6 producer evidence: ${a12UiEscape(A12_R6_PRODUCER_EVIDENCE_SHA256)} · R6 producer runtime: ${a12UiEscape(A12_R6_PRODUCER_RUNTIME_SHA256)}</small><small>09_Circle public API → 14_Arc read-only adapter · local_fixture_only · external_actions=0 · live Arc/ERP/business close not claimed.</small></div><p class="a12-inspector-note">A01H replay and R3/R4/R5/R6 runtime anchors are historical namespaces only; active UI authority is R7.</p></section>`;
+  const auditEvents = view.inspector.audit.length ? view.inspector.audit : [{ time: "initial", actor: "system", object: { label: "Settlement case", status: "opened" }, action: "case opened", result: "read-only local fixture" }];
+  return `<section class="a12-inspector-section"><h3>Causation table</h3><div class="a12-table-wrap"><table class="a12-table" id="a12-audit-table"><thead><tr><th>Time</th><th>Actor / object</th><th>Action / result</th></tr></thead><tbody>${auditEvents.map((event) => { const safe = a12UiPublicAuditEvent(event); return `<tr><td>${a12UiEscape(safe.time)}</td><td>${a12UiEscape(safe.actor)}<br>${a12UiEscape(safe.object)}</td><td>${a12UiEscape(safe.action)}<br>${a12UiEscape(safe.result)}</td></tr>`; }).join("")}</tbody></table></div></section><section class="a12-inspector-section"><h3>Evidence provenance</h3><div class="a12-replay"><b>${upstreamCheck.ok ? "Typed producer authority verified" : "Typed authority verification failed closed"}</b><p class="a12-inspector-note">Public view shows the business event, status and recovery only. Internal packet, runtime, producer, handoff and digest identifiers are withheld.</p><small>Read-only adapter · local fixture only · external actions: 0 · live Arc settlement, ERP posting and business close are not claimed.</small></div></section>`;
 }
 
 function a12SetDrawerTabbability(inspector, closed) {
@@ -728,24 +781,50 @@ function a12SetDrawerTabbability(inspector, closed) {
   for (const node of inspector.querySelectorAll("button,input,select,textarea,[tabindex]")) node.setAttribute("tabindex", "-1");
 }
 
+function a12WorkspacePrimaryMarkup(view, state, queue) {
+  const workspace = view.workspace ?? { id: "milestone-desk", title: "Milestone desk", detail: "Work the current settlement decision.", primaryJob: view.canvas.headline };
+  const guide = `<div class="a12-workspace-guide"><img src="assets/gayson-receipt-assistant-reference.png" alt="Gayson task assistant"><div><span class="a12-kicker">Gayson · ${a12UiEscape(workspace.title)}</span><h2>${a12UiEscape(workspace.primaryJob)}</h2><p>${a12UiEscape(workspace.detail)}</p></div></div>`;
+  let body = "";
+  if (workspace.id === "payables" || workspace.id === "receivables") {
+    const rows = queue.filter((row) => row.direction === (workspace.id === "payables" ? "outgoing" : "incoming"));
+    body = `<table class="a12-workspace-table" aria-label="${a12UiEscape(workspace.title)} worklist"><thead><tr><th>Case</th><th>Party</th><th>Principal</th><th>Next control</th></tr></thead><tbody>${rows.map((row) => `<tr data-selected="${String(row.selected)}"><td><b>${a12UiEscape(row.label)}</b><br><small>${a12UiEscape(row.id)}</small></td><td>${a12UiEscape(row.party)}</td><td>${a12UiEscape(row.principal)}</td><td>${a12UiEscape(row.nextOwner)}</td></tr>`).join("")}</tbody></table>`;
+  } else if (workspace.id === "reconciliation") {
+    body = `<div class="a12-workspace-grid">${view.canvas.fields.slice(0, 6).map((field) => `<div class="a12-workspace-card"><b>${a12UiEscape(field.label)}</b><span>Observed · ${a12UiEscape(field.value)}</span><small>${a12UiEscape(field.source)} · ${a12UiEscape(field.truthClass)}</small></div>`).join("")}</div><div class="a12-boundary"><b>First exact blocker</b>${a12UiEscape(view.canvas.firstFailure)} · ${a12UiEscape(view.canvas.recovery)}</div>`;
+  } else if (workspace.id === "general-ledger") {
+    const evidence = view.verifiedErpEvidence;
+    body = `<div class="a12-workspace-grid"><div class="a12-workspace-card"><b>Payment Entry</b><span>${a12UiEscape(evidence.payment_entry.selector)} · ${a12UiEscape(evidence.payment_entry.status)}</span><small>${a12UiEscape(view.inspector.consequences.paymentEntry)}</small></div><div class="a12-workspace-card"><b>Bank Transaction</b><span>${a12UiEscape(evidence.bank_transaction.selector)} · ${a12UiEscape(evidence.bank_transaction.status)}</span><small>${a12UiEscape(view.inspector.consequences.bankTransaction)}</small></div><div class="a12-workspace-card"><b>GL / PLED</b><span>Debit ${a12UiEscape(evidence.purchase_invoice.gl.total_debit)} = credit ${a12UiEscape(evidence.purchase_invoice.gl.total_credit)}</span><small>${a12UiEscape(view.inspector.consequences.glPled)}</small></div><div class="a12-workspace-card"><b>Close boundary</b><span>${a12UiEscape(view.inspector.consequences.outstanding)}</span><small>${a12UiEscape(view.inspector.consequences.close)}</small></div></div>`;
+  } else if (workspace.id === "audit-trail") {
+    const events = view.inspector.audit.length ? view.inspector.audit : [{ time: "initial", actor: "Control service", object: "Settlement case", action: "case opened", result: "read-only local fixture" }];
+    body = `<table class="a12-workspace-table" aria-label="Business causation trail"><thead><tr><th>Time</th><th>Actor / object</th><th>Action / result</th></tr></thead><tbody>${events.map((event) => { const safe = a12UiPublicAuditEvent(event); return `<tr><td>${a12UiEscape(safe.time)}</td><td>${a12UiEscape(safe.actor)}<br>${a12UiEscape(safe.object)}</td><td>${a12UiEscape(safe.action)}<br>${a12UiEscape(safe.result)}</td></tr>`; }).join("")}</tbody></table>`;
+  } else {
+    const steps = [
+      ["file-invoice-dollar.svg", "Source document selected", `${view.canvas.sourceDocument} · ${view.canvas.counterparty}`, "verified"],
+      ["circle-check.svg", "Typed reviewer evidence", state.evidence ? `${state.evidence.outcome} · local typed evidence` : "Awaiting a bound typed observation", state.evidence ? "verified" : "held"],
+      ["receipt.svg", "Arc receipt comparison", state.evidence ? `Receipt outcome ${state.evidence.outcome}` : "No current settlement receipt observed", state.evidence ? "current" : "held"],
+      ["scale-balanced.svg", "ERP reconciliation", `${view.inspector.consequences.paymentEntry}; ${view.inspector.consequences.bankTransaction}`, "held"],
+      ["book-open.svg", "General ledger proposal", `${view.inspector.consequences.glPled}; books closed remains false`, "held"]
+    ];
+    body = `<div class="a12-milestone-layout"><div class="a12-milestone-timeline" aria-label="Document to Arc receipt to ERP close timeline">${steps.map(([icon,title,detail,status]) => `<div class="a12-milestone-step" data-state="${status}"><img src="assets/icons/${icon}" alt=""><div><b>${a12UiEscape(title)}</b><span>${a12UiEscape(detail)}</span></div></div>`).join("")}</div><aside class="a12-milestone-summary" aria-label="Settlement summary and decision states"><section class="a12-summary-panel"><h3>Settlement summary</h3><div class="a12-summary-token"><img src="assets/brand/usdc-token-official.svg" alt="Official Circle USDC"><div><span>Exact release amount</span><b>${a12UiEscape(view.canvas.principal)}</b></div></div><div class="a12-summary-pairs"><div><span>Policy</span><b>Exact amount required</b></div><div><span>Tolerance</span><b>0 USDC</b></div><div><span>Network</span><b>Arc Testnet</b></div><div><span>Receipt state</span><b>${a12UiEscape(view.canvas.scenarioState)}</b></div></div></section><section class="a12-summary-panel"><h3>Decision states</h3><div class="a12-decision-row" data-state="current"><b>Current · ${a12UiEscape(view.canvas.scenarioState)}</b><span>${a12UiEscape(view.canvas.recovery)}</span></div><div class="a12-decision-row"><b>Stale evidence</b><span>Keep the business item open and refresh the typed observation.</span></div><div class="a12-decision-row"><b>Receipt mismatch</b><span>Keep the open item unchanged and inspect the first exact mismatch.</span></div></section></aside></div>`;
+  }
+  return `<section class="a12-workspace-primary" data-a12-workspace-primary="${a12UiEscape(workspace.id)}" aria-label="${a12UiEscape(workspace.title)} primary workspace">${guide}${body}</section>`;
+}
+
 function a12UiMarkup(view, state) {
   const queue = a12UiFilteredQueue(view, state);
-  const narrow = (globalThis.innerWidth ?? 1440) <= 1050;
-  const drawerOpen = narrow && state.inspectorOpen;
-  const drawerClosed = narrow && !state.inspectorOpen;
+  const drawerOpen = state.inspectorOpen === true;
+  const drawerClosed = !drawerOpen;
   const backgroundInert = drawerOpen ? " inert" : "";
   const inspectorRole = drawerOpen ? ' role="dialog" aria-modal="true" aria-labelledby="a12-inspector-heading" data-a12-modal="true"' : "";
   const metrics = a12RuntimeLayoutMetrics(globalThis.innerWidth ?? 1440, globalThis.innerHeight ?? 768, globalThis.__A12_ZOOM ?? 1);
   const commandLayout = a12CommandRegionLayout(globalThis.innerWidth ?? 1440, globalThis.__A12_ZOOM ?? 1);
-  const navItems = [
-    ["queue", "Work queue", "source"], ["classify", "Match funds", "allocate"], ["post", "Post to ERP", "post"], ["close", "Ledger & close", "close"], ["evidence", "Evidence", "audit"]
-  ];
-  return `<div class="a12-app" data-a12-batch="${a12UiEscape(A12_BATCH_ID)}" data-evidence-level="${a12UiEscape(view.evidenceLevel)}" data-runtime-viewport="${metrics.viewport}" data-navigation-width="${metrics.navigation}" data-queue-width="${metrics.queue}" data-inspector-width="${metrics.inspector}" data-inspector-mode="${metrics.inspectorMode}" data-overflow-x="${metrics.overflowX}" data-overflow-y="${metrics.overflowY}" data-text-floor-px="${metrics.textFloorPx}" data-zoom-percent="${metrics.zoomPercent}">
-    <aside class="a12-nav"${backgroundInert} aria-label="Settlement workflow navigation"><div class="a12-brand"><img src="assets/gayson-lion-brand-reference.png" alt="Gayson"><div><b>Gayson</b><span>Settlement control</span></div></div><p class="a12-nav-label">Operator workflow</p><nav class="a12-nav-list">${navItems.map(([icon,label,stage]) => `<button type="button" data-a12-nav-stage="${stage}" aria-label="${a12UiEscape(label)}" aria-current="${String((stage === "audit" ? state.inspectorTab === "Audit" : state.selectedStage === stage))}"><img src="${a12UiIcon(icon)}" alt=""><span>${label}</span></button>`).join("")}</nav><div class="a12-nav-boundary"><b>LOCAL FIXTURE</b><small>No wallet, RPC, ERP, deploy, publish or Encode action.</small></div></aside>
+  const navItems = A12_ERP_WORKSPACE_IDS.map((id) => [id, WORKSPACE_CONTRACT[id]?.area ?? a12UiLabel(id)]);
+  return `<div class="a12-app" data-current-workspace="${a12UiEscape(view.workspace.id)}" data-evidence-level="${a12UiEscape(view.evidenceLevel)}" data-runtime-viewport="${metrics.viewport}" data-navigation-width="${metrics.navigation}" data-queue-width="${metrics.queue}" data-inspector-width="${metrics.inspector}" data-inspector-mode="${metrics.inspectorMode}" data-overflow-x="${metrics.overflowX}" data-overflow-y="${metrics.overflowY}" data-text-floor-px="${metrics.textFloorPx}" data-zoom-percent="${metrics.zoomPercent}">
+    <aside class="a12-nav"${backgroundInert} aria-label="ERP settlement workspace navigation"><div class="a12-brand"><img src="assets/gayson-lion-brand-reference.png" alt="Gayson"><div><b>Gayson</b><span>Settlement control</span></div></div><p class="a12-nav-label">ERP workspaces</p><nav class="a12-nav-list">${navItems.map(([id,label]) => `<button type="button" data-a12-workspace="${a12UiEscape(id)}" aria-label="${a12UiEscape(label)}" aria-current="${String((state.selectedWorkspace ?? "milestone-desk") === id)}"><img src="${a12UiIcon(id)}" alt=""><span>${a12UiEscape(label)}</span></button>`).join("")}</nav><div class="a12-nav-boundary"><b>LOCAL FIXTURE</b><small>No wallet, RPC, ERP, deploy, publish or Encode action.</small></div></aside>
     <header class="a12-shell"${backgroundInert} data-landmark="global-control-shell" aria-label="Global control shell"><span class="a12-shell-title">SETTLEMENT WORKBENCH · A12</span><span class="a12-shell-status"><i class="a12-dot neutral"></i><b>Environment</b> Local fixture</span><span class="a12-shell-status"><b>Arc</b> Testnet · chainId 5042002</span><span class="a12-shell-status"><b>Company</b> Gayson Labs Pte Ltd</span><span class="a12-shell-status"><b>Treasury</b> ${a12UiEscape(view.shell.treasury)}</span><span class="a12-shell-status"><b>ERP</b> ${a12UiEscape(view.shell.erpFreshness)}</span><span class="a12-shell-status"><b>Role</b> ${a12UiEscape(view.shell.role)}</span></header>
-    <main class="a12-main"><div class="a12-breadcrumb"${backgroundInert}><span>Saved view / <b>All settlement cases</b> / ${a12UiEscape(view.canvas.scenario)}</span><button type="button" class="a12-inspector-open" data-a12-open-inspector aria-controls="a12-evidence-inspector" aria-expanded="${String(state.inspectorOpen)}">Open evidence inspector</button></div><div class="a12-workbench">
+    <main class="a12-main"><div class="a12-breadcrumb"${backgroundInert}><span>${a12UiEscape(view.workspace.title)} / <b>${a12UiEscape(view.canvas.scenario)}</b> / ${a12UiEscape(view.canvas.sourceDocument)}</span><button type="button" class="a12-inspector-open" data-a12-open-inspector aria-controls="a12-evidence-inspector" aria-expanded="${String(state.inspectorOpen)}">Open evidence inspector</button></div><div class="a12-workbench">
       <section class="a12-queue"${backgroundInert} data-landmark="case-queue" aria-labelledby="a12-queue-heading"><div class="a12-panel-head"><div><h2 id="a12-queue-heading">Case queue</h2><p>Direction, party, principal, evidence and next owner.</p></div><span class="a12-count">${queue.length}/${A12_SCENARIO_IDS.length}</span></div><div class="a12-queue-tools"><input type="search" aria-label="Search settlement cases" placeholder="Search party or source" data-a12-search value="${a12UiEscape(state.searchQuery ?? "")}"><div class="a12-filter-row">${["all", "incoming", "outgoing", "exceptions"].map((filter) => `<button type="button" data-a12-filter="${filter}" aria-pressed="${String(state.queueFilter === filter)}">${a12UiLabel(filter)}</button>`).join("")}</div></div><div class="a12-queue-list" role="listbox" aria-label="Settlement cases">${queue.map((row) => `<button type="button" class="a12-queue-row" data-a12-scenario="${a12UiEscape(row.id)}" role="option" aria-selected="${String(row.selected)}"><span class="a12-direction ${row.direction === "incoming" ? "in" : row.direction === "outgoing" ? "out" : "unresolved"}">${row.direction === "incoming" ? "IN" : row.direction === "outgoing" ? "OUT" : "?"}</span><span><b>${a12UiEscape(row.label)}</b><small>${a12UiEscape(row.party)} · ${a12UiEscape(row.id)}</small><span class="a12-queue-meta"><strong>${a12UiEscape(row.principal)}</strong><span>${a12UiEscape(row.nextOwner)}</span></span></span></button>`).join("")}</div><div class="a12-unresolved"><b>Unresolved is selectable</b>${a12UiEscape(view.unresolved.reason)}<br><small>Selection resets every dependent field, evidence and downstream state.</small></div></section>
       <section class="a12-canvas"${backgroundInert} data-landmark="decision-canvas" id="a12-decision-canvas" aria-labelledby="a12-task-heading"><div class="a12-case-header"><span class="a12-kicker">${a12UiEscape(view.canvas.scenario)} · ${a12UiEscape(view.canvas.counterparty)}</span><h1 id="a12-task-heading" tabindex="-1">${a12UiEscape(view.canvas.headline)}</h1><p class="a12-case-copy">One decision canvas for source, typed fields, consequence and next owner. Local fixture values are not live evidence.</p><div class="a12-object-line"><button type="button" class="a12-object-ref" data-a12-object="case"><span>Case</span><b>${a12UiEscape(view.canvas.caseId)}</b></button><button type="button" class="a12-object-ref" data-a12-object="source"><span>Source</span><b>${a12UiEscape(view.canvas.sourceDocument)}</b></button><button type="button" class="a12-object-ref" data-a12-object="origin"><span>Authority origin</span><b>${a12UiEscape(view.canvas.origin ?? "unknown")}</b></button><button type="button" class="a12-object-ref" data-a12-object="principal"><span>Principal</span><b>${a12UiEscape(view.canvas.principal)}</b></button></div><div class="a12-object-summary" aria-label="Settlement summary"><div><span>Counterparty</span><b>${a12UiEscape(view.canvas.counterparty)}</b></div><div><span>Open item</span><b>${a12UiEscape(view.canvas.sourceDocument)}</b></div><div><span>Amount</span><b>${a12UiEscape(view.canvas.principal)}</b></div><div><span>Current state</span><b class="a12-state-pill tone-${a12UiEscape(view.canvas.scenarioTone)}">${a12UiEscape(view.canvas.scenarioState)}</b></div></div></div>
+        ${a12WorkspacePrimaryMarkup(view, state, queue)}
         <section class="a12-command" data-landmark="stage-command-bar" data-command-layout="${commandLayout.mode}" data-command-text-width="${commandLayout.estimatedTextWidthPx}" data-command-overlap-risk="${String(commandLayout.overlapRisk)}" aria-label="Stage-aware command bar"><div><h2>First blocking fact · ${a12UiEscape(view.canvas.command.enabled ? view.canvas.firstFailure : view.canvas.command.disabledReason)}</h2><p>${a12UiEscape(view.canvas.recovery)}</p><small>Consequence: ${a12UiEscape(view.canvas.command.mutation_boundary)} · next owner: ${a12UiEscape(view.canvas.command.next_owner)} · no external mutation</small></div><div class="a12-command-actions"><button type="button" class="a12-primary" data-a12-primary ${view.canvas.command.enabled ? "" : "disabled aria-disabled=\"true\" title=\"" + a12UiEscape(view.canvas.command.disabledReason) + "\""}>${a12UiEscape(view.canvas.command.label)}<small>${a12UiEscape(view.canvas.command.enabled ? view.canvas.command.mutation_boundary : view.canvas.command.disabledReason)}</small></button><button type="button" class="a12-secondary" data-a12-open-inspector aria-controls="a12-evidence-inspector" aria-expanded="${String(state.inspectorOpen)}">Inspect ${a12UiEscape(view.inspector.activeTab)} evidence</button></div></section>
         <div class="a12-status-strip tone-${a12UiEscape(view.canvas.scenarioTone)}" data-landmark="status-recovery"><div><h2>Current state · ${a12UiEscape(view.canvas.scenarioState)}</h2><p>${a12UiEscape(view.canvas.recovery)}</p></div><div class="a12-status-meta"><span>Next owner</span><b>${a12UiEscape(view.canvas.command.next_owner)}</b></div></div>
         <details class="a12-disclosure a12-fields-disclosure" data-a12-disclosure="fields"><summary id="a12-fields-heading">Typed decision fields <span>source, editability and truth class</span></summary><div class="a12-disclosure-body"><p class="a12-section-intro">Required keys come from the read-only C15 scenario projection. Expand only when the next decision requires a field-level review.</p><dl class="a12-field-grid">${view.canvas.fields.map(a12UiFieldMarkup).join("")}</dl></div></details>
@@ -767,8 +846,8 @@ export function a12RuntimeLayoutMetrics(width, height, zoom = 1) {
     height,
     navigation: oracle.navigation,
     queue: oracle.queue,
-    inspector: oracle.inspector,
-    inspectorMode: oracle.inspectorMode === "focus_trapped_drawer" ? "focus_trapped_drawer" : "persistent",
+    inspector: 0,
+    inspectorMode: viewport === "1024x768" ? "focus_trapped_drawer" : "drawer",
     overflowX: "none",
     overflowY: "scrollable",
     textFloorPx: 16,
@@ -807,7 +886,7 @@ export function mountA12DeepWorkbench(root = null, { initialHash = globalThis.lo
   host.className = "a12-root";
   let state = createA12WorkbenchState();
   const route = parseA12WorkbenchRoute(initialHash);
-  if (route) state = reduceA12Workbench(state, { type: "RESTORE_ROUTE", scenario: route.scenario, stage: route.stage, tab: route.tab, searchQuery: route.searchQuery });
+  if (route) state = reduceA12Workbench(state, { type: "RESTORE_ROUTE", workspace: route.workspace, scenario: route.scenario, stage: route.stage, tab: route.tab, searchQuery: route.searchQuery });
   const focusAfterRender = (selector) => requestAnimationFrame(() => {
     const node = selector ? document.querySelector(selector) : document.querySelector(`[data-a12-scenario="${state.selectedScenario}"]`);
     node?.focus({ preventScroll: true });
@@ -815,11 +894,11 @@ export function mountA12DeepWorkbench(root = null, { initialHash = globalThis.lo
   const render = (focusSelector = null, updateRoute = true) => {
     const view = projectA12Workbench(state);
     host.innerHTML = a12UiMarkup(view, state);
-    host.querySelectorAll("[data-a12-nav-stage]").forEach((control) => {
-      const active = control.dataset.a12NavStage === "audit" ? state.inspectorTab === "Audit" : state.selectedStage === control.dataset.a12NavStage;
+    host.querySelectorAll("[data-a12-workspace]").forEach((control) => {
+      const active = (state.selectedWorkspace ?? "milestone-desk") === control.dataset.a12Workspace;
       control.setAttribute("aria-current", active ? "page" : "false");
     });
-    a12SetDrawerTabbability(host.querySelector("#a12-evidence-inspector"), (globalThis.innerWidth ?? 1440) <= 1050 && !state.inspectorOpen);
+    a12SetDrawerTabbability(host.querySelector("#a12-evidence-inspector"), !state.inspectorOpen);
     if (updateRoute && globalThis.history && globalThis.location) {
       const nextHash = a12WorkbenchRoute(state);
       if (globalThis.location.hash !== nextHash) globalThis.history.replaceState({}, "", nextHash);
@@ -831,14 +910,13 @@ export function mountA12DeepWorkbench(root = null, { initialHash = globalThis.lo
     render(focusSelector);
   };
   host.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-a12-scenario],[data-a12-stage],[data-a12-tab],[data-a12-filter],[data-a12-primary],[data-a12-open-inspector],[data-a12-close-inspector],[data-a12-nav-stage],[data-a12-object],[data-a12-edit-select]");
+    const target = event.target.closest("[data-a12-workspace],[data-a12-scenario],[data-a12-stage],[data-a12-tab],[data-a12-filter],[data-a12-primary],[data-a12-open-inspector],[data-a12-close-inspector],[data-a12-object],[data-a12-edit-select]");
     if (!target || !host.contains(target)) return;
+    if (target.dataset.a12Workspace) return act({ type: "SET_WORKSPACE", workspace: target.dataset.a12Workspace }, "#a12-task-heading");
     if (target.dataset.a12Scenario) return act({ type: "SELECT_SCENARIO", scenario: target.dataset.a12Scenario }, `[data-a12-scenario="${target.dataset.a12Scenario}"]`);
     if (target.dataset.a12Stage) return act({ type: "SET_STAGE", stage: target.dataset.a12Stage }, `#workflow-step-${A12_UI_STAGE_IDS.indexOf(target.dataset.a12Stage)}`);
     if (target.dataset.a12Tab) return act({ type: "SET_INSPECTOR_TAB", tab: target.dataset.a12Tab }, `[data-a12-tab="${target.dataset.a12Tab}"]`);
     if (target.dataset.a12Filter) return act({ type: "SET_QUEUE_FILTER", filter: target.dataset.a12Filter });
-    if (target.dataset.a12NavStage === "audit") return act({ type: "SET_INSPECTOR_TAB", tab: "Audit" });
-    if (target.dataset.a12NavStage) return act({ type: "SET_STAGE", stage: target.dataset.a12NavStage }, `#a12-task-heading`);
     if (target.hasAttribute("data-a12-primary")) return act({ type: "PRIMARY_ACTION" }, "[data-a12-primary]");
     if (target.hasAttribute("data-a12-open-inspector")) return act({ type: "OPEN_INSPECTOR" }, "#a12-evidence-inspector");
     if (target.hasAttribute("data-a12-close-inspector")) return act({ type: "CLOSE_INSPECTOR" }, "[data-a12-open-inspector]");
@@ -855,7 +933,7 @@ export function mountA12DeepWorkbench(root = null, { initialHash = globalThis.lo
     act({ type: "SET_SEARCH_QUERY", query: search.value });
   });
   host.addEventListener("keydown", (event) => {
-    if (event.key === "Tab" && state.inspectorOpen && (globalThis.innerWidth ?? 1440) <= 1050) {
+    if (event.key === "Tab" && state.inspectorOpen) {
       const inspector = host.querySelector("#a12-evidence-inspector");
       const focusable = [...(inspector?.querySelectorAll("button,input,select,textarea,[tabindex]:not([tabindex='-1'])") ?? [])].filter((node) => !node.disabled && node.tabIndex >= 0 && node.getAttribute("aria-hidden") !== "true" && !node.hasAttribute("inert"));
       const first = focusable[0];
@@ -880,7 +958,7 @@ export function mountA12DeepWorkbench(root = null, { initialHash = globalThis.lo
   globalThis.addEventListener("hashchange", () => {
     const nextRoute = parseA12WorkbenchRoute(globalThis.location.hash);
     if (!nextRoute) return;
-    state = reduceA12Workbench(state, { type: "RESTORE_ROUTE", scenario: nextRoute.scenario, stage: nextRoute.stage, tab: nextRoute.tab, searchQuery: nextRoute.searchQuery });
+    state = reduceA12Workbench(state, { type: "RESTORE_ROUTE", workspace: nextRoute.workspace, scenario: nextRoute.scenario, stage: nextRoute.stage, tab: nextRoute.tab, searchQuery: nextRoute.searchQuery });
     render(null, false);
   });
   render(null, true);

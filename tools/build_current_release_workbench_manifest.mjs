@@ -15,14 +15,14 @@ export const CURRENT_MVP_ROOT = join(RELEASE_ROOT, "current-mvp");
 export const OUTPUT_PATH = join(CURRENT_MVP_ROOT, "current-release-workbench-manifest.json");
 export const BASE_MANIFEST_PATH = join(CURRENT_MVP_ROOT, "mvp-publication-staging-rc1-manifest.json");
 export const ACCEPTED_PACKET = Object.freeze({
-  id: "programme-current-release-product-completion-sprint-14-owner-09-domain-bridge-negative-test-request-v1",
-  packet_object_sha256: "70a29799ff77011278b3aafdc72e6bb59a5f2dccc12a55c19a250f4a356923c7",
-  exchange_sha256: "37c1acfcd035ee56b39167b93a069e866b32010dadac84fe818c4c169d1e3c4a"
+  id: "programme-current-release-h199-h198-pass-consume-render-owner-gate-v1",
+  packet_object_sha256: "a4a7f1a900e7e56b594d7965e9f2f718eabbd09cb641678cf670afbdc03af9ed",
+  exchange_sha256: "15e8325141ca719607687b4a3482a8e75ab73d6fc520eebc5ecd0f4cb5daec30"
 });
 export const SOURCE_REQUEST = Object.freeze({
-  id: "programme-current-release-product-completion-sprint-root-correction-request-v1",
-  packet_object_sha256: "577762814fd25363649a6b50c0733a5aef9e354093778981a8d84abbee095e50",
-  exchange_sha256: "6eea4843ef52f4035c3a6ad5a3bfa87530e1cd9bf1c83ef5696a3d4d7ac78a6f"
+  id: "programme-current-release-h198-h197-selector-transition-truth-correction-fresh-sol-medium-audit-v1",
+  packet_object_sha256: "294abd691d6e20c60915349f5f7b2b38c9d4545c730e06815816d2d326eb9748",
+  exchange_sha256: "0677465352fcaaafc4b356d7f9f4202528eb5a37bf0ac2fdcc9074c8db2698d0"
 });
 
 const WORKBENCH_ENTRIES = Object.freeze([
@@ -33,17 +33,17 @@ const WORKBENCH_ENTRIES = Object.freeze([
   ["current-release-final-assets-evidence.json", "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json"]
 ]);
 const DOCUMENTATION_ONLY_PATHS = Object.freeze(["docs/ARCHITECTURE.md", "docs/INTERACTION_TRAIL.md"]);
-export const CURRENT_RELEASE_COMMIT = "e27d847454a4bf2c05319c9a3e2a7c1fc6976c4d";
+export const CURRENT_RELEASE_COMMIT = "4f26c6aa410547f16e82f134054c1398589540f8";
 export const RENDER_CURRENT_DEPLOYED_COMMIT = "83becbb58bb88be12cabf129af784db79747e958";
 export const RENDER_SERVICE_ID = "srv-d9cumml8nd3s73c9nehg";
 export const RENDER_SERVICE_URL = "https://arc-payment-receipt.onrender.com/";
 export const RENDER_CURRENT_DEPLOYMENT_ID = "dep-d9u4lcflk1mc73fi8o0g";
 export const RENDER_CURRENT_DEPLOYMENT_URL = `https://dashboard.render.com/web/${RENDER_SERVICE_ID}/deploys/${RENDER_CURRENT_DEPLOYMENT_ID}`;
 export const RENDER_STATUS = "EXISTING_DEPLOYMENT_TRUE_RECEIPT_CURRENT_CANDIDATE_NOT_DEPLOYED";
-export const ACCEPTANCE_STATE = "H194_GITHUB_TRUE_RECEIPT_RENDER_OWNER_GATE_NOT_GRANTED";
-export const PUBLICATION_CANDIDATE_STATE = "H194_CURRENT_RELEASE_CORRECTION_CANDIDATE_AGAINST_PUBLISHED_E27D847_RENDER_OWNER_GATE_PENDING";
+export const ACCEPTANCE_STATE = "H199_H198_PASS_CONSUMED_RENDER_OWNER_GATE_NOT_GRANTED_CURRENT_PRODUCT_CORRECTION_PENDING";
+export const PUBLICATION_CANDIDATE_STATE = "H199_CURRENT_PRODUCT_CORRECTION_CANDIDATE_AGAINST_PUBLISHED_4F26C6A_RENDER_NOT_DEPLOYED";
 const SELF_EXCLUDED_MANIFEST_PATH = "current-mvp/current-release-workbench-manifest.json";
-const CURRENT_WORKTREE_SCOPE = Object.freeze({ trackedModified: 11, contentCandidates: 4, modeOnly: 7 });
+const CURRENT_WORKTREE_SCOPE = Object.freeze({ trackedModified: 13, contentCandidates: 7, modeOnly: 7 });
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -122,7 +122,7 @@ async function worktreeTruth() {
     snapshots.push(snapshot);
   }
   const untrackedPaths = statusOutput.split("\n").filter((line) => line.startsWith("?? ")).map((line) => line.slice(3)).filter(Boolean).sort();
-  const allowedUntracked = new Set(["outputs/Arc_Current_Release_PolicySettlementV1_Readback.json"]);
+  const allowedUntracked = new Set(["outputs/Arc_Current_Release_PolicySettlementV1_Readback.json", "tools/current_mvp_engineering_support.test.mjs"]);
   const untrackedCandidates = [];
   for (const path of untrackedPaths.filter((path) => allowedUntracked.has(path))) {
     const bytes = await readFile(join(RELEASE_ROOT, path));
@@ -152,7 +152,7 @@ async function worktreeTruth() {
     untracked_policy: "must_be_empty_before_manifest_freeze",
     current_worktree_candidate_bound: false,
     self_excluded_manifest_path: "current-mvp/current-release-workbench-manifest.json",
-    clean_worktree_rule: "The current public release is immutable published main@e27d847: every content-changing path after that release is a local correction candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
+    clean_worktree_rule: "The current public release is immutable published main@4f26c6a: every content-changing path after that release is a local product correction candidate; the manifest self-excludes its own bytes; only seven pre-existing mode-only paths are excluded; all other untracked paths are forbidden."
   };
 }
 
@@ -214,8 +214,8 @@ export async function buildManifest() {
     baseline_git_commit: worktree.baseline_commit,
     current_worktree_candidate_bound: false,
     current_release_surface_status: {
-      github: { status: "TRUE_RECEIPT", current_release_bound: true, branch: "main", commit: CURRENT_RELEASE_COMMIT, remote_main: CURRENT_RELEASE_COMMIT, current_worktree_candidate_bound: false, current_worktree_dirty: worktree.content_candidate_count > 0, source_readback: "remote_main_e27d847_verified", note: "GitHub main@e27d847 is the current public release; local correction candidates remain unbound", owner_gate_required: false, historical_lineage_only: false },
-      render: { status: RENDER_STATUS, current_release_bound: false, service_id: RENDER_SERVICE_ID, service_url: RENDER_SERVICE_URL, deployed_commit: RENDER_CURRENT_DEPLOYED_COMMIT, deployment_id: RENDER_CURRENT_DEPLOYMENT_ID, deployment_url: RENDER_CURRENT_DEPLOYMENT_URL, immutable_deploy_entity: true, current_worktree_candidate_bound: false, source_readback: "render_deployment_83becbb_live; e27d847_candidate_not_deployed", note: "Render still serves immutable 83becbb; the e27d847 candidate awaits the existing deployment/readback owner gate", candidate: { required_commit: CURRENT_RELEASE_COMMIT, status: "NOT_DEPLOYED", current_release_bound: false, owner_gate: "NOT_GRANTED", owner_gate_required: true }, owner_gate_required: true, historical_lineage_only: false },
+      github: { status: "TRUE_RECEIPT", current_release_bound: true, branch: "main", commit: CURRENT_RELEASE_COMMIT, remote_main: CURRENT_RELEASE_COMMIT, current_worktree_candidate_bound: false, current_worktree_dirty: worktree.content_candidate_count > 0, source_readback: "remote_main_4f26c6a_verified", note: "GitHub main@4f26c6a is the current public release; local product correction candidates remain unbound", owner_gate_required: false, historical_lineage_only: false },
+      render: { status: RENDER_STATUS, current_release_bound: false, service_id: RENDER_SERVICE_ID, service_url: RENDER_SERVICE_URL, deployed_commit: RENDER_CURRENT_DEPLOYED_COMMIT, deployment_id: RENDER_CURRENT_DEPLOYMENT_ID, deployment_url: RENDER_CURRENT_DEPLOYMENT_URL, immutable_deploy_entity: true, current_worktree_candidate_bound: false, source_readback: "render_deployment_83becbb_live; 4f26c6a_candidate_not_deployed", note: "Render still serves immutable 83becbb; GitHub main@4f26c6a and the newer local correction are not deployed", candidate: { required_commit: CURRENT_RELEASE_COMMIT, status: "NOT_DEPLOYED", current_release_bound: false, owner_gate: "NOT_GRANTED", owner_gate_required: true }, owner_gate_required: true, historical_lineage_only: false },
       deck: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
       video: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
       circle_console: {
@@ -238,7 +238,7 @@ export async function buildManifest() {
       },
       encode: { status: "UNPROVEN", readiness: surfaceReadiness.encode, historical_lineage_only: true },
       final: { status: "UNPROVEN", readiness: surfaceReadiness.final, historical_lineage_only: true },
-      arc_testnet: { status: "VERIFIED_CHAIN_RECEIPT_PENDING_PUBLICATION_BINDING", readiness: surfaceReadiness.arc_testnet, evidence_binding: "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding remains pending until Render deploys e27d847", historical_lineage_only: false },
+      arc_testnet: { status: "VERIFIED_CHAIN_RECEIPT_PENDING_PUBLICATION_BINDING", readiness: surfaceReadiness.arc_testnet, evidence_binding: "official Arc RPC proves deployment 0xbf3e...a27b and current-contract createPolicy/PolicyCreated/getPolicy 0x2f40...4a9c; dynamic public release binding remains pending until Render deploys the accepted product correction", historical_lineage_only: false },
       erp: {
         status: "VERIFIED_READ_ONLY_CANDIDATE",
         evidence_binding: "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
@@ -305,8 +305,8 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   const githubSurface = manifest.current_release_surface_status?.github;
   const renderSurface = manifest.current_release_surface_status?.render;
   const erpSurface = manifest.current_release_surface_status?.erp;
-  if (githubSurface?.current_release_bound !== true || githubSurface?.branch !== "main" || githubSurface?.commit !== CURRENT_RELEASE_COMMIT || githubSurface?.remote_main !== CURRENT_RELEASE_COMMIT || githubSurface?.source_readback !== "remote_main_e27d847_verified" || githubSurface?.owner_gate_required !== false || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_current_release_binding_invalid");
-  if (renderSurface?.current_release_bound !== false || renderSurface?.service_id !== RENDER_SERVICE_ID || renderSurface?.deployed_commit !== RENDER_CURRENT_DEPLOYED_COMMIT || renderSurface?.deployment_id !== RENDER_CURRENT_DEPLOYMENT_ID || renderSurface?.deployment_url !== RENDER_CURRENT_DEPLOYMENT_URL || renderSurface?.immutable_deploy_entity !== true || renderSurface?.source_readback !== "render_deployment_83becbb_live; e27d847_candidate_not_deployed" || renderSurface?.owner_gate_required !== true || renderSurface?.current_worktree_candidate_bound !== false || renderSurface?.candidate?.required_commit !== CURRENT_RELEASE_COMMIT || renderSurface?.candidate?.status !== "NOT_DEPLOYED" || renderSurface?.candidate?.current_release_bound !== false || renderSurface?.candidate?.owner_gate !== "NOT_GRANTED" || renderSurface?.candidate?.owner_gate_required !== true) issues.push("render_deployment_truth_invalid");
+  if (githubSurface?.current_release_bound !== true || githubSurface?.branch !== "main" || githubSurface?.commit !== CURRENT_RELEASE_COMMIT || githubSurface?.remote_main !== CURRENT_RELEASE_COMMIT || githubSurface?.source_readback !== "remote_main_4f26c6a_verified" || githubSurface?.owner_gate_required !== false || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_current_release_binding_invalid");
+  if (renderSurface?.current_release_bound !== false || renderSurface?.service_id !== RENDER_SERVICE_ID || renderSurface?.deployed_commit !== RENDER_CURRENT_DEPLOYED_COMMIT || renderSurface?.deployment_id !== RENDER_CURRENT_DEPLOYMENT_ID || renderSurface?.deployment_url !== RENDER_CURRENT_DEPLOYMENT_URL || renderSurface?.immutable_deploy_entity !== true || renderSurface?.source_readback !== "render_deployment_83becbb_live; 4f26c6a_candidate_not_deployed" || renderSurface?.owner_gate_required !== true || renderSurface?.current_worktree_candidate_bound !== false || renderSurface?.candidate?.required_commit !== CURRENT_RELEASE_COMMIT || renderSurface?.candidate?.status !== "NOT_DEPLOYED" || renderSurface?.candidate?.current_release_bound !== false || renderSurface?.candidate?.owner_gate !== "NOT_GRANTED" || renderSurface?.candidate?.owner_gate_required !== true) issues.push("render_deployment_truth_invalid");
   if (erpSurface?.current_worktree_candidate_bound !== false || erpSurface?.public_current_release_bound !== false || erpSurface?.owner_live_readback_binding !== true || erpSurface?.live_erp_mutation !== false || erpSurface?.business_close !== "not_proven" || Object.hasOwn(erpSurface, "candidate_binding") || Object.hasOwn(erpSurface, "public_remote_binding")) issues.push("erp_candidate_binding_ambiguous");
   const surfaceReadiness = buildCurrentReleaseSurfaceReadinessView({ now: "2026-08-12T00:00:00.000Z" });
   for (const surface of ["encode", "final"]) {

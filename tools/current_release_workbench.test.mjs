@@ -34,6 +34,7 @@ import {
 } from "../current-mvp/web/fixture-engine.mjs";
 import { a12BrowserMeasurementContract, a12RuntimeLayoutMetrics, a12UiFilteredQueue } from "../current-mvp/web/navigation-workspace.mjs";
 import {
+  ACCEPTED_PACKET,
   ACCEPTANCE_STATE,
   CURRENT_RELEASE_COMMIT,
   CURRENT_MVP_ROOT,
@@ -270,7 +271,7 @@ test("deep UI contract binds seven schemas, five inspectors, seven causal stages
   assert.equal(A12_C15_DAPP_OBJECT_IDS.includes("receipt_finality"), true);
   assert.equal(A12_CAUSAL_STAGES.length, 7);
   for (const scenario of A12_SEVEN_SCENARIO_IDS) assert.equal(A12_C15_SCENARIO_SCHEMA[scenario].fields.length > 0, true, scenario);
-  assert.deepEqual(a12RuntimeLayoutMetrics(1440, 1024, 2), { viewport: "1440x1024", height: 1024, navigation: 208, queue: 300, inspector: 336, inspectorMode: "persistent", overflowX: "none", overflowY: "scrollable", textFloorPx: 16, zoomPercent: 200 });
+  assert.deepEqual(a12RuntimeLayoutMetrics(1440, 1024, 2), { viewport: "1440x1024", height: 1024, navigation: 208, queue: 300, inspector: 0, inspectorMode: "drawer", overflowX: "none", overflowY: "scrollable", textFloorPx: 16, zoomPercent: 200 });
   assert.deepEqual(a12RuntimeLayoutMetrics(1280, 800, 2).viewport, "1280x800");
   assert.deepEqual(a12RuntimeLayoutMetrics(1024, 768, 2).inspectorMode, "focus_trapped_drawer");
   assert.deepEqual(A12_C15_VIEWPORT_ORACLE["1024x768"].inspectorMode, "focus_trapped_drawer");
@@ -292,8 +293,8 @@ test("UI correction keeps business focus visible while progressive disclosure an
   const after = projectA12Workbench(state);
   assert.equal(after.canvas.scenario, before.canvas.scenario);
   assert.equal(after.canvas.command.next_owner, before.canvas.command.next_owner);
-  assert.match(state.lastNotice, /Moved to/);
-  assert.match(state.lastNotice, /completion is not implied/);
+  assert.match(state.lastNotice, /Main workspace changed to/);
+  assert.match(state.lastNotice, /Completion is not implied/);
   state = reduceA12Workbench(state, { type: "RESTORE_ROUTE", scenario: "supplier_payable", stage: "source", tab: "Business" });
   assert.equal(state.lastNotice, "");
   assert.match(navigation, /button\[aria-current="page"\]/);
@@ -311,12 +312,38 @@ test("R1 UI correction keeps active navigation persistent, summaries readable, a
   assert.match(fixture, /state\.lastNotice = "";/);
   let state = createA12WorkbenchState({ scenario: "supplier_payable" });
   state = reduceA12Workbench(state, { type: "SET_STAGE", stage: "allocate" });
-  assert.match(state.lastNotice, /Moved to Allocate/);
+  assert.match(state.lastNotice, /Main workspace changed to/);
   state = reduceA12Workbench(state, { type: "RESTORE_ROUTE", scenario: "supplier_payable", stage: "source", tab: "Business" });
   assert.equal(state.selectedStage, "source");
   assert.equal(state.inspectorTab, "Business");
   assert.equal(state.lastNotice, "");
   assert.doesNotMatch(state.lastNotice, /Moved to Allocate/);
+});
+
+test("workflow navigation changes the main decision surface, not only an inspector tab", () => {
+  let state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  const before = projectA12Workbench(state);
+  state = reduceA12Workbench(state, { type: "SET_WORKFLOW_ROUTE", route: "post" });
+  const post = projectA12Workbench(state);
+  assert.equal(post.canvas.route, "post");
+  assert.notEqual(post.canvas.headline, before.canvas.headline);
+  assert.equal(state.inspectorTab, "ERP");
+  state = reduceA12Workbench(state, { type: "SET_WORKFLOW_ROUTE", route: "evidence" });
+  const evidence = projectA12Workbench(state);
+  assert.equal(evidence.canvas.route, "evidence");
+  assert.match(evidence.canvas.headline, /evidence/i);
+  assert.equal(state.inspectorTab, "Audit");
+});
+
+test("public Audit serialization is readable and redacts governance identifiers", async () => {
+  const navigation = await readFile(join(CURRENT_MVP_ROOT, "web/navigation-workspace.mjs"), "utf8");
+  assert.match(navigation, /a12UiPublicAuditValue/);
+  assert.match(navigation, /Structured event \(internal details withheld\)/);
+  assert.match(navigation, /Internal governance detail withheld/);
+  assert.match(navigation, /Evidence provenance/);
+  assert.doesNotMatch(navigation, /<h3>R7 frozen runtime · R6 producer upstream<\/h3>/);
+  assert.doesNotMatch(navigation, /<code>active packet:/);
+  assert.doesNotMatch(navigation, /R7 exchange sha256:/);
 });
 
 test("current inspector exposes verified Arc/ERP evidence without threshold or live-close claims", async () => {
@@ -354,7 +381,7 @@ test("current narrative and compiler contract reject historical umbrella drift",
   assert.match(readme, /programme-final-20260810\/arc-enterprise-settlement-control-programme-final-3min\.mp4/);
   assert.match(readme, /programme-final-20260810\/Arc_Enterprise_Settlement_Programme_Deck_Current_V3\.pdf/);
   assert.match(readme, /^## Historical\/support verified evidence$/m);
-  assert.match(readme, /current `e27d847` source carries a source-separated current-contract receipt/);
+  assert.match(readme, /current `4f26c6a` source carries a source-separated current-contract receipt/);
   assert.match(readme, /no active subscription ID and no trusted readback loader/);
   assert.match(architecture, /Verified Milestone Close/);
   assert.match(demo, /current product/);
@@ -618,12 +645,12 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal(manifest.current_release_surface_status.github.branch, "main");
   assert.equal(manifest.current_release_surface_status.github.commit, CURRENT_RELEASE_COMMIT);
   assert.equal(manifest.current_release_surface_status.github.remote_main, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.current_release_surface_status.github.source_readback, "remote_main_e27d847_verified");
+  assert.equal(manifest.current_release_surface_status.github.source_readback, "remote_main_4f26c6a_verified");
   assert.equal(manifest.current_release_surface_status.github.current_worktree_candidate_bound, false);
   assert.equal(manifest.current_release_surface_status.github.owner_gate_required, false);
   assert.equal("candidate_binding" in manifest.current_release_surface_status.github, false);
   assert.equal(manifest.worktree_truth.publication_candidate_state, PUBLICATION_CANDIDATE_STATE);
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 4);
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 7);
   assert.equal(manifest.current_release_surface_status.render.service_id, RENDER_SERVICE_ID);
   assert.equal(manifest.current_release_surface_status.render.status, RENDER_STATUS);
   assert.equal(manifest.current_release_surface_status.render.deployed_commit, RENDER_CURRENT_DEPLOYED_COMMIT);
@@ -658,12 +685,12 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
   assert.equal(manifest.current_worktree_candidate_bound, false);
   assert.equal(manifest.worktree_truth.baseline_commit, CURRENT_RELEASE_COMMIT);
   assert.equal(manifest.worktree_truth.current_head, CURRENT_RELEASE_COMMIT);
-  assert.equal(manifest.worktree_truth.tracked_modified_count, 11);
-  assert.equal(manifest.worktree_truth.content_candidate_count, 4);
+  assert.equal(manifest.worktree_truth.tracked_modified_count, 13);
+  assert.equal(manifest.worktree_truth.content_candidate_count, 7);
   assert.equal(manifest.worktree_truth.mode_only_non_candidate_count, 7);
   assert.equal(manifest.worktree_truth.self_excluded_manifest_path, "current-mvp/current-release-workbench-manifest.json");
   assert.equal(manifest.worktree_truth.publication_candidate_state, PUBLICATION_CANDIDATE_STATE);
-  assert.equal(manifest.worktree_truth.publication_candidate_count, 4);
+  assert.equal(manifest.worktree_truth.publication_candidate_count, 7);
   const selfExcludedManifest = manifest.worktree_truth.publication_candidate_paths.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
   assert.equal(selfExcludedManifest.self_excluded, true);
   assert.equal(selfExcludedManifest.hash_excluded, true);
@@ -693,5 +720,5 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     "tools/current_mvp_accounting_close.test.mjs",
     "tools/current_mvp_fail_closed_lifecycle.test.mjs"
   ]) assert.equal(manifest.verification_inputs.some((item) => item.path === path), true, path);
-  assert.equal(manifest.accepted_request.id, "programme-current-release-product-completion-sprint-14-owner-09-domain-bridge-negative-test-request-v1");
+  assert.equal(manifest.accepted_request.id, ACCEPTED_PACKET.id);
 });

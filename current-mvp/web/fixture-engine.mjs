@@ -550,8 +550,8 @@ export const A12_C15_INTERFACE_BINDING = Object.freeze({
 });
 
 export const A12_WORKSPACE_LAYOUT = Object.freeze({
-  desktop: { viewport: "1440x1024", navigation: 208, queue: 300, inspector: 336, inspectorMode: "persistent" },
-  compact: { viewport: "1280x800", navigation: 208, queue: 280, inspector: 320, inspectorMode: "persistent" },
+  desktop: { viewport: "1440x1024", navigation: 208, queue: 300, inspector: 0, inspectorMode: "drawer" },
+  compact: { viewport: "1280x800", navigation: 208, queue: 280, inspector: 0, inspectorMode: "drawer" },
   narrow: { viewport: "1024x768", navigation: 176, queue: 248, inspector: 0, inspectorMode: "drawer" }
 });
 
@@ -959,8 +959,8 @@ export const A12_C15_RECEIPT_FIELDS = Object.freeze([
 ]);
 
 export const A12_C15_VIEWPORT_ORACLE = Object.freeze({
-  "1440x1024": { navigation: 208, queue: 300, inspector: 336, tolerance: 16, inspectorMode: "persistent" },
-  "1280x800": { navigation: 208, queue: 280, inspector: 320, tolerance: 16, inspectorMode: "persistent" },
+  "1440x1024": { navigation: 208, queue: 300, inspector: 0, tolerance: 16, inspectorMode: "drawer" },
+  "1280x800": { navigation: 208, queue: 280, inspector: 0, tolerance: 16, inspectorMode: "drawer" },
   "1024x768": { navigation: 176, queue: 248, inspector: 0, tolerance: 16, inspectorMode: "focus_trapped_drawer" }
 });
 
@@ -969,6 +969,22 @@ export const A12_C15_ACTION_STATE_MACHINE = Object.freeze({
 });
 
 export const A12_C15_TABS = Object.freeze(["Business", "Arc", "ERP", "Ledger", "Audit"]);
+export const A12_ERP_WORKSPACE_IDS = Object.freeze([
+  "milestone-desk",
+  "payables",
+  "receivables",
+  "reconciliation",
+  "general-ledger",
+  "audit-trail"
+]);
+const A12_ERP_WORKSPACE_PRESENTATION = Object.freeze({
+  "milestone-desk": { title: "Milestone desk", detail: "Work the current settlement decision and its exact next local control.", primaryJob: "Resolve the first blocking settlement fact", queueFilter: "all", stage: "source", tab: "Business" },
+  payables: { title: "Payables", detail: "Select an outgoing supplier, employee or refund obligation and preserve its original-document relationship.", primaryJob: "Choose the outgoing payable open item", queueFilter: "outgoing", stage: "source", tab: "Business" },
+  receivables: { title: "Receivables", detail: "Classify incoming invoice collections, advances and refunds before reconciliation.", primaryJob: "Classify the incoming receivable purpose", queueFilter: "incoming", stage: "classify", tab: "Business" },
+  reconciliation: { title: "Reconciliation", detail: "Compare the locked business document with one typed logical payment and isolate the first mismatch.", primaryJob: "Compare expected and observed settlement fields", queueFilter: "all", stage: "allocate", tab: "Business" },
+  "general-ledger": { title: "General ledger", detail: "Review Payment Entry, Bank Transaction, GL/PLED and the separate close boundaries without posting.", primaryJob: "Review the non-postable ledger and close proposal", queueFilter: "all", stage: "close", tab: "Ledger" },
+  "audit-trail": { title: "Audit trail", detail: "Trace business causation and recovery without exposing internal governance identifiers.", primaryJob: "Trace the decision and evidence history", queueFilter: "all", stage: "close", tab: "Audit" }
+});
 const A12_C15_STAGE_TABS = Object.freeze({ source: "Business", classify: "Business", allocate: "Business", authorize: "Arc", settle: "Arc", post: "ERP", close: "Ledger" });
 const A12_C15_STAGE_IDS = Object.freeze(A12_CAUSAL_STAGES.map((stage) => stage.id));
 const A12_C15_PROVENANCE_SOURCE = Object.freeze({
@@ -981,6 +997,17 @@ const A12_C15_PROVENANCE_SOURCE = Object.freeze({
 
 function a12Humanize(fieldId) {
   return fieldId.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const A12_AUDIT_PUBLIC_KEYS = new Set(["label", "name", "type", "status", "state", "reason", "stage", "action_id", "mutation_boundary", "completion"]);
+function a12AuditPublicValue(value) {
+  if (value === null || value === undefined || value === "") return "Not provided";
+  if (Array.isArray(value)) return value.map(a12AuditPublicValue).join(", ");
+  if (typeof value === "object") {
+    const fields = Object.entries(value).filter(([key]) => A12_AUDIT_PUBLIC_KEYS.has(key)).map(([key, item]) => `${a12Humanize(key)}: ${a12AuditPublicValue(item)}`);
+    return fields.length ? fields.join(" · ") : "Structured event (internal details withheld)";
+  }
+  return String(value);
 }
 
 export const A12_C15_SCENARIO_SCHEMA = Object.freeze(Object.fromEntries(
@@ -1004,6 +1031,27 @@ const a12PrimaryActionFor = (scenario) => {
   const actionId = A12_C15_SCENARIO_SCHEMA[scenario]?.primary_action;
   return A12_C15_ACTION_STATE_MACHINE.scenario_primary_actions[actionId] ?? null;
 };
+
+const A12_STAGE_PRESENTATION = Object.freeze({
+  source: { headline: "Select the source object", action: "Rank source candidates", recovery: "Choose the human business document and counterparty before any downstream control." },
+  classify: { headline: "Classify direction and purpose", action: "Confirm classification", recovery: "Confirm whether this is payable, receivable, advance or refund; unresolved direction stays blocked." },
+  allocate: { headline: "Match funds to the open item", action: "Set typed allocation", recovery: "Compare the typed amount with the locked open item and refund ceiling; no inferred match is accepted." },
+  authorize: { headline: "Prepare the authorization boundary", action: "Prepare unsigned authorization", recovery: "Review policy, roles and unsigned command fields; signing and wallet actions remain owner-gated." },
+  settle: { headline: "Read the Arc settlement receipt", action: "Read typed Arc receipt", recovery: "Inspect the typed receipt and freshness state; a local fixture is not a live settlement receipt." },
+  post: { headline: "Prepare the ERP handoff", action: "Prepare ERP draft", recovery: "Prepare a non-posting Payment Entry / Bank Transaction handoff; native ERP mutation remains closed." },
+  evidence: { headline: "Trace the evidence and recovery path", action: "Inspect evidence trail", recovery: "Review the typed causation record and recovery owner; internal governance identifiers stay private." },
+  close: { headline: "Review ledger and close boundaries", action: "Review close boundary", recovery: "Read the projected GL/PLED and separate close levels; chain finality never proves books closed." }
+});
+
+function a12StagePresentation(stage, fallbackAction) {
+  const presentation = A12_STAGE_PRESENTATION[stage] ?? A12_STAGE_PRESENTATION.source;
+  return {
+    ...fallbackAction,
+    label: presentation.action,
+    recovery: presentation.recovery,
+    stage_headline: presentation.headline
+  };
+}
 
 function a12FixtureFields(profile, matcherState, overrides = {}) {
   const fields = a12FieldProjection(profile, matcherState);
@@ -1153,6 +1201,7 @@ export const A12_LIFECYCLE_TRANSITION_TYPES = Object.freeze(["LATE_ENTRY", "REPL
 const a12ResetDependentState = (state, scenario) => {
   state.selectedScenario = scenario;
   state.selectedStage = "source";
+  state.workspaceRoute = "queue";
   state.inspectorTab = "Business";
   state.inspectorOpen = false;
   state.fieldEdits = {};
@@ -1688,7 +1737,9 @@ export function createA12WorkbenchState({ scenario = "supplier_payable" } = {}) 
     batchId: A12_BATCH_ID,
     schema: "arc-erp.product-construction.v3.2.a12.workbench-state.v2",
     selectedScenario: selected,
+    selectedWorkspace: "milestone-desk",
     selectedStage: "source",
+    workspaceRoute: "queue",
     inspectorTab: "Business",
     inspectorOpen: false,
     queueFilter: "all",
@@ -1709,7 +1760,7 @@ export function createA12WorkbenchState({ scenario = "supplier_payable" } = {}) 
     fixture,
     externalActions: 0,
     localFixtureOnly: true,
-    route: { workspace: "settlement-workbench", scenario: selected, stage: "source", tab: "Business", searchQuery: "" },
+    route: { workspace: "milestone-desk", scenario: selected, stage: "source", tab: "Business", searchQuery: "" },
     sealedReplay: null
   };
   // A01H remains historical-only.  Active R6 state never seals or renders it.
@@ -1719,7 +1770,7 @@ export function createA12WorkbenchState({ scenario = "supplier_payable" } = {}) 
 
 function a12WithProjection(next) {
   next.fixture = createA12ProjectionFixture({ scenario: next.selectedScenario, matcherState: next.matcherState, selectedStage: next.selectedStage });
-  next.route = { workspace: "settlement-workbench", scenario: next.selectedScenario, stage: next.selectedStage, tab: next.inspectorTab, searchQuery: next.searchQuery ?? "" };
+  next.route = { workspace: next.selectedWorkspace ?? "milestone-desk", scenario: next.selectedScenario, stage: next.selectedStage, tab: next.inspectorTab, searchQuery: next.searchQuery ?? "" };
   next.sealedReplay = null;
   return next;
 }
@@ -1863,12 +1914,33 @@ export function reduceA12Workbench(input, action = {}) {
     state.lastNotice = "Dependencies reset: source, policy, wallet review, typed evidence, completed stages and receipt projections are re-evaluated for the selected scenario.";
     return next({ scenario: action.scenario, reset_dependencies: true });
   }
+  if (type === "SET_WORKSPACE" && A12_ERP_WORKSPACE_IDS.includes(action.workspace)) {
+    const workspace = A12_ERP_WORKSPACE_PRESENTATION[action.workspace];
+    state.selectedWorkspace = action.workspace;
+    state.queueFilter = workspace.queueFilter;
+    state.selectedStage = workspace.stage;
+    state.workspaceRoute = workspace.stage === "source" ? "queue" : workspace.stage === "allocate" ? "classify" : workspace.stage === "post" ? "post" : workspace.stage === "close" ? (action.workspace === "audit-trail" ? "evidence" : "close") : "queue";
+    state.inspectorTab = workspace.tab;
+    state.inspectorOpen = false;
+    state.lastNotice = `${workspace.title} opened. ${workspace.primaryJob}; navigation does not complete or mutate the case.`;
+    return next({ workspace: action.workspace, primary_job: workspace.primaryJob, completion: "not_implied_by_navigation", external_actions: 0 });
+  }
   if (type === "SET_STAGE" && A12_C15_STAGE_IDS.includes(action.stage)) {
     state.selectedStage = action.stage;
-    state.inspectorTab = A12_C15_STAGE_TABS[action.stage];
+    state.workspaceRoute = action.stage === "source" ? "queue" : action.stage === "allocate" ? "classify" : action.stage === "post" ? "post" : action.stage === "close" ? "close" : state.workspaceRoute;
     const stageLabel = A12_CAUSAL_STAGES.find((stage) => stage.id === action.stage)?.label ?? action.stage;
-    state.lastNotice = `Moved to ${stageLabel}. Stage navigation changes the review focus only; completion is not implied.`;
-    return next({ stage: action.stage, inspector_tab: state.inspectorTab, completion: "not_implied_by_navigation" });
+    state.lastNotice = `Main workspace changed to ${stageLabel}. Completion is not implied by navigation.`;
+    return next({ stage: action.stage, main_workspace: stageLabel, inspector_tab: state.inspectorTab, completion: "not_implied_by_navigation" });
+  }
+  if (type === "SET_WORKFLOW_ROUTE" && ["queue", "classify", "post", "close", "evidence"].includes(action.route)) {
+    const routeStage = { queue: "source", classify: "allocate", post: "post", close: "close", evidence: "close" }[action.route];
+    state.workspaceRoute = action.route;
+    state.selectedStage = routeStage;
+    state.inspectorTab = { queue: "Business", classify: "Business", post: "ERP", close: "Ledger", evidence: "Audit" }[action.route];
+    state.inspectorOpen = action.route === "evidence";
+    const routeLabel = { queue: "Work queue", classify: "Match funds", post: "Post to ERP", close: "Ledger & close", evidence: "Evidence" }[action.route];
+    state.lastNotice = `Main workspace changed to ${routeLabel}. Completion is not implied by navigation.`;
+    return next({ route: action.route, main_workspace: routeLabel, inspector_tab: state.inspectorTab, completion: "not_implied_by_navigation" });
   }
   if (type === "SET_INSPECTOR_TAB" && A12_C15_TABS.includes(action.tab)) {
     state.inspectorTab = action.tab;
@@ -1957,12 +2029,14 @@ export function reduceA12Workbench(input, action = {}) {
     const scenarioChanged = action.scenario !== state.selectedScenario;
     if (scenarioChanged) a12ResetDependentState(state, action.scenario);
     state.selectedStage = A12_C15_STAGE_IDS.includes(action.stage) ? action.stage : "source";
+    state.selectedWorkspace = A12_ERP_WORKSPACE_IDS.includes(action.workspace) ? action.workspace : "milestone-desk";
+    state.workspaceRoute = action.tab === "Audit" ? "evidence" : action.stage === "post" ? "post" : action.stage === "close" ? "close" : action.stage === "allocate" ? "classify" : "queue";
     state.inspectorTab = A12_C15_TABS.includes(action.tab) ? action.tab : "Business";
     state.searchQuery = String(action.searchQuery ?? "").trim().toLowerCase();
     state.inspectorOpen = state.inspectorTab !== "Business";
     // Restoring a URL is a fresh projection, not a replay of a previous stage toast.
     state.lastNotice = "";
-    return next({ scenario: state.selectedScenario, stage: state.selectedStage, tab: state.inspectorTab, route_restore: true, reset_dependencies: scenarioChanged });
+    return next({ workspace: state.selectedWorkspace, scenario: state.selectedScenario, stage: state.selectedStage, tab: state.inspectorTab, route_restore: true, reset_dependencies: scenarioChanged });
   }
   if (type === "REPLAY_SEALED") {
     state.lastNotice = "Historical-only A01H replay is isolated; active R7 uses the accepted producer public projection only.";
@@ -1974,18 +2048,19 @@ export function reduceA12Workbench(input, action = {}) {
 
 export function a12WorkbenchRoute(state) {
   const query = String(state.searchQuery ?? "").trim().toLowerCase();
-  return `#a12/workbench/${encodeURIComponent(state.selectedScenario)}/${encodeURIComponent(state.selectedStage)}/${encodeURIComponent(state.inspectorTab.toLowerCase())}${query ? `?q=${encodeURIComponent(query)}` : ""}`;
+  return `#a12/workbench/${encodeURIComponent(state.selectedWorkspace ?? "milestone-desk")}/${encodeURIComponent(state.selectedScenario)}/${encodeURIComponent(state.selectedStage)}/${encodeURIComponent(state.inspectorTab.toLowerCase())}${query ? `?q=${encodeURIComponent(query)}` : ""}`;
 }
 
 export function parseA12WorkbenchRoute(hash = "") {
-  const match = hash.match(/^#a12\/workbench\/([^/]+)\/([^/]+)\/([^/?]+)(?:\?q=([^#]*))?$/);
+  const match = hash.match(/^#a12\/workbench\/(?:([^/]+)\/)?([^/]+)\/([^/]+)\/([^/?]+)(?:\?q=([^#]*))?$/);
   if (!match) return null;
-  const scenario = decodeURIComponent(match[1]);
-  const stage = decodeURIComponent(match[2]);
-  const rawTab = decodeURIComponent(match[3]);
-  const searchQuery = match[4] ? decodeURIComponent(match[4]) : "";
+  const workspaceCandidate = match[1] ? decodeURIComponent(match[1]) : "milestone-desk";
+  const scenario = decodeURIComponent(match[2]);
+  const stage = decodeURIComponent(match[3]);
+  const rawTab = decodeURIComponent(match[4]);
+  const searchQuery = match[5] ? decodeURIComponent(match[5]) : "";
   const tab = A12_C15_TABS.find((candidate) => candidate.toLowerCase() === rawTab.toLowerCase()) ?? "Business";
-  return { scenario: A12_SCENARIO_IDS.includes(scenario) ? scenario : "supplier_payable", stage: A12_C15_STAGE_IDS.includes(stage) ? stage : "source", tab, searchQuery };
+  return { workspace: A12_ERP_WORKSPACE_IDS.includes(workspaceCandidate) ? workspaceCandidate : "milestone-desk", scenario: A12_SCENARIO_IDS.includes(scenario) ? scenario : "supplier_payable", stage: A12_C15_STAGE_IDS.includes(stage) ? stage : "source", tab, searchQuery };
 }
 
 export function a12ViewportMode(width) {
@@ -1997,7 +2072,8 @@ export function a12ViewportMode(width) {
 export function projectA12Workbench(state) {
   const profile = A12_PROFILE_DEFINITIONS[state.selectedScenario] ?? A12_PROFILE_DEFINITIONS.supplier_payable;
   const schema = A12_C15_SCENARIO_SCHEMA[profile.id];
-  const action = a12PrimaryActionFor(profile.id);
+  const presentationStage = state.workspaceRoute === "evidence" ? "evidence" : state.selectedStage;
+  const action = a12StagePresentation(presentationStage, a12PrimaryActionFor(profile.id));
   const evidenceValidation = state.evidence ? validateA12C15TypedEvidence(state, state.evidence) : null;
   const evidenceIntegrityInvalid = Boolean(state.evidence && !evidenceValidation?.ok);
   const effectiveMatcherState = evidenceIntegrityInvalid ? "pending" : state.matcherState;
@@ -2037,7 +2113,15 @@ export function projectA12Workbench(state) {
     outstanding: effectiveMatcherState === "matched" ? "before → after projection / owner controlled" : "OPEN",
     close: "chain-final ≠ ERP-submitted ≠ operationally-reconciled ≠ books-closed"
   };
-  const firstFailure = profile.direction === "outgoing" ? "settlement_policy" : profile.direction === "unresolved" ? "evidence_gaps" : "receipt_finality_state";
+  const firstMismatchedRecord = state.evidence?.ordered_records?.find((record) => !a12TypedObjectsEqual(record.expected, record.observed));
+  const firstFailure = evidenceIntegrityInvalid
+    ? evidenceValidation.reason
+    : effectiveMatcherState === "mismatch"
+      ? `${firstMismatchedRecord?.type ?? "typed_receipt"}.${Object.keys(firstMismatchedRecord?.expected ?? {}).find((key) => !a12TypedObjectsEqual(firstMismatchedRecord.expected?.[key], firstMismatchedRecord.observed?.[key])) ?? "identity"}`
+      : effectiveMatcherState === "stale"
+        ? "receipt_finality.confirmations"
+        : profile.direction === "outgoing" ? "settlement_policy" : profile.direction === "unresolved" ? "evidence_gaps" : "receipt_finality_state";
+  const workspace = A12_ERP_WORKSPACE_PRESENTATION[state.selectedWorkspace] ?? A12_ERP_WORKSPACE_PRESENTATION["milestone-desk"];
   return {
     batchId: A12_BATCH_ID,
     evidenceLevel: A12_EVIDENCE_LEVEL,
@@ -2046,8 +2130,9 @@ export function projectA12Workbench(state) {
     shell: { environment: "LOCAL FIXTURE", chain: "Arc Testnet · chainId 5042002", company: "Gayson Labs Pte Ltd", treasury: A12_VALUE.treasuryWallet, erpFreshness: "local projection · not live", watcherLag: "not observed", outbox: "0 external commands", role: action.role },
     queue: A12_SCENARIO_IDS.map((id) => { const row = A12_PROFILE_DEFINITIONS[id]; const rowAction = a12PrimaryActionFor(id); return { id, label: row.label, direction: row.direction, party: row.party, principal: row.amount, age: "local fixture", evidenceTier: A12_EVIDENCE_LEVEL, exception: effectiveMatcherState === "pending" ? "control required" : a12StateLabel(effectiveMatcherState), nextOwner: rowAction.next_owner, selected: id === profile.id }; }),
     unresolved: { id: "unresolved_incoming_outgoing", label: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.label, reason: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.openItem, selectable: true },
-    canvas: { headline: action.label, scenario: profile.label, matcherState: effectiveMatcherState, scenarioState: a12StateLabel(effectiveMatcherState), scenarioTone: a12StateTone(effectiveMatcherState), caseId: fixture.caseId, sourceDocument: profile.sourceDocument, counterparty: profile.party, principal: profile.amount, source: "C15 typed scenario projection · local fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: action.recovery, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: guard.enabled, disabledReason: guard.enabled ? null : guard.reason }, consequences, policy: { policyId, version: "C15 upstream policy projection", allowance: profile.amount6, expiry: "C15 upstream fixture · local only", nonce: policyNonce } },
-    inspector: { tabs: A12_C15_TABS, activeTab: state.inspectorTab, objects: objectRows, receiptFields, logs: fixture.receiptRecords, typedReadbacks: workbenchProjection.typed_readbacks, arcVerifiedEvidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE, erpVerifiedEvidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE, getter: { expected: `case:${fixture.caseId} · transfer:${transferId}`, observed: effectiveMatcherState === "pending" ? "missing" : `case:${fixture.caseId} · transfer:${transferId}`, status: effectiveMatcherState === "matched" ? "matched" : "missing", source: A12_C15_PROVENANCE_SOURCE.arc }, consequences, audit: (state.history ?? []).map((event) => ({ time: `local revision ${event.seq}`, actor: "local operator", object: event.type, revision: event.seq, action: event.type, result: event.payload, correlationId: `a12:${fixture.caseId}:${event.seq}` })) },
+    workspace: { id: state.selectedWorkspace ?? "milestone-desk", ...workspace },
+    canvas: { headline: `${workspace.primaryJob} · ${action.stage_headline}`, stage: presentationStage, route: state.workspaceRoute ?? "queue", scenario: profile.label, matcherState: effectiveMatcherState, scenarioState: a12StateLabel(effectiveMatcherState), scenarioTone: a12StateTone(effectiveMatcherState), caseId: fixture.caseId, sourceDocument: profile.sourceDocument, counterparty: profile.party, principal: profile.amount, source: "C15 typed scenario projection · local fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: action.recovery, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: guard.enabled, disabledReason: guard.enabled ? null : guard.reason }, consequences, policy: { policyId, version: "C15 upstream policy projection", allowance: profile.amount6, expiry: "C15 upstream fixture · local only", nonce: policyNonce } },
+    inspector: { tabs: A12_C15_TABS, activeTab: state.inspectorTab, objects: objectRows, receiptFields, logs: fixture.receiptRecords, typedReadbacks: workbenchProjection.typed_readbacks, arcVerifiedEvidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE, erpVerifiedEvidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE, getter: { expected: `case:${fixture.caseId} · transfer:${transferId}`, observed: effectiveMatcherState === "pending" ? "missing" : `case:${fixture.caseId} · transfer:${transferId}`, status: effectiveMatcherState === "matched" ? "matched" : "missing", source: A12_C15_PROVENANCE_SOURCE.arc }, consequences, audit: (state.history ?? []).map((event) => ({ time: `local revision ${event.seq}`, actor: "local operator", object: event.type, revision: event.seq, action: event.type, result: a12AuditPublicValue(event.payload), correlationId: `a12:${fixture.caseId}:${event.seq}` })) },
     causalRail: A12_CAUSAL_STAGES.map((stage, index) => ({ ...stage, status: stage.id === state.selectedStage ? "current" : effectiveCompletedStages.includes(stage.id) ? "verified" : "prerequisite", timestamp: effectiveCompletedStages.includes(stage.id) ? "local guarded action" : null, nextOwner: index === 4 ? "wallet owner or watcher" : index >= 5 ? "ERP/finance owner gate" : "operator" })),
     replay: state.sealedReplay,
     oracle: A12_C15_VIEWPORT_ORACLE,
