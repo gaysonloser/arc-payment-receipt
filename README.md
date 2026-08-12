@@ -4,11 +4,11 @@
 
 **Presentation name:** Arc Enterprise Settlement Control. Verified Milestone Close is the current release: a receipt-first Arc/USDC workbench for a treasury operator reviewing a supplier payable and its customer-receipt/refund counterpart. `PolicySettlementV1` supplies the programmable-money boundary; the workbench separately displays typed ERPNext Invoice, Payment Entry, Bank Transaction, GL, Payment Ledger, Accounting Period and close readbacks. Chain success never implies ERP posting or business close.
 
-**Published baseline demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) (commit `dc239d696d9b6dea1fe8edec483e94fc72581dbd`).
+**Current product source:** [GitHub commit `a63fbce`](https://github.com/gaysonloser/arc-payment-receipt/tree/a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7), published on `main` by non-force fast-forward.
 
-The baseline demo runs as a free Render web service and may take 50 seconds or more to wake after inactivity. The product-quality changes currently present in the local worktree are a release candidate only: they are not yet committed, pushed, or deployed, so the published baseline must not be read as evidence for those candidate changes.
+**Published baseline demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) currently serves commit `dc239d696d9b6dea1fe8edec483e94fc72581dbd`. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity. Deployment and live readback of current GitHub commit `a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7` remain separately owner-gated; the baseline URL must not yet be read as runtime evidence for the new source release.
 
-**Current-release boundary:** GitHub is the engineering source and Render is the public runtime. The remote `main` baseline is `dc239d696d9b6dea1fe8edec483e94fc72581dbd`; the uncommitted local candidate is not current-release-bound until a separately approved commit, non-force push, deployment, and readback complete. Arc Testnet provides immutable receipt facts; ERPNext remains the authoritative business/ledger/close system. Circle Console, Encode and Final submission remain separate owner-gated surfaces. The local fixture, read-only UI, historical receipts and public chain deployment do not claim a signer, wallet action, ERP posting or business close. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+**Current-release boundary:** GitHub `main` contains product commit `a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7`; Render remains on the older `dc239d696d9b6dea1fe8edec483e94fc72581dbd` runtime until a separately approved deployment and readback complete. Arc Testnet provides immutable receipt facts; ERPNext remains the authoritative business/ledger/close system. Circle Console, Encode and Final submission remain separate owner-gated surfaces. The local fixture, read-only UI, historical receipts and public chain deployment do not claim a signer, wallet action, ERP posting or business close. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
 
 ## Historical/support component: Arc Lab Enterprise OS E1
 
@@ -104,7 +104,19 @@ ephemeral fixture validation). `ArcPaymentReceipt` and the Arc Lab E1 views are
 historical/support components retained for provenance, not current product
 claims.
 
-## What is implemented
+## Current release materials
+
+- Product source: [`a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7`](https://github.com/gaysonloser/arc-payment-receipt/commit/a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7)
+- Three-minute demo video: [`arc-enterprise-settlement-control-programme-final-3min.mp4`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4)
+- Reviewer deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf)
+- Editable deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx)
+- Published runtime baseline: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/) at `dc239d696d9b6dea1fe8edec483e94fc72581dbd`; current product deployment remains pending.
+
+The separate Arc Lab Review Deck page retained below is a historical/support reviewer artifact. It is not the final three-minute demo video and does not replace the current PDF/PPTX deck above.
+
+## Historical/support implementation inventory
+
+The following inventory describes the retained `ArcPaymentReceipt` and Arc Lab support lineage. It is not evidence that the current `PolicySettlementV1` release has a verified Arc Testnet settlement receipt, ERP business close, Circle Console subscription, Encode receipt or Final submission receipt.
 
 - Native Arc Testnet USDC payment with no ERC-20 approval.
 - Immediate settlement to an immutable merchant; contract balance returns to zero.
@@ -140,25 +152,29 @@ claims.
 - A bounded public-disclosure auditor that hashes the selected reviewer-facing JSON documents and fails closed on potential secret, credential, bearer-token or local-path leakage without returning a detected value.
 - A public-boundary consistency gate that cross-checks identity, external-route, delivery and trace controls before admitting a reviewer to the read-only surface.
 - A content-addressed Reviewer Evidence Pack that gathers the manufacturing reconciliation, delivery links, public-boundary controls and unresolved source-assurance items into one auditable, read-only handoff without exposing a wallet, ERP write path or Circle subscription action.
-- A public Arc Lab Review Deck that turns the live product, evidence trail and remaining delivery boundaries into a reviewer-readable narrative. It is a candidate review artifact, not a recorded video or a declaration that the final hackathon submission has been completed.
+- A public Arc Lab Review Deck that turns the historical/support evidence trail and remaining delivery boundaries into a reviewer-readable narrative. It is not the current three-minute demo video or the current PDF/PPTX deck, and it is not a declaration that Final submission has been completed.
 - A read-only Arc Lab Evidence Explorer that pulls the public evidence pack, delivery surfaces, final-submission readiness and public-boundary consistency into one live reviewer workspace. It never opens a wallet or an ERP write path.
 - A browser-side Arc Lab Provenance Ledger that reads bounded public evidence documents and exposes each response's SHA-256 digest, route and retrieval time for repeatable reviewer verification; it does not upload or persist the inspected data.
 - A Release Evidence Anchor packet that exposes one canonical public release fingerprint, makes missing GitHub/Render/Encode/Circle/Arc receipts explicit, and pairs the material release with a separately owner-reviewed zero-value Arc Testnet deployment. The public service cannot deploy it or submit any platform action.
 
-## Verified evidence
+## Historical/support verified evidence
+
+These receipts belong to the retained `ArcPaymentReceipt` and Arc Lab lineage. The current `PolicySettlementV1` release still has no current-release-bound Arc Testnet settlement receipt in the public candidate.
 
 - Contract: [`0x05fd...E1Df`](https://testnet.arcscan.app/address/0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df)
 - Deployment: [`0xa880...fab1`](https://testnet.arcscan.app/tx/0xa8800b86a2d476aabc23d79cd2e7fa6b4a89ef425a594d072341304fa8c5fab1)
 - P1 test payment: [`0x56b6...0fdbf`](https://testnet.arcscan.app/tx/0x56b64a6a56209b2a82b170c6b1ea6ca5c8114d122488957f91b13cd40c00fdbf)
 - P2 segregated-payer payment: [`0x1837...8fe6`](https://testnet.arcscan.app/tx/0x18379c57f2499a1846ef56623286596bca5424b2b11f3d494afb335a0d868fe6)
 - Circle contract state: `COMPLETE / VERIFIED`
-- Circle monitor state: historical `PaymentReceived / Subscribed` evidence remains source-separated; the current `ArcEnterpriseEvidenceRegistryV2` import is `Complete` with no event subscription because Circle Console requires an active webhook.
+- Circle monitor state: historical `PaymentReceived / Subscribed` evidence remains source-separated. The current `ArcEnterpriseEvidenceRegistryV2` is import-only; Circle Console remains fail-closed and blocked because there is no active subscription ID and no trusted readback loader.
 - Manufacturing completion anchor: [`0xc9f5...2cfe`](https://testnet.arcscan.app/tx/0xc9f58ce2662d23dd08906bcceaadd4c90ba70914edee2da4a33668c666932cfe), registry `0x094f...a1e7`, zero value, state `MANUFACTURE_COMPLETED`.
 - Arc RPC coverage: deployment block `52,159,957` through observed block `52,895,762`
 - Current overlap state: `1 RPC / 1 Circle / aligned_in_overlap_window`
 - Settlement Evidence Manifest SHA-256: `ca93a6e741a0ca55ea85cffda9e12b8e6f06f90c506a79f312c0171204c470e9`
 
-## Architecture
+## Historical/support `ArcPaymentReceipt` architecture
+
+This flow documents the retained `ArcPaymentReceipt` component and must not be read as the `PolicySettlementV1` current-release execution path.
 
 1. The payer calls `pay(orderId, metadataHash)` with native Arc Testnet USDC.
 2. The contract records payer, amount, metadata hash, and block number.

@@ -248,6 +248,12 @@ test("current narrative and compiler contract reject historical umbrella drift",
   const demo = await readFile(join(CURRENT_MVP_ROOT, "..", "docs/DEMO_SCRIPT.md"), "utf8");
   assert.match(readme, /^# Verified Milestone Close/m);
   assert.match(readme, /historical\/support/);
+  assert.match(readme, /^## Current release materials$/m);
+  assert.match(readme, /programme-final-20260810\/arc-enterprise-settlement-control-programme-final-3min\.mp4/);
+  assert.match(readme, /programme-final-20260810\/Arc_Enterprise_Settlement_Programme_Deck_Current_V3\.pdf/);
+  assert.match(readme, /^## Historical\/support verified evidence$/m);
+  assert.match(readme, /no current-release-bound Arc Testnet settlement receipt/);
+  assert.match(readme, /no active subscription ID and no trusted readback loader/);
   assert.match(architecture, /Verified Milestone Close/);
   assert.match(demo, /current product/);
   assert.doesNotMatch(readme.split("\n")[0], /^# Payment Receipt$/);
@@ -490,7 +496,7 @@ test("browser measurement contract rejects overflow, focus loss and console erro
 test("manifest freezes current five-surface status and verifier/test byte inputs", async () => {
   const manifest = JSON.parse(await readFile(OUTPUT_PATH, "utf8"));
   assert.deepEqual(Object.fromEntries(Object.entries(manifest.current_release_surface_status).map(([id, value]) => [id, value.status])), {
-    github: "TRUE_RECEIPT_HISTORICAL",
+    github: "TRUE_RECEIPT",
     render: "TRUE_RECEIPT",
     deck: "TRUE_RECEIPT",
     video: "TRUE_RECEIPT",
@@ -501,8 +507,14 @@ test("manifest freezes current five-surface status and verifier/test byte inputs
     erp: "VERIFIED_READ_ONLY_CANDIDATE"
   });
   assert.deepEqual(manifest.current_release_surface_status.circle_console.blockers.sort(), ["subscription_id_missing", "trusted_readback_loader_not_configured"].sort());
+  assert.equal(manifest.current_release_surface_status.github.current_release_bound, true);
+  assert.equal(manifest.current_release_surface_status.github.product_commit, "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7");
+  assert.equal(manifest.current_release_surface_status.github.receipt_observed_remote_main, "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7");
+  assert.equal(manifest.current_release_surface_status.github.owner_gate_required, false);
+  assert.equal(manifest.current_release_surface_status.render.observed_commit, "dc239d696d9b6dea1fe8edec483e94fc72581dbd");
+  assert.equal(manifest.current_release_surface_status.render.current_release_bound, false);
   assert.equal(manifest.current_release_surface_status.erp.candidate_binding, true);
-  assert.equal(manifest.current_release_surface_status.erp.public_remote_binding, false);
+  assert.equal(manifest.current_release_surface_status.erp.public_remote_binding, true);
   assert.equal(manifest.current_release_surface_status.erp.live_erp_mutation, false);
   assert.equal(manifest.entries.some((item) => item.path === "current-release-final-assets-evidence.json"), true);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 5);

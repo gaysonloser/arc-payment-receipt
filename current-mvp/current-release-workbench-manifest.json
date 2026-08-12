@@ -20,22 +20,25 @@
   "direct_erp_mutation": false,
   "stable_terminal_freeze": true,
   "writer_idle": true,
-  "acceptance_state": "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING",
+  "acceptance_state": "GITHUB_TRUE_RECEIPT_ACCEPTED_RELEASE_BINDING_CORRECTION_AUDIT_PENDING",
   "current_release_surface_status": {
     "github": {
-      "status": "TRUE_RECEIPT_HISTORICAL",
-      "current_release_bound": false,
-      "candidate_binding": false,
-      "remote_main": "dc239d696d9b6dea1fe8edec483e94fc72581dbd",
-      "note": "remote main is the published baseline and does not contain the current local product-quality candidate; exact commit+push owner gate required",
-      "owner_gate_required": true,
-      "historical_lineage_only": true
+      "status": "TRUE_RECEIPT",
+      "current_release_bound": true,
+      "candidate_binding": true,
+      "product_commit": "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7",
+      "receipt_observed_remote_main": "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7",
+      "receipt_parent": "dc239d696d9b6dea1fe8edec483e94fc72581dbd",
+      "receipt_tree": "51a9083f0954f1b064b37925c2926c38e6632af9",
+      "note": "GitHub main accepted the independently audited exact 20-file product commit by non-force fast-forward; later receipt-only metadata commits do not change the product commit; Render deployment and readback remain separate",
+      "owner_gate_required": false,
+      "historical_lineage_only": false
     },
     "render": {
       "status": "TRUE_RECEIPT",
       "current_release_bound": false,
-      "observed_commit": "be6d807637849b1c726f0ed32ac03638e0ccb111",
-      "note": "real receipt predates current public HEAD; current-release re-readback remains required",
+      "observed_commit": "dc239d696d9b6dea1fe8edec483e94fc72581dbd",
+      "note": "Render dashboard and public-file readback show the live baseline at dc239d6; deployment and readback of the current GitHub product commit remain required",
       "historical_lineage_only": true
     },
     "deck": {
@@ -75,7 +78,7 @@
       "status": "VERIFIED_READ_ONLY_CANDIDATE",
       "evidence_binding": "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
       "candidate_binding": true,
-      "public_remote_binding": false,
+      "public_remote_binding": true,
       "live_erp_mutation": false,
       "historical_lineage_only": false
     }
@@ -84,14 +87,14 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 30837,
-      "sha256": "bbf1764f689a0d7d28e6ee4a6d24feba25c4fec606a5796f6d595d77d319e2a3"
+      "bytes": 32005,
+      "sha256": "d42878e615dc1251f1fe30b8bd6673be55b906a102e16468e6d15de66558b1b5"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 13505,
-      "sha256": "e31ec64b33a324ed54b4519fe4a0abd14a5a3340778860aaefce7bf56e8d750e"
+      "bytes": 13793,
+      "sha256": "cc09980ad653ea2e1d73b39eb9282eb495f64929be7ec57524f0368762627376"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",

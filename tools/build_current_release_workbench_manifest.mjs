@@ -98,10 +98,10 @@ export async function buildManifest() {
     direct_erp_mutation: false,
     stable_terminal_freeze: true,
     writer_idle: true,
-    acceptance_state: "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING",
+    acceptance_state: "GITHUB_TRUE_RECEIPT_ACCEPTED_RELEASE_BINDING_CORRECTION_AUDIT_PENDING",
     current_release_surface_status: {
-      github: { status: "TRUE_RECEIPT_HISTORICAL", current_release_bound: false, candidate_binding: false, remote_main: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", note: "remote main is the published baseline and does not contain the current local product-quality candidate; exact commit+push owner gate required", owner_gate_required: true, historical_lineage_only: true },
-      render: { status: "TRUE_RECEIPT", current_release_bound: false, observed_commit: "be6d807637849b1c726f0ed32ac03638e0ccb111", note: "real receipt predates current public HEAD; current-release re-readback remains required", historical_lineage_only: true },
+      github: { status: "TRUE_RECEIPT", current_release_bound: true, candidate_binding: true, product_commit: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_observed_remote_main: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_parent: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", receipt_tree: "51a9083f0954f1b064b37925c2926c38e6632af9", note: "GitHub main accepted the independently audited exact 20-file product commit by non-force fast-forward; later receipt-only metadata commits do not change the product commit; Render deployment and readback remain separate", owner_gate_required: false, historical_lineage_only: false },
+      render: { status: "TRUE_RECEIPT", current_release_bound: false, observed_commit: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", note: "Render dashboard and public-file readback show the live baseline at dc239d6; deployment and readback of the current GitHub product commit remain required", historical_lineage_only: true },
       deck: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
       video: { status: "TRUE_RECEIPT", current_release_bound: true, tag: "programme-final-20260810", historical_lineage_only: false },
       circle_console: { status: "BLOCKED", blockers: ["subscription_id_missing", "trusted_readback_loader_not_configured"], historical_lineage_only: false },
@@ -112,7 +112,7 @@ export async function buildManifest() {
         status: "VERIFIED_READ_ONLY_CANDIDATE",
         evidence_binding: "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
         candidate_binding: true,
-        public_remote_binding: false,
+        public_remote_binding: true,
         live_erp_mutation: false,
         historical_lineage_only: false
       }
@@ -141,12 +141,12 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   }
   if (manifest.manifest_sha256_self_excluded !== true) issues.push("manifest_self_exclusion_missing");
   if (manifest.external_actions !== 0 || manifest.live_arc !== false || manifest.live_erp !== false || manifest.html_css_write !== false || manifest.direct_erp_mutation !== false) issues.push("unsafe_boundary");
-  if (manifest.stable_terminal_freeze !== true || manifest.writer_idle !== true || manifest.acceptance_state !== "LOCAL_IMPLEMENTATION_AND_REPRODUCIBLE_TESTS_COMPLETE_FRESH_SOL_MEDIUM_AUDIT_PENDING") issues.push("freeze_state_missing");
+  if (manifest.stable_terminal_freeze !== true || manifest.writer_idle !== true || manifest.acceptance_state !== "GITHUB_TRUE_RECEIPT_ACCEPTED_RELEASE_BINDING_CORRECTION_AUDIT_PENDING") issues.push("freeze_state_missing");
   if (manifest.independent_audit?.model !== "gpt-5.6-sol" || manifest.independent_audit?.reasoning_effort !== "medium" || manifest.independent_audit?.read_only !== true || manifest.independent_audit?.independent !== true || manifest.independent_audit?.status !== "PENDING" || manifest.independent_audit?.self_acceptance !== false) issues.push("audit_boundary_missing");
   if (JSON.stringify(manifest.accepted_request ?? null) !== JSON.stringify(ACCEPTED_PACKET)) issues.push("accepted_packet_binding_missing");
   if (JSON.stringify(manifest.source_request ?? null) !== JSON.stringify(SOURCE_REQUEST)) issues.push("source_request_lineage_missing");
   const expectedSurfaces = {
-    github: "TRUE_RECEIPT_HISTORICAL",
+    github: "TRUE_RECEIPT",
     render: "TRUE_RECEIPT",
     deck: "TRUE_RECEIPT",
     video: "TRUE_RECEIPT",
