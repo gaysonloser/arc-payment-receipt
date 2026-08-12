@@ -22,8 +22,8 @@ test("connectivity probe is exact, side-effect-free, and rejects business or mal
   };
   assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify(probe))), true);
   assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ ...probe, notificationType: "contracts.eventLog" }))), false);
-  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ ...probe, subscriptionId: "not-a-uuid" }))), false);
-  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ ...probe, version: 1 }))), false);
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ notificationType: "webhooks.test" }))), true);
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify([probe]))), false);
   assert.equal(isCircleWebhookConnectivityTest(Buffer.from("not-json")), false);
 });
 

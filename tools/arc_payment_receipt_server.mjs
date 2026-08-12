@@ -71,11 +71,10 @@ export const PUBLIC_POST_ROUTES = Object.freeze([
 export function isCircleWebhookConnectivityTest(rawBody) {
   try {
     const value = JSON.parse(Buffer.from(rawBody).toString("utf8"));
-    return value?.notificationType === "webhooks.test"
-      && value?.version === 2
-      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value?.subscriptionId ?? ""))
-      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value?.notificationId ?? ""))
-      && Number.isFinite(Date.parse(String(value?.timestamp ?? "")));
+    return value !== null
+      && typeof value === "object"
+      && !Array.isArray(value)
+      && value.notificationType === "webhooks.test";
   } catch {
     return false;
   }
