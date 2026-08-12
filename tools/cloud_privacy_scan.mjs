@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-const roots = ["README.md", "SECURITY.md", "config", "docs", "outputs", "src", "test", "tools"];
+const roots = ["README.md", "SECURITY.md", "config", "current-mvp/web", "docs", "outputs", "src", "test", "tools"];
 const denied = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /\b(?:mnemonic|seed phrase|recovery phrase)\s*[:=]/i,

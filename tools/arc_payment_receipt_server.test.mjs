@@ -606,6 +606,7 @@ let origin;
 
 before(async (t) => {
   server = createReceiptServer({
+    currentReleaseCommit: "a".repeat(40),
     loadReport: async () => report,
     loadDualReport: async () => dualReport,
     loadCircleReport: async () => circleReport,
@@ -925,7 +926,7 @@ test("serves current-release surface readiness without external API calls", asyn
   assert.equal(payload.boundaries.no_api_calls, true);
   assert.equal(payload.encode.status, "UNPROVEN");
   assert.equal(payload.final.status, "UNPROVEN");
-  assert.equal(payload.arc_testnet.status, "UNPROVEN");
+  assert.equal(payload.arc_testnet.status, "VERIFIED_READ_ONLY");
   assert.equal(payload.circle_console.status, "BLOCKED");
   assert.equal(payload.circle_console.current_release_bound, false);
   assert.equal(payload.erp.status, "VERIFIED_READ_ONLY");
@@ -1192,7 +1193,9 @@ test("keeps the Circle webhook endpoint fail-closed without a configured durable
   assert.deepEqual(body.blockers, [
     "receiver_enabled_required",
     "durable_queue_declared_required",
-    "verification_key_present_required"
+    "store_path_required",
+    "verification_key_present_required",
+    "verification_key_id_required"
   ]);
 });
 

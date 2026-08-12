@@ -4,11 +4,11 @@
 
 **Presentation name:** Arc Enterprise Settlement Control. Verified Milestone Close is the current release: a receipt-first Arc/USDC workbench for a treasury operator reviewing a supplier payable and its customer-receipt/refund counterpart. `PolicySettlementV1` supplies the programmable-money boundary; the workbench separately displays typed ERPNext Invoice, Payment Entry, Bank Transaction, GL, Payment Ledger, Accounting Period and close readbacks. Chain success never implies ERP posting or business close.
 
-**Current product source:** [GitHub `main`](https://github.com/gaysonloser/arc-payment-receipt/tree/main) contains the accepted product implementation. The current source receipt is [`4f26c6a`](https://github.com/gaysonloser/arc-payment-receipt/commit/4f26c6aa410547f16e82f134054c1398589540f8); a newer local six-workspace product correction remains uncommitted and unbound until independent acceptance.
+**Current product source:** [GitHub `main`](https://github.com/gaysonloser/arc-payment-receipt/tree/main) contains the accepted product implementation. The current published source receipt is [`2524f0d`](https://github.com/gaysonloser/arc-payment-receipt/commit/2524f0de459e49c993a9d6d426663af51fa605fa). Any working-tree correction remains unbound until independent acceptance, an exact non-force push, deployment, and public readback.
 
-**Published demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) is the existing Render service. Its current immutable deployment receipt is the older [`83becbb`](https://github.com/gaysonloser/arc-payment-receipt/commit/83becbb58bb88be12cabf129af784db79747e958); the public service must not be described as serving `4f26c6a` or the newer local correction until an immutable deployment and route/API readback exist. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity.
+**Published demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) is the existing Render service. Immutable deployment `dep-d9ucvtdbedkc73a0lgn0` serves accepted commit [`2524f0d`](https://github.com/gaysonloser/arc-payment-receipt/commit/2524f0de459e49c993a9d6d426663af51fa605fa). It runs as a free Render web service and may take 50 seconds or more to wake after inactivity.
 
-**Current-release boundary:** GitHub `main@4f26c6a` is the current source receipt, while Render still serves the older immutable `83becbb` receipt; the newer six-workspace product correction remains local until fresh acceptance, commit, push and deployment readback. The source carries a current-contract Arc Testnet readback for `PolicySettlementV1`: deployment code, one successful `createPolicy` transaction, its `PolicyCreated` log, and an independently matching `getPolicy` result. Arc Testnet facts and owner-live ERP readbacks remain separate evidence classes and do not imply settlement execution, ERP posting or business close. Circle Console remains fail-closed without a current subscription/readback; ERP posting/business close, Encode and Final remain unproven. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+**Current-release boundary:** GitHub `main@2524f0d` and Render deployment `dep-d9ucvtdbedkc73a0lgn0` are the current accepted public pair. The source carries a current-contract Arc Testnet readback for `PolicySettlementV1`: deployment code, one successful `createPolicy` transaction, its `PolicyCreated` log, and an independently matching `getPolicy` result. Arc Testnet facts and owner-live ERP readbacks remain separate evidence classes and do not imply settlement execution, ERP posting or business close. Encode has an accepted authenticated binding to this release; Circle Console remains fail-closed without a current subscription/webhook/event readback, ERP business close remains unproven, and Final remains unproven. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
 
 ### Circle Console trusted readback boundary
 
@@ -117,11 +117,11 @@ claims.
 
 ## Current release materials
 
-- Current product implementation: [`4f26c6aa410547f16e82f134054c1398589540f8`](https://github.com/gaysonloser/arc-payment-receipt/commit/4f26c6aa410547f16e82f134054c1398589540f8), published to `main`; Render deployment/readback for this commit and the newer local correction remain unproven.
+- Current product implementation: [`2524f0de459e49c993a9d6d426663af51fa605fa`](https://github.com/gaysonloser/arc-payment-receipt/commit/2524f0de459e49c993a9d6d426663af51fa605fa), published to `main` and bound to Render deployment `dep-d9ucvtdbedkc73a0lgn0`.
 - Three-minute demo video: [`arc-enterprise-settlement-control-programme-final-3min.mp4`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4)
 - Reviewer deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf)
 - Editable deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx)
-- Published runtime: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/); current immutable deployment `83becbb`. GitHub `4f26c6a` and the newer local correction are not yet bound to a Render deployment receipt.
+- Published runtime: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/); current immutable deployment `dep-d9ucvtdbedkc73a0lgn0` at GitHub `2524f0d`.
 
 The separate Arc Lab Review Deck page retained below is a historical/support reviewer artifact. It is not the final three-minute demo video and does not replace the current PDF/PPTX deck above.
 
@@ -170,7 +170,7 @@ The following inventory describes the retained `ArcPaymentReceipt` and Arc Lab s
 
 ## Historical/support verified evidence
 
-These receipts belong to the retained `ArcPaymentReceipt` and Arc Lab lineage. They do not supply the current `PolicySettlementV1` proof. The current `4f26c6a` source carries a source-separated current-contract receipt: [`createPolicy` transaction `0x2f40…a9c`](https://testnet.arcscan.app/tx/0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c), its `PolicyCreated` log, and an independently matching `getPolicy` readback; public Render release binding remains pending until the accepted product correction is deployed and read back.
+These receipts belong to the retained `ArcPaymentReceipt` and Arc Lab lineage. They do not supply the current `PolicySettlementV1` proof. The current `2524f0d` source carries a source-separated current-contract receipt: [`createPolicy` transaction `0x2f40…a9c`](https://testnet.arcscan.app/tx/0x2f40fa6b8d464fd2b35a34612ee2e90dbb4121b3a2ddfad652505599b2ed4a9c), its `PolicyCreated` log, and an independently matching `getPolicy` readback; the accepted public pair is Render `dep-d9ucvtdbedkc73a0lgn0` at this GitHub commit.
 
 - Contract: [`0x05fd...E1Df`](https://testnet.arcscan.app/address/0x05fd366E0F1Af3C5DCDCdC88ED8824bbf175E1Df)
 - Deployment: [`0xa880...fab1`](https://testnet.arcscan.app/tx/0xa8800b86a2d476aabc23d79cd2e7fa6b4a89ef425a594d072341304fa8c5fab1)
@@ -307,7 +307,7 @@ The Node suite covers event decoding, overlap-window reconciliation, missing-eve
 - `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/circle-webhook-readiness`
 
-All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a Circle ECDSA verification key, a durable queue, a durable idempotency store, and an explicit Circle subscription. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP. `POST /api/v1/opening-balance-fixture-validate` is a separate in-memory, fail-closed fixture check and never persists or posts anything.
+All other paths or write methods return explicit errors. The service has no signer, wallet connection, API key, enabled webhook receiver, database, or ERP state-changing endpoint. `POST /api/v1/circle-webhook` is fail-closed by default and accepts nothing until all separate runtime controls exist: a pre-provisioned Circle ECDSA public key, its exact `CIRCLE_WEBHOOK_PUBLIC_KEY_ID`, a persistent `CIRCLE_WEBHOOK_STORE_PATH`, and an explicit Circle subscription. The receiver verifies the raw request body against `X-Circle-Signature` only after `X-Circle-Key-Id` exactly matches the configured UUID; it does not fetch keys or use Circle credentials in the request path. When disabled, it returns `503`; it never creates a Circle subscription or writes to ERP. `POST /api/v1/opening-balance-fixture-validate` is a separate in-memory, fail-closed fixture check and never persists or posts anything.
 
 ## Safety and limitations
 

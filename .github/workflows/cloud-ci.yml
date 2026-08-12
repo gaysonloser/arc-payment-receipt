@@ -24,12 +24,17 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Run product and boundary tests
         run: npm test
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - name: Run settlement contract tests
+        run: forge test -vv
       - name: Privacy and secret scan
         run: node tools/cloud_privacy_scan.mjs
       - name: Build reproducibility artifact
         run: |
           mkdir -p cloud-artifact
-          cp -R README.md SECURITY.md LICENSE package.json package-lock.json Dockerfile assets config docs outputs src test tools cloud-artifact/
+          cp -R README.md SECURITY.md LICENSE package.json package-lock.json Dockerfile assets config current-mvp docs outputs src test tools cloud-artifact/
       - uses: actions/upload-artifact@v4
         with:
           name: arc-payment-receipt-${{ github.sha }}

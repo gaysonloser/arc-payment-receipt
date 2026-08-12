@@ -12,9 +12,13 @@ import {
   buildCircleConsoleTrustedReadbackContract,
   buildCircleWebhookPolicy,
   buildCircleWebhookReadiness,
+  buildCircleWebhookRuntimePolicy,
+  DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING,
   createCircleWebhookProcessor,
-  createCircleConsoleTrustedReadbackLoader
+  createCircleConsoleTrustedReadbackLoader,
+  isValidCircleWebhookPublicKey
 } from "./circle_contract_webhook_gate.mjs";
+import { createCircleWebhookStore } from "./circle_webhook_store.mjs";
 import {
   currentMvpContentType,
   resolveCurrentMvpRequest
@@ -84,18 +88,33 @@ const CIRCLE_WEBHOOK_READINESS_POLICY = Object.freeze({
   enabled: false,
   durableQueueAvailable: false,
   chainId: 5042002,
-  contractAddress: "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7",
-  eventSignature: "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)"
+  contractAddress: CURRENT_POLICY_SETTLEMENT_CONTRACT,
+  eventSignature: CURRENT_POLICY_CREATED_EVENT,
+  eventTopic: "0x18a40807aa0569234a6f9202ddaab5639334547426c0cb66915bb5e5779b53ec",
+  blockchain: "ARC-TESTNET",
+  requireTypedEvent: true
 });
 
-export function buildCircleWebhookPublicView() {
-  const readiness = buildCircleWebhookReadiness(buildCircleWebhookPolicy(CIRCLE_WEBHOOK_READINESS_POLICY));
+export function buildCircleWebhookPublicView(environment = {}, options = {}) {
+  const runtime = buildCircleWebhookRuntimePolicy(environment);
+  const readiness = buildCircleWebhookReadiness(buildCircleWebhookPolicy({
+    ...CIRCLE_WEBHOOK_READINESS_POLICY,
+    enabled: runtime.enabled,
+    durableQueueAvailable: runtime.configured.store_path_persistent === true,
+    storePathPersistent: runtime.configured.store_path_persistent,
+    verificationKeyPresent: runtime.configured.verification_key_present
+  }));
+  const blockers = [...new Set([...runtime.blockers, ...readiness.blockers])];
+  if (options.storeInitialized === false && runtime.configured.store_path_persistent === true) blockers.push("durable_store_initialization_failed");
+  if (options.verificationKeyValid === false) blockers.push("verification_key_invalid");
   return {
     ...readiness,
+    status: blockers.length ? "not_ready_fail_closed" : "ready_for_circle_console_subscription",
+    blockers,
     surface: "read_only_configuration_boundary",
-    next_owner_action: "Provide a durable HTTPS queue and explicitly authorize Circle Console subscription creation.",
+    next_owner_action: "Provide a persistent JSONL store, verification key and explicit Circle Console subscription authorization.",
     guarantees: {
-      endpoint_accepts_webhooks: false,
+      endpoint_accepts_webhooks: blockers.length === 0,
       circle_subscription_created: false,
       circle_resource_changed: false,
       erp_write: false,
@@ -425,6 +444,17 @@ function text(response, status, body, contentType = "text/plain; charset=utf-8",
 }
 
 async function readJsonBody(request, maxBytes = 64 * 1024) {
+  const rawBody = await readRawBody(request, maxBytes);
+  try {
+    return { rawBody, payload: JSON.parse(rawBody.toString("utf8")) };
+  } catch {
+    const error = new Error("invalid_json_body");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+async function readRawBody(request, maxBytes = 64 * 1024) {
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
@@ -437,13 +467,7 @@ async function readJsonBody(request, maxBytes = 64 * 1024) {
     chunks.push(chunk);
   }
   const rawBody = Buffer.concat(chunks);
-  try {
-    return { rawBody, payload: JSON.parse(rawBody.toString("utf8")) };
-  } catch {
-    const error = new Error("invalid_json_body");
-    error.statusCode = 400;
-    throw error;
-  }
+  return rawBody;
 }
 
 function binary(response, status, body, contentType, method = "GET") {
@@ -2134,15 +2158,51 @@ export function createReceiptServer(options = {}) {
     trustedReadbackLoaderAvailable: loadCircleConsoleReadback !== null,
     trustedReadbackContract
   });
+  let circleWebhookStorePromise = null;
+  const getCircleWebhookStore = async () => {
+    if (options.circleWebhookStore) return options.circleWebhookStore;
+    if (circleWebhookStorePromise) return circleWebhookStorePromise;
+    const runtime = buildCircleWebhookRuntimePolicy(runtimeEnvironment);
+    if (!runtime.enabled) return null;
+    let publicKeyPem = runtimeEnvironment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM;
+    if (!publicKeyPem && runtimeEnvironment.CIRCLE_WEBHOOK_PUBLIC_KEY_PATH) {
+      publicKeyPem = await readFile(resolve(runtimeEnvironment.CIRCLE_WEBHOOK_PUBLIC_KEY_PATH), "utf8");
+    }
+    if (!isValidCircleWebhookPublicKey(publicKeyPem)) throw new Error("invalid_circle_webhook_public_key");
+    circleWebhookStorePromise = createCircleWebhookStore({
+      path: runtimeEnvironment.CIRCLE_WEBHOOK_STORE_PATH,
+      releaseBinding: {
+        ...DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING,
+        release_id: runtimeEnvironment.CIRCLE_WEBHOOK_RELEASE_ID || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.release_id,
+        commit_sha: runtimeEnvironment.CIRCLE_WEBHOOK_RELEASE_COMMIT || runtimeEnvironment.CURRENT_RELEASE_COMMIT || runtimeEnvironment.RENDER_GIT_COMMIT || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.commit_sha,
+        render_deployment_id: runtimeEnvironment.CIRCLE_WEBHOOK_RENDER_DEPLOYMENT_ID || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.render_deployment_id,
+        manifest_sha256: runtimeEnvironment.CIRCLE_WEBHOOK_MANIFEST_SHA256 || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.manifest_sha256
+      }
+    }).then((store) => ({ store, publicKeyPem }));
+    return circleWebhookStorePromise;
+  };
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
     environment: runtimeEnvironment,
-    policy: { ...CIRCLE_WEBHOOK_READINESS_POLICY, enabled: true, durableQueueAvailable: true },
-    durableQueue: options.circleWebhookDurableQueue,
-    idempotencyStore: options.circleWebhookIdempotencyStore
+    policy: {
+      ...CIRCLE_WEBHOOK_READINESS_POLICY,
+      enabled: true,
+      durableQueueAvailable: true,
+      releaseBinding: {
+        ...DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING,
+        release_id: runtimeEnvironment.CIRCLE_WEBHOOK_RELEASE_ID || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.release_id,
+        commit_sha: runtimeEnvironment.CIRCLE_WEBHOOK_RELEASE_COMMIT || runtimeEnvironment.CURRENT_RELEASE_COMMIT || runtimeEnvironment.RENDER_GIT_COMMIT || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.commit_sha,
+        render_deployment_id: runtimeEnvironment.CIRCLE_WEBHOOK_RENDER_DEPLOYMENT_ID || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.render_deployment_id,
+        manifest_sha256: runtimeEnvironment.CIRCLE_WEBHOOK_MANIFEST_SHA256 || DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING.manifest_sha256
+      }
+    },
+    publicKeyPem: runtimeEnvironment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM,
+    expectedKeyId: runtimeEnvironment.CIRCLE_WEBHOOK_PUBLIC_KEY_ID,
+    getPublicKeyPem: async () => (await getCircleWebhookStore())?.publicKeyPem ?? null,
+    getDurableStore: async () => (await getCircleWebhookStore())?.store
   });
   const now = options.now ?? (() => Date.now());
 
-  return createServer(async (request, response) => {
+  const server = createServer(async (request, response) => {
     try {
       const url = new URL(request.url, "http://localhost");
       if (url.pathname === "/.well-known/agent-registration.json") {
@@ -2154,8 +2214,8 @@ export function createReceiptServer(options = {}) {
         return;
       }
       if (request.method === "POST" && url.pathname === PUBLIC_POST_ROUTES[0]) {
-        const { rawBody, payload } = await readJsonBody(request);
-        const result = await circleWebhookProcessor({ rawBody, payload, headers: request.headers });
+        const rawBody = await readRawBody(request);
+        const result = await circleWebhookProcessor({ rawBody, headers: request.headers });
         json(response, result.status, result, request.method);
         return;
       }
@@ -2605,7 +2665,19 @@ export function createReceiptServer(options = {}) {
       }
 
       if (url.pathname === "/api/v1/circle-webhook-readiness") {
-        json(response, 200, buildCircleWebhookPublicView(), request.method);
+        let storeInitialized = null;
+        let verificationKeyValid = null;
+        if (buildCircleWebhookRuntimePolicy(runtimeEnvironment).enabled) {
+          try {
+            const initialized = await getCircleWebhookStore();
+            storeInitialized = Boolean(initialized?.store);
+            verificationKeyValid = isValidCircleWebhookPublicKey(initialized?.publicKeyPem);
+          } catch {
+            storeInitialized = false;
+            verificationKeyValid = false;
+          }
+        }
+        json(response, 200, buildCircleWebhookPublicView(runtimeEnvironment, { storeInitialized, verificationKeyValid }), request.method);
         return;
       }
 
@@ -2780,6 +2852,12 @@ export function createReceiptServer(options = {}) {
       json(response, status, { error: status === 500 ? "internal_error" : error.message });
     }
   });
+  server.on("close", () => {
+    if (!options.circleWebhookStore && circleWebhookStorePromise) {
+      void circleWebhookStorePromise.then(({ store }) => store.close()).catch(() => {});
+    }
+  });
+  return server;
 }
 
 function parseArgs(argv) {

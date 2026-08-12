@@ -3,11 +3,11 @@
   "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
   "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
   "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
-  "content_identity_sha256": "158466d4e9239d36a3d97e1ae22150f40fbb2c3f4df3c71a538613b17af902af",
+  "content_identity_sha256": "e1daa5afe2a3839191501c66653eeea39c0534c3d7472099d5d6a6033a0212a1",
   "manifest_sha256_self_excluded": true,
   "release_binding": {
     "model": "content_addressed_external_receipt",
-    "content_identity_sha256": "158466d4e9239d36a3d97e1ae22150f40fbb2c3f4df3c71a538613b17af902af",
+    "content_identity_sha256": "e1daa5afe2a3839191501c66653eeea39c0534c3d7472099d5d6a6033a0212a1",
     "self_authenticating_commit": false,
     "github_commit": null,
     "render_deployment_id": null,
@@ -169,8 +169,8 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 42114,
-      "sha256": "e7fdc59cf4edcc0c6b6fc4d15e30e26cc1b457508043a384a6432136b2865c63"
+      "bytes": 47399,
+      "sha256": "69e830c14a487e9f17bedfaa397f64c2c35b6c67c268d036c5cce12837b2a373"
     },
     {
       "path": "tools/current_mvp_engineering_support.test.mjs",
@@ -181,8 +181,8 @@
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 16882,
-      "sha256": "bd56cdf524b1827c3d15405d4325f2ad4c4e1def18980161fdb2eefb84995f15"
+      "bytes": 17093,
+      "sha256": "13f57c9d0eea0d1b5e3b1e85e3bff9aee587dc58425adc8af4760ab50ddfe705"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -199,8 +199,32 @@
     {
       "path": "tools/circle_contract_webhook_gate.mjs",
       "role": "verifier",
-      "bytes": 27810,
-      "sha256": "58b5f4cfbfdada767f910ef7718468b5cca4f413d1b55b275bb0aaa7a52780fa"
+      "bytes": 36791,
+      "sha256": "4097e7bc7465370efc91417c81dbbc97b77736691a7393fc8e603229a8d47143"
+    },
+    {
+      "path": "tools/circle_contract_webhook_gate.test.mjs",
+      "role": "test",
+      "bytes": 10530,
+      "sha256": "70704e99299c2fd23bf00e3e2e8eb80ff13b0f7361a95ab5f035cbe08df2919c"
+    },
+    {
+      "path": "tools/circle_webhook_store.mjs",
+      "role": "runtime",
+      "bytes": 5998,
+      "sha256": "e8a447478c8e7d6eaaae30a7259e6840547ce551f2460e5687933db559dfb023"
+    },
+    {
+      "path": "tools/circle_webhook_store.test.mjs",
+      "role": "test",
+      "bytes": 3482,
+      "sha256": "6997bd9279edcb6c6005c4736adf272f0c64f2c99e4bcb89358f8b819f696c11"
+    },
+    {
+      "path": "tools/circle_webhook_server.test.mjs",
+      "role": "test",
+      "bytes": 5997,
+      "sha256": "9edec2c706cddedfbed356764a3f8e54a578f7bbf7f64a8e97b557e25dc17ece"
     },
     {
       "path": "tools/circle_console_receipt.test.mjs",
@@ -211,14 +235,14 @@
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 145721,
-      "sha256": "b2925910ef6738aa44fd297ff9c77cafa358422c8ab57225dbadfce53f83332e"
+      "bytes": 150231,
+      "sha256": "4842c19335901290715dd0795d9b97f07e8d4c1781c7f62b8f4a7fd0b6303de5"
     },
     {
       "path": "tools/arc_payment_receipt_server.test.mjs",
       "role": "test",
-      "bytes": 91598,
-      "sha256": "95ed7efc302b942a8b0218645ec949cdffd6ed2db9981bd4af7cd625316adc44"
+      "bytes": 91713,
+      "sha256": "24ea4fe234b18af60ce4756b6f8a34406c0004ad9f1138389a94ebd2b0abb50c"
     },
     {
       "path": "tools/circle_console_server.test.mjs",
@@ -457,8 +481,8 @@
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 156908,
-      "sha256": "e3161111297366179b7806ed7fdbfd16c3aa7c5905d54d50d15b07d13dfb7f93",
+      "bytes": 161418,
+      "sha256": "57df3de17b478bbf8b49a23ed04ac27f834d386540b1082c69d9f3fa106c6269",
       "mode": "100644",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
@@ -466,8 +490,8 @@
     },
     {
       "path": "web/index.html",
-      "bytes": 24751,
-      "sha256": "eebc323cb5e541c112755340946c8504fe3068e9bd0d4ccd61a0f1378608c9c9",
+      "bytes": 24730,
+      "sha256": "93131b51ff7196bcd99587637bf5ad30e4bb2aaae5baad96ad9fcdac01e5aaae",
       "mode": "100644",
       "historical_sha256": "c06819266a08bef7a3541921b43a235e0968c048bd2c533ab85b74fac2d0646a",
       "historical_bytes": 67534,
@@ -475,8 +499,8 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 149819,
-      "sha256": "e6a668b841f973e5e8a80a8d3b729dcd4c53facfcbdc16043bd3d379dcbbdf7b",
+      "bytes": 156778,
+      "sha256": "acfb537f739fe7e714d80af8eb911f59da7001f26f2fe86d4cb6cd9448583d9a",
       "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,

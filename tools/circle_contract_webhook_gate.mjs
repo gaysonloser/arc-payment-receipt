@@ -1,20 +1,50 @@
-import { createHash, verify } from "node:crypto";
+import { createHash, createPublicKey, verify } from "node:crypto";
+import { isPersistentCircleWebhookStorePath } from "./circle_webhook_store.mjs";
 
 const ADDRESS = /^0x[0-9a-f]{40}$/i;
 const HASH = /^0x[0-9a-f]{64}$/i;
+const WORD = /^0x[0-9a-f]{64}$/i;
+const EVENT_TOPIC = /^0x[0-9a-f]{64}$/i;
+const KEY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CURRENT_CONTRACT = "0xc7682649a1aa60d0f74825ad2b812ee062178047";
+const CURRENT_EVENT = "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)";
+const CURRENT_EVENT_TOPIC = "0x18a40807aa0569234a6f9202ddaab5639334547426c0cb66915bb5e5779b53ec";
+const CURRENT_RELEASE_BINDING = Object.freeze({
+  release_id: "verified-milestone-close-current-mvp-workbench-rc1",
+  commit_sha: "2524f0de459e49c993a9d6d426663af51fa605fa",
+  render_deployment_id: "dep-d9ucvtdbedkc73a0lgn0",
+  manifest_sha256: "4bff506ab9215af0242f8205e91b3d125539494263ff671bc41bdf05f21791f5"
+});
+export const DEFAULT_CIRCLE_WEBHOOK_RELEASE_BINDING = CURRENT_RELEASE_BINDING;
 
 function normalizeAddress(value) {
   return String(value ?? "").toLowerCase();
 }
 
+function isAbiAddressWord(value) {
+  return WORD.test(String(value ?? "")) && /^0{24}[0-9a-f]{40}$/i.test(String(value).slice(2));
+}
+
+function isAbiUint64Word(value) {
+  return WORD.test(String(value ?? "")) && /^0{0,48}[0-9a-f]{16}$/i.test(String(value).slice(2));
+}
+
 export function buildCircleWebhookPolicy(options = {}) {
+  const eventSignature = options.eventSignature ?? "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)";
+  const typedEvent = eventSignature === CURRENT_EVENT;
   return {
     enabled: options.enabled === true,
     durableQueueAvailable: options.durableQueueAvailable === true,
     chainId: Number(options.chainId ?? 5042002),
-    contractAddress: normalizeAddress(options.contractAddress),
-    eventSignature: options.eventSignature ?? "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)",
-    notificationType: "contracts.eventLog"
+    blockchain: String(options.blockchain ?? "ARC-TESTNET"),
+    contractAddress: normalizeAddress(options.contractAddress ?? CURRENT_CONTRACT),
+    eventSignature,
+    eventTopic: String(options.eventTopic ?? (typedEvent ? CURRENT_EVENT_TOPIC : "")).toLowerCase(),
+    notificationType: "contracts.eventLog",
+    requireTypedEvent: options.requireTypedEvent === true || typedEvent,
+    releaseBinding: { ...CURRENT_RELEASE_BINDING, ...(options.releaseBinding ?? {}) },
+    storePathPersistent: options.storePathPersistent,
+    verificationKeyPresent: options.verificationKeyPresent
   };
 }
 
@@ -28,17 +58,47 @@ export function validateCircleContractNotification(payload, policy) {
   if (normalizeAddress(notification.contractAddress) !== policy.contractAddress || !ADDRESS.test(notification.contractAddress ?? "")) {
     errors.push("unexpected_contract_address");
   }
-  if (String(notification.eventSignature ?? "") !== policy.eventSignature) errors.push("unexpected_event_signature");
+  const observedEventSignature = notification.eventSignature ?? notification.eventName;
+  if (String(observedEventSignature ?? "") !== policy.eventSignature) errors.push("unexpected_event_signature");
   if (!HASH.test(notification.txHash ?? "")) errors.push("invalid_transaction_hash");
   if (!Number.isInteger(Number(notification.chainId)) || Number(notification.chainId) !== policy.chainId) {
     errors.push("unexpected_chain_id");
+  }
+  if (policy.requireTypedEvent) {
+    if (String(notification.blockchain ?? notification.network ?? "") !== policy.blockchain) errors.push("unexpected_blockchain");
+    if (!Number.isInteger(Number(notification.logIndex)) || Number(notification.logIndex) < 0) errors.push("invalid_log_index");
+    const topics = Array.isArray(notification.topics) ? notification.topics : [];
+    if (topics.length !== 4 || topics.some((topic) => !WORD.test(String(topic ?? "")))) errors.push("invalid_topics");
+    if (policy.eventTopic && String(topics[0] ?? "").toLowerCase() !== policy.eventTopic) errors.push("unexpected_event_topic");
+    if (topics.length === 4 && (!isAbiAddressWord(topics[2]) || !isAbiAddressWord(topics[3]))) errors.push("invalid_indexed_address_topics");
+    const data = String(notification.data ?? "");
+    if (!/^0x[0-9a-f]*$/i.test(data) || data.length !== 2 + (6 * 64)) errors.push("invalid_event_data");
+    if (data.length === 2 + (6 * 64)) {
+      const words = Array.from({ length: 6 }, (_, index) => `0x${data.slice(2 + (index * 64), 2 + ((index + 1) * 64))}`);
+      if (!isAbiAddressWord(words[0])) errors.push("invalid_reviewer_word");
+      if (!isAbiUint64Word(words[4]) || !isAbiUint64Word(words[5])) errors.push("invalid_uint64_words");
+    }
+    if (notification.blockHash !== undefined && !HASH.test(notification.blockHash)) errors.push("invalid_block_hash");
   }
   return {
     accepted: errors.length === 0,
     errors,
     idempotency_key: payload?.notificationId ?? null,
     event_fingerprint: HASH.test(notification.txHash ?? "")
-      ? createHash("sha256").update(`${normalizeAddress(notification.contractAddress)}:${notification.txHash}:${notification.logIndex ?? ""}`).digest("hex")
+      ? createHash("sha256").update(JSON.stringify({
+        notification_id: payload?.notificationId ?? null,
+        notification_type: payload?.notificationType ?? null,
+        blockchain: notification.blockchain ?? notification.network ?? null,
+        chain_id: notification.chainId ?? null,
+        contract_address: normalizeAddress(notification.contractAddress),
+        event_signature: observedEventSignature ?? null,
+        event_topic: policy.eventTopic || null,
+        tx_hash: String(notification.txHash).toLowerCase(),
+        block_hash: notification.blockHash ?? null,
+        log_index: notification.logIndex ?? null,
+        topics: notification.topics ?? null,
+        data: notification.data ?? null
+      })).digest("hex")
       : null,
     boundaries: {
       chain_write: false,
@@ -54,6 +114,9 @@ export function buildCircleWebhookReadiness(policy) {
   if (!policy.enabled) blockers.push("receiver_disabled_by_default");
   if (!policy.durableQueueAvailable) blockers.push("durable_queue_not_configured");
   if (!ADDRESS.test(policy.contractAddress)) blockers.push("contract_address_invalid");
+  if (policy.requireTypedEvent && !EVENT_TOPIC.test(policy.eventTopic)) blockers.push("event_topic_required");
+  if (policy.storePathPersistent === false) blockers.push("durable_store_path_not_persistent");
+  if (policy.verificationKeyPresent === false) blockers.push("verification_key_missing");
   return {
     status: blockers.length ? "not_ready_fail_closed" : "ready_for_circle_console_subscription",
     blockers,
@@ -72,19 +135,48 @@ function hasNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+export function isValidCircleWebhookPublicKey(value) {
+  if (!hasNonEmptyString(value)) return false;
+  try {
+    const key = createPublicKey(value);
+    return key.type === "public" && key.asymmetricKeyType === "ec";
+  } catch {
+    return false;
+  }
+}
+
 export function buildCircleWebhookRuntimePolicy(environment = process.env) {
+  const storePath = environment.CIRCLE_WEBHOOK_STORE_PATH ?? "";
+  const storePathPersistent = isPersistentCircleWebhookStorePath(storePath);
+  const inlineVerificationKeyPresent = hasNonEmptyString(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM);
+  const verificationKeyPathPresent = hasNonEmptyString(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PATH);
+  const verificationKeyPresent = inlineVerificationKeyPresent || verificationKeyPathPresent;
+  const inlineVerificationKeyValid = inlineVerificationKeyPresent
+    ? isValidCircleWebhookPublicKey(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM)
+    : null;
+  const verificationKeyIdPresent = KEY_ID.test(String(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_ID ?? ""));
   const configured = {
     receiver_enabled: environment.CIRCLE_WEBHOOK_ENABLED === "true",
-    durable_queue_declared: environment.CIRCLE_WEBHOOK_DURABLE_QUEUE === "true",
-    verification_key_present: hasNonEmptyString(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM)
+    durable_queue_declared: environment.CIRCLE_WEBHOOK_DURABLE_QUEUE === "true" || storePathPersistent,
+    store_path_configured: hasNonEmptyString(storePath),
+    store_path_persistent: storePathPersistent,
+    verification_key_present: verificationKeyPresent,
+    verification_key_valid: inlineVerificationKeyValid,
+    verification_key_id_present: verificationKeyIdPresent
   };
-  const blockers = Object.entries(configured)
-    .filter(([, present]) => !present)
-    .map(([name]) => `${name}_required`);
+  const blockers = [];
+  if (!configured.receiver_enabled) blockers.push("receiver_enabled_required");
+  if (!configured.durable_queue_declared) blockers.push(configured.store_path_configured ? "durable_store_path_not_persistent" : "durable_queue_declared_required");
+  if (!configured.store_path_configured && environment.CIRCLE_WEBHOOK_DURABLE_QUEUE !== "true") blockers.push("store_path_required");
+  if (!configured.verification_key_present) blockers.push("verification_key_present_required");
+  if (configured.verification_key_valid === false) blockers.push("verification_key_invalid");
+  if (!configured.verification_key_id_present) blockers.push("verification_key_id_required");
   return {
     enabled: blockers.length === 0,
     blockers,
     configured,
+    storePath,
+    verificationKeySource: hasNonEmptyString(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM) ? "CIRCLE_WEBHOOK_PUBLIC_KEY_PEM" : (hasNonEmptyString(environment.CIRCLE_WEBHOOK_PUBLIC_KEY_PATH) ? "CIRCLE_WEBHOOK_PUBLIC_KEY_PATH" : null),
     boundaries: {
       requires_circle_console_subscription: true,
       requires_signature_verification: true,
@@ -100,7 +192,8 @@ export function verifyCircleWebhookSignature(rawBody, signature, publicKeyPem) {
     return false;
   }
   try {
-    return verify("sha256", rawBody, publicKeyPem, Buffer.from(signature, "base64"));
+    const encoded = String(signature).replace(/^sha256=/i, "");
+    return verify("sha256", rawBody, publicKeyPem, Buffer.from(encoded, "base64"));
   } catch {
     return false;
   }
@@ -111,22 +204,62 @@ export function createCircleWebhookProcessor(options = {}) {
   const policy = buildCircleWebhookPolicy(options.policy);
   const durableQueue = options.durableQueue;
   const idempotencyStore = options.idempotencyStore;
+  const durableStore = options.durableStore;
+  const getDurableStore = options.getDurableStore;
   const publicKeyPem = options.publicKeyPem ?? options.environment?.CIRCLE_WEBHOOK_PUBLIC_KEY_PEM;
+  const expectedKeyId = String(options.expectedKeyId ?? options.environment?.CIRCLE_WEBHOOK_PUBLIC_KEY_ID ?? "").toLowerCase();
 
   return async ({ rawBody, headers, payload }) => {
     if (!runtime.enabled) {
       return { accepted: false, status: 503, error: "webhook_receiver_disabled", blockers: runtime.blockers };
     }
-    if (!durableQueue?.enqueue || !idempotencyStore?.has || !idempotencyStore?.put) {
+    if (!durableStore && !getDurableStore && !(durableQueue?.enqueue && idempotencyStore?.has && idempotencyStore?.put)) {
       return { accepted: false, status: 503, error: "durable_queue_or_idempotency_store_unavailable" };
     }
     const signature = headers?.["x-circle-signature"];
-    if (!verifyCircleWebhookSignature(rawBody, signature, publicKeyPem)) {
+    const observedKeyId = String(headers?.["x-circle-key-id"] ?? "").toLowerCase();
+    if (!KEY_ID.test(observedKeyId) || observedKeyId !== expectedKeyId) {
+      return { accepted: false, status: 401, error: "invalid_circle_key_id" };
+    }
+    const effectivePublicKeyPem = publicKeyPem ?? (typeof options.getPublicKeyPem === "function" ? await options.getPublicKeyPem() : null);
+    if (!verifyCircleWebhookSignature(rawBody, signature, effectivePublicKeyPem)) {
       return { accepted: false, status: 401, error: "invalid_circle_signature" };
     }
-    const validation = validateCircleContractNotification(payload, policy);
+    let parsedPayload = payload;
+    if (parsedPayload === undefined) {
+      try { parsedPayload = JSON.parse(Buffer.from(rawBody).toString("utf8")); }
+      catch { return { accepted: false, status: 422, error: "invalid_json_body" }; }
+    }
+    const validation = validateCircleContractNotification(parsedPayload, policy);
     if (!validation.accepted) {
       return { accepted: false, status: 422, error: "invalid_circle_notification", validation };
+    }
+    if (durableStore || getDurableStore) {
+      let store;
+      try { store = durableStore ?? await getDurableStore(); }
+      catch { return { accepted: false, status: 503, error: "durable_store_unavailable" }; }
+      if (!store?.claimAndEnqueue) return { accepted: false, status: 503, error: "durable_store_unavailable" };
+      const result = await store.claimAndEnqueue({
+        notification_id: validation.idempotency_key,
+        fingerprint: createHash("sha256").update(rawBody).digest("hex"),
+        release_binding: policy.releaseBinding,
+        event: {
+          notification_type: parsedPayload.notificationType,
+          blockchain: parsedPayload.notification?.blockchain ?? parsedPayload.notification?.network ?? null,
+          chain_id: parsedPayload.notification?.chainId ?? null,
+          contract_address: normalizeAddress(parsedPayload.notification?.contractAddress),
+          event_signature: parsedPayload.notification?.eventSignature ?? parsedPayload.notification?.eventName ?? null,
+          event_topic: policy.eventTopic || null,
+          tx_hash: String(parsedPayload.notification?.txHash ?? "").toLowerCase(),
+          block_hash: parsedPayload.notification?.blockHash ?? null,
+          log_index: Number(parsedPayload.notification?.logIndex),
+          topics: parsedPayload.notification?.topics ?? null,
+          data_sha256: createHash("sha256").update(String(parsedPayload.notification?.data ?? "")).digest("hex")
+        }
+      });
+      if (result.kind === "conflict") return { accepted: false, status: 422, error: "notification_id_conflict", idempotency_key: validation.idempotency_key, prior_fingerprint: result.prior_fingerprint };
+      if (result.kind === "duplicate") return { accepted: true, status: 200, duplicate: true, idempotency_key: validation.idempotency_key };
+      return { accepted: true, status: 202, duplicate: false, idempotency_key: validation.idempotency_key, fingerprint: result.fingerprint };
     }
     if (await idempotencyStore.has(validation.idempotency_key)) {
       return { accepted: true, status: 200, duplicate: true, idempotency_key: validation.idempotency_key };
@@ -134,8 +267,8 @@ export function createCircleWebhookProcessor(options = {}) {
     await durableQueue.enqueue({
       idempotency_key: validation.idempotency_key,
       event_fingerprint: validation.event_fingerprint,
-      notification_type: payload.notificationType,
-      notification: payload.notification
+      notification_type: parsedPayload.notificationType,
+      notification: parsedPayload.notification
     });
     await idempotencyStore.put(validation.idempotency_key);
     return { accepted: true, status: 202, duplicate: false, idempotency_key: validation.idempotency_key };
@@ -156,7 +289,6 @@ export const CIRCLE_CONSOLE_EVENT_HISTORY_KIND = "circle_contract_event_history"
 export const CIRCLE_CONSOLE_SUBSCRIPTION_ACTIVE = "active";
 
 const RELEASE_COMMIT = /^[0-9a-f]{40}$/i;
-const EVENT_TOPIC = /^0x[0-9a-f]{64}$/i;
 const DEFAULT_CONSOLE_RECEIPT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_CONSOLE_RECEIPT_FUTURE_SKEW_MS = 5 * 60 * 1000;
 

@@ -26,6 +26,7 @@ import {
   A12_C15_TABS,
   A12_C15_VIEWPORT_ORACLE,
   A12_CAUSAL_STAGES,
+  A12_ORIGIN_ENTRY_CATALOG,
   A12_SEVEN_SCENARIO_IDS,
   createA12WorkbenchState,
   projectA12Workbench,
@@ -33,7 +34,7 @@ import {
   a12WorkbenchRoute,
   parseA12WorkbenchRoute
 } from "../current-mvp/web/fixture-engine.mjs";
-import { a12BrowserMeasurementContract, a12RuntimeLayoutMetrics, a12UiFilteredQueue } from "../current-mvp/web/navigation-workspace.mjs";
+import { a12BrowserMeasurementContract, a12RuntimeLayoutMetrics, a12UiFilteredQueue, a12UiMarkup, a12WorkspacePrimaryMarkup } from "../current-mvp/web/navigation-workspace.mjs";
 import {
   CONTENT_MANIFEST_SCHEMA,
   CURRENT_MVP_ROOT,
@@ -320,6 +321,33 @@ test("R1 UI correction keeps active navigation persistent, summaries readable, a
   assert.doesNotMatch(state.lastNotice, /Moved to Allocate/);
 });
 
+test("Milestone desk is an accounting document center with a single five-step decision path", async () => {
+  const navigation = await readFile(join(CURRENT_MVP_ROOT, "web/navigation-workspace.mjs"), "utf8");
+  const index = await readFile(join(CURRENT_MVP_ROOT, "web/index.html"), "utf8");
+  const state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  const view = projectA12Workbench(state);
+  const markup = a12WorkspacePrimaryMarkup(view, state, []);
+  const fullMarkup = a12UiMarkup(view, state);
+  const stepIds = [...markup.matchAll(/data-a12-milestone-step="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(stepIds, ["document", "reviewer", "arc-receipt", "erp-reconciliation", "gl-close"]);
+  assert.match(markup, /data-testid="milestone-business-document"/);
+  assert.match(markup, /Accounting document center/);
+  assert.match(markup, /aria-label="Document to reviewer to Arc receipt to ERP reconciliation to GL close timeline"/);
+  assert.match(markup, /USDC · Arc settlement summary/);
+  for (const label of ["Counterparty", "Open item", "Principal", "Status", "Gayson guide", "next owner", "recovery"]) assert.match(markup, new RegExp(label));
+  assert.equal((markup.match(/data-a12-decision=/g) ?? []).length, 3);
+  assert.doesNotMatch(markup, /a12-command/);
+  assert.doesNotMatch(fullMarkup, /class="a12-command"/);
+  assert.equal((fullMarkup.match(/data-a12-primary/g) ?? []).length, 1);
+  assert.match(fullMarkup, /data-current-workspace="milestone-desk"/);
+  assert.match(navigation, /const commandMarkup = isMilestoneDesk \? ""/);
+  assert.match(navigation, /const supportingMarkup = isMilestoneDesk \? fieldsMarkup/);
+  assert.match(navigation, /grid-template-columns:minmax\(0,1\.55fr\) minmax\(320px,\.78fr\)/);
+  assert.match(index, /navigation-workspace\.mjs\?rev=v3-2-a12-r4-milestone-document-center/);
+  assert.equal(a12RuntimeLayoutMetrics(1440, 1024, 1).overflowX, "none");
+  assert.equal(a12RuntimeLayoutMetrics(1024, 768, 2).inspectorMode, "focus_trapped_drawer");
+});
+
 test("workflow navigation changes the main decision surface, not only an inspector tab", () => {
   let state = createA12WorkbenchState({ scenario: "supplier_payable" });
   const before = projectA12Workbench(state);
@@ -381,7 +409,7 @@ test("current narrative and compiler contract reject historical umbrella drift",
   assert.match(readme, /programme-final-20260810\/arc-enterprise-settlement-control-programme-final-3min\.mp4/);
   assert.match(readme, /programme-final-20260810\/Arc_Enterprise_Settlement_Programme_Deck_Current_V3\.pdf/);
   assert.match(readme, /^## Historical\/support verified evidence$/m);
-  assert.match(readme, /current `4f26c6a` source carries a source-separated current-contract receipt/);
+  assert.match(readme, /current `2524f0d` source carries a source-separated current-contract receipt/);
   assert.match(readme, /no active subscription ID and no trusted readback loader/);
   assert.match(architecture, /Verified Milestone Close/);
   assert.match(demo, /current product/);
@@ -490,6 +518,52 @@ test("active browser edge consumes the public domain projection and exposes orig
   assert.equal(chainView.canvas.origin, "chain_observed");
   assert.equal(Array.isArray(erpView.inspector.typedReadbacks), false);
   assert.equal(erpView.inspector.typedReadbacks.invoice.id, "invoice");
+});
+
+test("chain observed origin entry is operable, authority-bound, dependency-resetting, and route-stable", () => {
+  const chainEntry = A12_ORIGIN_ENTRY_CATALOG.chain_observed;
+  assert.equal(chainEntry.scenario, "customer_invoice_receipt");
+  let state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  state = reduceA12Workbench(state, { type: "SET_STAGE", stage: "allocate" });
+  state.fieldEdits = { source_purchase_invoice: "operator-value" };
+  state.matcherState = "matched";
+  state.evidence = { outcome: "matched" };
+  state.completedStages = ["allocate"];
+  state.walletReview = "prepared_owner_gate_closed";
+  state.inspectorOpen = true;
+  state.searchQuery = "supplier";
+  state = reduceA12Workbench(state, { type: "SELECT_ORIGIN_ENTRY", origin: "chain_observed", scenario: chainEntry.scenario, authorityId: chainEntry.authorityId });
+  assert.equal(state.selectedScenario, chainEntry.scenario);
+  assert.equal(state.originEntry.origin, "chain_observed");
+  assert.equal(state.fixture.origin, "chain_observed");
+  assert.equal(state.selectedStage, "source");
+  assert.equal(state.matcherState, "pending");
+  assert.equal(state.evidence, null);
+  assert.deepEqual(state.completedStages, []);
+  assert.equal(state.walletReview, "not_prepared");
+  assert.equal(state.inspectorOpen, false);
+  assert.equal(state.searchQuery, "");
+  assert.match(state.lastNotice, /Arc chain observed selected/);
+  const route = a12WorkbenchRoute(state);
+  assert.equal(parseA12WorkbenchRoute(route).origin, "chain_observed");
+  const restored = reduceA12Workbench(createA12WorkbenchState(), { type: "RESTORE_ROUTE", ...parseA12WorkbenchRoute(route) });
+  assert.equal(restored.originEntry.origin, "chain_observed");
+  assert.equal(restored.lastNotice, "");
+  const forgedRoute = parseA12WorkbenchRoute("#a12/workbench/milestone-desk/supplier_payable/not-an-accepted-origin/source/business");
+  const rejectedRoute = reduceA12Workbench(createA12WorkbenchState(), { type: "RESTORE_ROUTE", ...forgedRoute });
+  assert.equal(rejectedRoute.originEntry.origin, "erp_initiated");
+  assert.match(rejectedRoute.lastNotice, /Route origin rejected fail-closed/);
+  const forged = reduceA12Workbench(createA12WorkbenchState({ scenario: "supplier_payable" }), { type: "SELECT_ORIGIN_ENTRY", origin: "chain_observed", scenario: "supplier_payable", authorityId: "product-authority-supplier-payable-001" });
+  assert.equal(forged.selectedScenario, "supplier_payable");
+  assert.equal(forged.originEntry.origin, "erp_initiated");
+  assert.match(forged.lastNotice, /rejected fail-closed/);
+  assert.equal(forged.externalActions, 0);
+  const markup = a12UiMarkup(projectA12Workbench(state), state);
+  assert.match(markup, /data-a12-origin-classification/);
+  assert.match(markup, /ERP initiated/);
+  assert.match(markup, /Arc chain observed/);
+  assert.match(markup, /data-a12-origin-entry="chain_observed"[^>]+aria-pressed="true"/);
+  assert.match(markup, /data-a12-origin-entry="erp_initiated"[^>]+aria-pressed="false"/);
 });
 
 test("search query is canonical route state and arrow queue uses visible rows only", () => {
@@ -674,11 +748,15 @@ test("content manifest freezes product bytes while external receipts remain exte
   assert.equal(manifest.boundaries.chain_success_implies_erp_posting, false);
   assert.equal(manifest.boundaries.chain_success_implies_business_close, false);
   assert.equal(manifest.entries.some((item) => item.path === "current-release-final-assets-evidence.json"), true);
-  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 9);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "test").length, 12);
   assert.equal(manifest.verification_inputs.filter((item) => item.role === "verifier").length, 4);
-  assert.equal(manifest.verification_inputs.filter((item) => item.role === "runtime").length, 1);
+  assert.equal(manifest.verification_inputs.filter((item) => item.role === "runtime").length, 2);
   for (const path of [
     "tools/circle_contract_webhook_gate.mjs",
+    "tools/circle_contract_webhook_gate.test.mjs",
+    "tools/circle_webhook_store.mjs",
+    "tools/circle_webhook_store.test.mjs",
+    "tools/circle_webhook_server.test.mjs",
     "tools/circle_console_receipt.test.mjs",
     "tools/arc_payment_receipt_server.mjs",
     "tools/arc_payment_receipt_server.test.mjs",
