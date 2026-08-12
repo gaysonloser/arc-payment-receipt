@@ -184,9 +184,9 @@
   },
   "worktree_truth": {
     "baseline_commit": "afce1f22c1f6b069d47b25106b71ab13f33d4670",
-    "current_head": "1090a0f9b52b81d92fab1abf810b16f0e2a7b261",
-    "tracked_modified_count": 20,
-    "content_candidate_count": 13,
+    "current_head": "83becbb58bb88be12cabf129af784db79747e958",
+    "tracked_modified_count": 22,
+    "content_candidate_count": 15,
     "mode_only_non_candidate_count": 7,
     "content_candidate_paths": [
       {
@@ -198,6 +198,26 @@
         "excluded": false,
         "self_excluded": true,
         "hash_excluded": true
+      },
+      {
+        "path": "current-mvp/web/fixture-engine.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 159548,
+        "sha256": "aeaee03e154eafc4e1353f8031cf21e3105fc2063f55e17a4d0585f2e8d62376"
+      },
+      {
+        "path": "current-mvp/web/navigation-workspace.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 136434,
+        "sha256": "4c43c648971608af1ddf5b46e7b5a45641a45baf9d78d958b3c9ca5bf961f070"
       },
       {
         "path": "current-mvp/web/workbench/workbench-projection.mjs",
@@ -256,8 +276,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 28482,
-        "sha256": "32e7fc5261f57f6317d773c29007946ecbf10bf8c90ff19c713629817e4d6ea0"
+        "bytes": 28789,
+        "sha256": "4c02aede35985a5fbcbdf63e466cf8406a5dcaa87b2ffb5fe5a49a7a13951c8e"
       },
       {
         "path": "tools/circle_console_receipt.test.mjs",
@@ -316,8 +336,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 40356,
-        "sha256": "042927aa0208d8ce9089e96b4a09428c704ff17624bfe8a17763f821f63466d8"
+        "bytes": 43164,
+        "sha256": "090845a3ea75540798d4ab33700b8eb501ce7a3ab6fafe7f8cacd2390e8c3a15"
       }
     ],
     "documentation_only_content_count": 0,
@@ -396,7 +416,7 @@
     ],
     "untracked_paths": [],
     "publication_candidate_state": "H188_ARC_CURRENT_RECEIPT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
-    "publication_candidate_count": 13,
+    "publication_candidate_count": 15,
     "publication_candidate_paths": [
       {
         "path": "current-mvp/current-release-workbench-manifest.json",
@@ -407,6 +427,28 @@
         "excluded": false,
         "self_excluded": true,
         "hash_excluded": true,
+        "documentation_only": false
+      },
+      {
+        "path": "current-mvp/web/fixture-engine.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 159548,
+        "sha256": "aeaee03e154eafc4e1353f8031cf21e3105fc2063f55e17a4d0585f2e8d62376",
+        "documentation_only": false
+      },
+      {
+        "path": "current-mvp/web/navigation-workspace.mjs",
+        "mode_head": "100644",
+        "mode_worktree": "100644",
+        "mode_changed": false,
+        "content_delta": true,
+        "excluded": false,
+        "bytes": 136434,
+        "sha256": "4c43c648971608af1ddf5b46e7b5a45641a45baf9d78d958b3c9ca5bf961f070",
         "documentation_only": false
       },
       {
@@ -471,8 +513,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 28482,
-        "sha256": "32e7fc5261f57f6317d773c29007946ecbf10bf8c90ff19c713629817e4d6ea0",
+        "bytes": 28789,
+        "sha256": "4c02aede35985a5fbcbdf63e466cf8406a5dcaa87b2ffb5fe5a49a7a13951c8e",
         "documentation_only": false
       },
       {
@@ -537,8 +579,8 @@
         "mode_changed": false,
         "content_delta": true,
         "excluded": false,
-        "bytes": 40356,
-        "sha256": "042927aa0208d8ce9089e96b4a09428c704ff17624bfe8a17763f821f63466d8",
+        "bytes": 43164,
+        "sha256": "090845a3ea75540798d4ab33700b8eb501ce7a3ab6fafe7f8cacd2390e8c3a15",
         "documentation_only": false
       }
     ],
@@ -551,14 +593,14 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 40356,
-      "sha256": "042927aa0208d8ce9089e96b4a09428c704ff17624bfe8a17763f821f63466d8"
+      "bytes": 43164,
+      "sha256": "090845a3ea75540798d4ab33700b8eb501ce7a3ab6fafe7f8cacd2390e8c3a15"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
       "role": "verifier",
-      "bytes": 28482,
-      "sha256": "32e7fc5261f57f6317d773c29007946ecbf10bf8c90ff19c713629817e4d6ea0"
+      "bytes": 28789,
+      "sha256": "4c02aede35985a5fbcbdf63e466cf8406a5dcaa87b2ffb5fe5a49a7a13951c8e"
     },
     {
       "path": "tools/current_mvp_source_binding.mjs",
@@ -842,8 +884,8 @@
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 159057,
-      "sha256": "a419334dc0560ba80e37d295dc7401a45917f7300a5065ac07921be46f877d11",
+      "bytes": 159548,
+      "sha256": "aeaee03e154eafc4e1353f8031cf21e3105fc2063f55e17a4d0585f2e8d62376",
       "mode": "100644",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
@@ -860,8 +902,8 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 129044,
-      "sha256": "74bd6cf18258da46b6baae54492b3f8af3ea0879f3d11dabb6ee3d3add95fd5a",
+      "bytes": 136434,
+      "sha256": "4c43c648971608af1ddf5b46e7b5a45641a45baf9d78d958b3c9ca5bf961f070",
       "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,
