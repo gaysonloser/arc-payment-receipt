@@ -4,12 +4,28 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import test from "node:test";
 
-import { createReceiptServer } from "./arc_payment_receipt_server.mjs";
+import { createReceiptServer, isCircleWebhookConnectivityTest } from "./arc_payment_receipt_server.mjs";
 
 const CONTRACT = "0xc7682649a1aa60d0f74825ad2b812ee062178047";
 const EVENT = "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)";
 const TOPIC = "0x18a40807aa0569234a6f9202ddaab5639334547426c0cb66915bb5e5779b53ec";
 const KEY_ID = "879dc113-5ca4-4ff7-a6b7-54652083fcf8";
+
+test("connectivity probe is exact, side-effect-free, and rejects business or malformed payloads", () => {
+  const probe = {
+    subscriptionId: "cd198ca6-9fc4-41d6-b6b1-8e2a9c975352",
+    notificationId: "0761b030-0c75-472a-b471-74d90a7e796c",
+    notificationType: "webhooks.test",
+    notification: {},
+    timestamp: "2026-08-13T00:00:00.000Z",
+    version: 2
+  };
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify(probe))), true);
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ ...probe, notificationType: "contracts.eventLog" }))), false);
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ ...probe, subscriptionId: "not-a-uuid" }))), false);
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from(JSON.stringify({ ...probe, version: 1 }))), false);
+  assert.equal(isCircleWebhookConnectivityTest(Buffer.from("not-json")), false);
+});
 
 function payload(data = "0".repeat(384)) {
   return {

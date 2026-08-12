@@ -68,6 +68,19 @@ export const PUBLIC_POST_ROUTES = Object.freeze([
   "/api/v1/opening-balance-fixture-validate"
 ]);
 
+export function isCircleWebhookConnectivityTest(rawBody) {
+  try {
+    const value = JSON.parse(Buffer.from(rawBody).toString("utf8"));
+    return value?.notificationType === "webhooks.test"
+      && value?.version === 2
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value?.subscriptionId ?? ""))
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value?.notificationId ?? ""))
+      && Number.isFinite(Date.parse(String(value?.timestamp ?? "")));
+  } catch {
+    return false;
+  }
+}
+
 async function loadJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -2215,6 +2228,14 @@ export function createReceiptServer(options = {}) {
       }
       if (request.method === "POST" && url.pathname === PUBLIC_POST_ROUTES[0]) {
         const rawBody = await readRawBody(request);
+        if (isCircleWebhookConnectivityTest(rawBody)) {
+          response.writeHead(204, {
+            "cache-control": "no-store",
+            ...SECURITY_HEADERS
+          });
+          response.end();
+          return;
+        }
         const result = await circleWebhookProcessor({ rawBody, headers: request.headers });
         json(response, result.status, result, request.method);
         return;

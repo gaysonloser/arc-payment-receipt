@@ -223,8 +223,8 @@
     {
       "path": "tools/circle_webhook_server.test.mjs",
       "role": "test",
-      "bytes": 5997,
-      "sha256": "9edec2c706cddedfbed356764a3f8e54a578f7bbf7f64a8e97b557e25dc17ece"
+      "bytes": 6954,
+      "sha256": "8afba7b4cd3b45ec01eb0ea7d03e245c29b43436e0a3b8ff0e3b5342c8a39dcf"
     },
     {
       "path": "tools/circle_console_receipt.test.mjs",
@@ -235,8 +235,8 @@
     {
       "path": "tools/arc_payment_receipt_server.mjs",
       "role": "runtime",
-      "bytes": 150231,
-      "sha256": "4842c19335901290715dd0795d9b97f07e8d4c1781c7f62b8f4a7fd0b6303de5"
+      "bytes": 151048,
+      "sha256": "346fe3b7fb4405c84f4a520f083176b3facfba68cc65e4a97466790406a12574"
     },
     {
       "path": "tools/arc_payment_receipt_server.test.mjs",
