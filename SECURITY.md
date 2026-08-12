@@ -30,6 +30,8 @@ The included service is read-only by default. It exposes generated evidence and 
 
 `POST /api/v1/opening-balance-fixture-validate` accepts only an in-memory fixture for fail-closed validation. It never persists a fixture, writes ERP, signs or broadcasts a transaction, or represents a live opening-balance posting.
 
+The read-only `GET /api/v1/current-release-surface-readiness` route performs no Encode, email-provider or Arc RPC call. Its Encode, Final late-email and Arc Testnet validators require an exact release ID/commit/manifest binding and reject absent, historical, fixture, unauthenticated, expired or mismatched evidence. Final evidence uses an opaque recipient reference plus hashes for subject/body/assets/links; recipient email and identity fields are forbidden. An owner send receipt may report `action_count=1`, while the verifier records `verifier_external_actions=0`; the service never sends the message. Arc evidence must separately bind deployment and PolicyCreated/getPolicy readbacks, and never implies ERP posting or business close.
+
 ## Known limitations
 
 - Source verification is not an independent audit.

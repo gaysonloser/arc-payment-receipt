@@ -4,6 +4,9 @@ import { execFile } from "node:child_process";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE } from "../current-mvp/web/workbench/workbench-projection.mjs";
+import { verifyEmbeddedCurrentMvpErpProjection } from "./current_mvp_erp_readiness.mjs";
+import { buildCurrentReleaseSurfaceReadinessView } from "./arc_payment_receipt_server.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const execFileAsync = promisify(execFile);
@@ -30,22 +33,8 @@ const WORKBENCH_ENTRIES = Object.freeze([
   ["current-release-final-assets-evidence.json", "release/arc-payment-receipt-public/current-mvp/current-release-final-assets-evidence.json"]
 ]);
 const DOCUMENTATION_ONLY_PATHS = Object.freeze(["docs/ARCHITECTURE.md", "docs/INTERACTION_TRAIL.md"]);
-const EXACT_COMMIT_CANDIDATE_PATHS = Object.freeze([
-  "README.md",
-  "artifacts/PolicySettlementV1.sol/PolicySettlementV1.json",
-  "current-mvp/current-release-workbench-manifest.json",
-  "current-mvp/web/fixture-engine.mjs",
-  "current-mvp/web/navigation-workspace.mjs",
-  "current-mvp/web/settlement-case.mjs",
-  "docs/ARCHITECTURE.md",
-  "docs/INTERACTION_TRAIL.md",
-  "tools/arc_payment_receipt_server.mjs",
-  "tools/build_current_release_workbench_manifest.mjs",
-  "tools/current_mvp_accounting_close.test.mjs",
-  "tools/current_mvp_fail_closed_lifecycle.test.mjs",
-  "tools/current_mvp_source_binding.test.mjs",
-  "tools/current_release_workbench.test.mjs"
-]);
+export const H186_BASELINE_COMMIT = "4f1f4b99cd12084cadb28e851d8a47e2913e9118";
+const SELF_EXCLUDED_MANIFEST_PATH = "current-mvp/current-release-workbench-manifest.json";
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -82,10 +71,11 @@ async function git(args) {
 }
 
 async function worktreeTruth() {
-  const [numstatOutput, rawOutput, statusOutput] = await Promise.all([
-    git(["diff", "--numstat", "--"]),
-    git(["diff", "--raw", "--no-renames", "--"]),
-    git(["status", "--porcelain=v1", "--untracked-files=all", "--"])
+  const [numstatOutput, rawOutput, statusOutput, baselineCommit] = await Promise.all([
+    git(["diff", "origin/main", "--numstat", "--"]),
+    git(["diff", "origin/main", "--raw", "--no-renames", "--"]),
+    git(["status", "--porcelain=v1", "--untracked-files=all", "--"]),
+    git(["rev-parse", "origin/main"])
   ]);
   const numstat = new Map();
   for (const line of numstatOutput.trim().split("\n").filter(Boolean)) {
@@ -97,7 +87,7 @@ async function worktreeTruth() {
     const match = line.match(/^:(\d{6}) (\d{6}) [0-9a-f]+ [0-9a-f]+ [A-Z]\t(.+)$/);
     if (match) modes.set(match[3], { mode_head: match[1], mode_worktree: match[2] });
   }
-  const modifiedPaths = [...numstat.keys()].filter((path) => !EXACT_COMMIT_CANDIDATE_PATHS.includes(path)).sort();
+  const modifiedPaths = [...numstat.keys()].sort();
   const snapshots = [];
   for (const path of modifiedPaths) {
     const fileStat = await stat(join(RELEASE_ROOT, path));
@@ -111,7 +101,7 @@ async function worktreeTruth() {
       content_delta: contentDelta,
       excluded: !contentDelta
     };
-    if (path === "current-mvp/current-release-workbench-manifest.json") {
+    if (path === SELF_EXCLUDED_MANIFEST_PATH) {
       snapshot.self_excluded = true;
       snapshot.hash_excluded = true;
     } else {
@@ -122,35 +112,30 @@ async function worktreeTruth() {
     snapshots.push(snapshot);
   }
   const untrackedPaths = statusOutput.split("\n").filter((line) => line.startsWith("?? ")).map((line) => line.slice(3)).filter(Boolean).sort();
-  const publicationCandidatePaths = [];
-  for (const path of EXACT_COMMIT_CANDIDATE_PATHS) {
-    const item = { path, documentation_only: DOCUMENTATION_ONLY_PATHS.includes(path) };
-    if (path === "current-mvp/current-release-workbench-manifest.json") {
-      item.self_excluded = true;
-      item.hash_excluded = true;
-    } else {
-      const bytes = await readFile(join(RELEASE_ROOT, path));
-      item.bytes = bytes.length;
-      item.sha256 = sha256(bytes);
-    }
-    publicationCandidatePaths.push(item);
-  }
+  const contentCandidates = snapshots.filter((item) => item.content_delta);
+  const publicationCandidatePaths = contentCandidates.map((item) => ({
+    ...item,
+    documentation_only: DOCUMENTATION_ONLY_PATHS.includes(item.path)
+  }));
+  const baseline = baselineCommit.trim();
   return {
+    baseline_commit: baseline,
+    current_head: baseline,
     tracked_modified_count: snapshots.length,
-    content_candidate_count: snapshots.filter((item) => item.content_delta && !DOCUMENTATION_ONLY_PATHS.includes(item.path)).length,
+    content_candidate_count: contentCandidates.length,
     mode_only_non_candidate_count: snapshots.filter((item) => !item.content_delta).length,
-    content_candidate_paths: snapshots.filter((item) => item.content_delta && !DOCUMENTATION_ONLY_PATHS.includes(item.path)),
-    documentation_only_content_count: snapshots.filter((item) => item.content_delta && DOCUMENTATION_ONLY_PATHS.includes(item.path)).length,
-    documentation_only_paths: snapshots.filter((item) => item.content_delta && DOCUMENTATION_ONLY_PATHS.includes(item.path)),
+    content_candidate_paths: contentCandidates,
+    documentation_only_content_count: contentCandidates.filter((item) => DOCUMENTATION_ONLY_PATHS.includes(item.path)).length,
+    documentation_only_paths: contentCandidates.filter((item) => DOCUMENTATION_ONLY_PATHS.includes(item.path)),
     mode_only_non_candidate_paths: snapshots.filter((item) => !item.content_delta),
     untracked_paths: untrackedPaths,
-    publication_candidate_state: "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK",
+    publication_candidate_state: "H187_CONTENT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE",
     publication_candidate_count: publicationCandidatePaths.length,
     publication_candidate_paths: publicationCandidatePaths,
     untracked_policy: "must_be_empty_before_manifest_freeze",
     current_worktree_candidate_bound: false,
     self_excluded_manifest_path: "current-mvp/current-release-workbench-manifest.json",
-    clean_worktree_rule: "The exact 14-path publication candidate is byte-bound independently of worktree dirtiness; the manifest self-excludes its own bytes to avoid a cycle. Outside that candidate, untracked paths must be empty and only the seven declared mode-only paths may remain."
+    clean_worktree_rule: "The complete unpublished candidate is classified from git diff origin/main: every content-changing path since the published baseline is a candidate, the manifest self-excludes its own bytes, and only the seven declared mode-only worktree paths may remain excluded. Untracked paths must be empty."
   };
 }
 
@@ -179,12 +164,21 @@ export async function buildManifest() {
     supportInput("tools/circle_contract_webhook_gate.mjs", "verifier"),
     supportInput("tools/circle_console_receipt.test.mjs", "test"),
     supportInput("tools/arc_payment_receipt_server.mjs", "runtime"),
+    supportInput("tools/arc_payment_receipt_server.test.mjs", "test"),
     supportInput("tools/circle_console_server.test.mjs", "test"),
     supportInput("tools/current_mvp_erp_readiness.mjs", "verifier"),
     supportInput("tools/current_mvp_erp_readiness.test.mjs", "test"),
     supportInput("tools/current_mvp_accounting_close.test.mjs", "test"),
     supportInput("tools/current_mvp_fail_closed_lifecycle.test.mjs", "test")
   ]);
+  const worktree = await worktreeTruth();
+  const erpRelease = {
+    release_id: "verified-milestone-close-current-mvp-workbench-rc1",
+    commit_sha: worktree.baseline_commit,
+    manifest_sha256: sha256(baseBytes)
+  };
+  const erpReadiness = verifyEmbeddedCurrentMvpErpProjection({ release: erpRelease, evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE });
+  const surfaceReadiness = buildCurrentReleaseSurfaceReadinessView({ now: "2026-08-12T00:00:00.000Z" });
   return {
     schema: "arc-erp.current-release-workbench-manifest.v1",
     release_id: "verified-milestone-close-current-mvp-workbench-rc1",
@@ -199,16 +193,35 @@ export async function buildManifest() {
     direct_erp_mutation: false,
     stable_terminal_freeze: true,
     writer_idle: true,
-    acceptance_state: "GITHUB_TRUE_RECEIPT_ACCEPTED_RELEASE_BINDING_CORRECTION_AUDIT_PENDING",
+    acceptance_state: "H187_CONTENT_CANDIDATE_PENDING_GITHUB_OWNER_GATE",
+    baseline_git_commit: worktree.baseline_commit,
+    current_worktree_candidate_bound: false,
     current_release_surface_status: {
-      github: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, product_commit: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_observed_remote_main: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", receipt_parent: "dc239d696d9b6dea1fe8edec483e94fc72581dbd", receipt_tree: "51a9083f0954f1b064b37925c2926c38e6632af9", observed_main_tip: "9795c442f4c80464c2d54639a638f02060265be1", observed_main_parent: "a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7", observed_main_tip_semantics: "receipt_only_metadata_commit", current_worktree_candidate_bound: false, current_worktree_dirty: true, source_readback: "local_git_readback_only; live_remote_dns_unavailable", note: "This is a published baseline receipt only; the dirty local worktree candidate is not bound or published", owner_gate_required: true, historical_lineage_only: false },
-      render: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, observed_commit: "9795c442f4c80464c2d54639a638f02060265be1", comparison: { main_tip: "9795c442f4c80464c2d54639a638f02060265be1", render_commit: "9795c442f4c80464c2d54639a638f02060265be1", aligned: true }, current_worktree_candidate_bound: false, note: "This is a published baseline receipt only; the dirty local worktree candidate is not bound or deployed", owner_gate_required: true, historical_lineage_only: false },
+      github: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, baseline_commit: worktree.baseline_commit, current_worktree_candidate_bound: false, current_worktree_dirty: worktree.tracked_modified_count > 0, source_readback: "local_git_head_baseline_only; remote_public_readback_not_claimed", note: "The uncommitted H187 worktree candidate is not bound or published", owner_gate_required: true, historical_lineage_only: false },
+      render: { status: "TRUE_RECEIPT", current_release_bound: false, published_baseline_binding: true, published_baseline_current_release_bound: true, baseline_commit: worktree.baseline_commit, current_worktree_candidate_bound: false, source_readback: "local_git_head_baseline_only; live_render_readback_not_claimed", note: "The uncommitted H187 worktree candidate is not deployed", owner_gate_required: true, historical_lineage_only: false },
       deck: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
       video: { status: "TRUE_RECEIPT", current_release_bound: true, published_baseline_binding: true, tag: "programme-final-20260810", historical_lineage_only: false },
-      circle_console: { status: "BLOCKED", blockers: ["subscription_id_missing", "trusted_readback_loader_not_configured"], historical_lineage_only: false },
-      encode: { status: "UNPROVEN", historical_lineage_only: true },
-      final: { status: "UNPROVEN", historical_lineage_only: true },
-      arc_testnet: { status: "UNPROVEN", evidence_binding: "no current-release-bound receipt in public candidate", historical_lineage_only: true },
+      circle_console: {
+        status: "BLOCKED",
+        blockers: ["subscription_id_missing", "webhook_history_source_missing", "event_history_source_missing", "trusted_readback_loader_not_configured"],
+        trusted_readback_contract: {
+          schema: "arc.circle-console-trusted-readback.v1",
+          status: "not_ready_fail_closed",
+          network: "ARC-TESTNET",
+          chain_id: 5042002,
+          contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+          event_signature: "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)",
+          subscription_id_required: true,
+          release_commit_required: true,
+          webhook_history: { kind: "circle_console_webhook_history", url_required: true, http_status: 200, authenticated: true },
+          event_history: { kind: "circle_contract_event_history", url_required: true, http_status: 200, authenticated: true },
+          loader: { injected_only: true, calls_external_api: false, creates_subscription: false }
+        },
+        historical_lineage_only: false
+      },
+      encode: { status: "UNPROVEN", readiness: surfaceReadiness.encode, historical_lineage_only: true },
+      final: { status: "UNPROVEN", readiness: surfaceReadiness.final, historical_lineage_only: true },
+      arc_testnet: { status: "UNPROVEN", readiness: surfaceReadiness.arc_testnet, evidence_binding: "no current-release-bound receipt in public candidate", historical_lineage_only: true },
       erp: {
         status: "VERIFIED_READ_ONLY_CANDIDATE",
         evidence_binding: "privacy-safe H167 supplier-payable readback is embedded in web/workbench/workbench-projection.mjs: paid Purchase Invoice ACC-PINV-2026-00002, submitted Payment Entry ACC-PAY-2026-00009, reconciled Bank Transaction ACC-BTN-2026-00004 and balanced GL; Payment Ledger, Accounting Period, Period Closing Voucher and business close remain not_proven",
@@ -216,10 +229,12 @@ export async function buildManifest() {
         current_worktree_candidate_bound: false,
         public_current_release_bound: false,
         live_erp_mutation: false,
+        erp_readiness: erpReadiness,
+        business_close: "not_proven",
         historical_lineage_only: false
       }
     },
-    worktree_truth: await worktreeTruth(),
+    worktree_truth: worktree,
     verification_inputs: verificationInputs,
     independent_audit: { model: "gpt-5.6-sol", reasoning_effort: "medium", read_only: true, independent: true, status: "PENDING", self_acceptance: false },
     entry_count: baseEntries.length + workbenchEntries.length,
@@ -244,7 +259,9 @@ export async function verifyCurrentReleaseWorkbenchManifest({
   }
   if (manifest.manifest_sha256_self_excluded !== true) issues.push("manifest_self_exclusion_missing");
   if (manifest.external_actions !== 0 || manifest.live_arc !== false || manifest.live_erp !== false || manifest.html_css_write !== false || manifest.direct_erp_mutation !== false) issues.push("unsafe_boundary");
-  if (manifest.stable_terminal_freeze !== true || manifest.writer_idle !== true || manifest.acceptance_state !== "GITHUB_TRUE_RECEIPT_ACCEPTED_RELEASE_BINDING_CORRECTION_AUDIT_PENDING") issues.push("freeze_state_missing");
+  if (manifest.stable_terminal_freeze !== true || manifest.writer_idle !== true || manifest.acceptance_state !== "H187_CONTENT_CANDIDATE_PENDING_GITHUB_OWNER_GATE") issues.push("freeze_state_missing");
+  if (manifest.baseline_git_commit !== H186_BASELINE_COMMIT || manifest.current_worktree_candidate_bound !== false) issues.push("h186_baseline_or_candidate_binding_invalid");
+  if (JSON.stringify(manifest).includes("a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7") || JSON.stringify(manifest).includes("9795c442f4c80464c2d54639a638f02060265be1")) issues.push("stale_publication_commit_truth");
   if (manifest.independent_audit?.model !== "gpt-5.6-sol" || manifest.independent_audit?.reasoning_effort !== "medium" || manifest.independent_audit?.read_only !== true || manifest.independent_audit?.independent !== true || manifest.independent_audit?.status !== "PENDING" || manifest.independent_audit?.self_acceptance !== false) issues.push("audit_boundary_missing");
   if (JSON.stringify(manifest.accepted_request ?? null) !== JSON.stringify(ACCEPTED_PACKET)) issues.push("accepted_packet_binding_missing");
   if (JSON.stringify(manifest.source_request ?? null) !== JSON.stringify(SOURCE_REQUEST)) issues.push("source_request_lineage_missing");
@@ -264,17 +281,27 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     if (value?.status !== expectedStatus) issues.push(`current_surface_status_invalid:${surface}`);
   }
   const consoleBlockers = manifest.current_release_surface_status?.circle_console?.blockers ?? [];
-  if (!consoleBlockers.includes("subscription_id_missing") || !consoleBlockers.includes("trusted_readback_loader_not_configured")) issues.push("circle_console_blockers_missing");
+  if (!["subscription_id_missing", "webhook_history_source_missing", "event_history_source_missing", "trusted_readback_loader_not_configured"].every((blocker) => consoleBlockers.includes(blocker))) issues.push("circle_console_blockers_missing");
+  const trustedConsole = manifest.current_release_surface_status?.circle_console?.trusted_readback_contract;
+  if (trustedConsole?.schema !== "arc.circle-console-trusted-readback.v1" || trustedConsole?.status !== "not_ready_fail_closed" || trustedConsole?.network !== "ARC-TESTNET" || trustedConsole?.chain_id !== 5042002 || trustedConsole?.contract_address !== "0xc7682649a1aa60d0f74825ad2b812ee062178047" || trustedConsole?.event_signature !== "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)" || trustedConsole?.loader?.injected_only !== true || trustedConsole?.loader?.calls_external_api !== false || trustedConsole?.loader?.creates_subscription !== false || trustedConsole?.webhook_history?.kind !== "circle_console_webhook_history" || trustedConsole?.event_history?.kind !== "circle_contract_event_history") issues.push("circle_console_trusted_readback_contract_invalid");
   if (manifest.current_release_surface_status?.final?.status === "TRUE_RECEIPT" || manifest.current_release_surface_status?.encode?.status === "TRUE_RECEIPT") issues.push("unproven_surface_promoted");
   const githubSurface = manifest.current_release_surface_status?.github;
   const renderSurface = manifest.current_release_surface_status?.render;
   const erpSurface = manifest.current_release_surface_status?.erp;
-  if (githubSurface?.current_release_bound !== false || githubSurface?.published_baseline_binding !== true || githubSurface?.published_baseline_current_release_bound !== true || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_candidate_binding_ambiguous");
-  if (renderSurface?.current_release_bound !== false || renderSurface?.published_baseline_binding !== true || renderSurface?.published_baseline_current_release_bound !== true || renderSurface?.current_worktree_candidate_bound !== false) issues.push("render_candidate_binding_ambiguous");
-  if (erpSurface?.current_worktree_candidate_bound !== false || erpSurface?.public_current_release_bound !== false || erpSurface?.owner_live_readback_binding !== true || Object.hasOwn(erpSurface, "candidate_binding") || Object.hasOwn(erpSurface, "public_remote_binding")) issues.push("erp_candidate_binding_ambiguous");
+  if (githubSurface?.current_release_bound !== false || githubSurface?.published_baseline_binding !== true || githubSurface?.published_baseline_current_release_bound !== true || githubSurface?.baseline_commit !== H186_BASELINE_COMMIT || githubSurface?.current_worktree_candidate_bound !== false || Object.hasOwn(githubSurface, "candidate_binding")) issues.push("github_candidate_binding_ambiguous");
+  if (renderSurface?.current_release_bound !== false || renderSurface?.published_baseline_binding !== true || renderSurface?.published_baseline_current_release_bound !== true || renderSurface?.baseline_commit !== H186_BASELINE_COMMIT || renderSurface?.current_worktree_candidate_bound !== false) issues.push("render_candidate_binding_ambiguous");
+  if (erpSurface?.current_worktree_candidate_bound !== false || erpSurface?.public_current_release_bound !== false || erpSurface?.owner_live_readback_binding !== true || erpSurface?.live_erp_mutation !== false || erpSurface?.business_close !== "not_proven" || Object.hasOwn(erpSurface, "candidate_binding") || Object.hasOwn(erpSurface, "public_remote_binding")) issues.push("erp_candidate_binding_ambiguous");
+  const surfaceReadiness = buildCurrentReleaseSurfaceReadinessView({ now: "2026-08-12T00:00:00.000Z" });
+  for (const surface of ["encode", "final", "arc_testnet"]) {
+    const actual = manifest.current_release_surface_status?.[surface]?.readiness;
+    const expected = surfaceReadiness[surface];
+    if (actual?.status !== "UNPROVEN" || actual?.valid !== false || actual?.current_release_bound !== false || JSON.stringify(actual?.errors) !== JSON.stringify(expected.errors) || actual?.external_actions !== 0) issues.push(`surface_readiness_binding_invalid:${surface}`);
+  }
   const publicationCandidate = manifest.worktree_truth?.publication_candidate_paths ?? [];
   const selfExcludedCandidate = publicationCandidate.find((item) => item.path === "current-mvp/current-release-workbench-manifest.json");
-  if (manifest.worktree_truth?.tracked_modified_count !== 7 || manifest.worktree_truth?.content_candidate_count !== 0 || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== 0 || manifest.worktree_truth?.publication_candidate_state !== "LOCALLY_COMMITTED_PENDING_REMOTE_MAIN_READBACK" || manifest.worktree_truth?.publication_candidate_count !== 14 || publicationCandidate.map((item) => item.path).sort().join(",") !== EXACT_COMMIT_CANDIDATE_PATHS.slice().sort().join(",") || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
+  const actualTruth = await worktreeTruth();
+  const actualCandidatePaths = actualTruth.publication_candidate_paths.map((item) => item.path).sort().join(",");
+  if (manifest.worktree_truth?.baseline_commit !== H186_BASELINE_COMMIT || manifest.worktree_truth?.tracked_modified_count !== actualTruth.tracked_modified_count || manifest.worktree_truth?.content_candidate_count !== actualTruth.content_candidate_count || manifest.worktree_truth?.content_candidate_count !== 11 || manifest.worktree_truth?.mode_only_non_candidate_count !== actualTruth.mode_only_non_candidate_count || manifest.worktree_truth?.mode_only_non_candidate_count !== 7 || manifest.worktree_truth?.documentation_only_content_count !== actualTruth.documentation_only_content_count || manifest.worktree_truth?.publication_candidate_state !== "H187_CONTENT_CANDIDATE_AGAINST_PUBLISHED_BASELINE_PENDING_OWNER_GATE" || manifest.worktree_truth?.publication_candidate_count !== actualTruth.publication_candidate_count || manifest.worktree_truth?.publication_candidate_count !== 11 || publicationCandidate.map((item) => item.path).sort().join(",") !== actualCandidatePaths || manifest.worktree_truth?.untracked_paths?.length !== 0 || manifest.worktree_truth?.current_worktree_candidate_bound !== false || manifest.worktree_truth?.self_excluded_manifest_path !== "current-mvp/current-release-workbench-manifest.json" || selfExcludedCandidate?.self_excluded !== true || selfExcludedCandidate?.hash_excluded !== true) issues.push("worktree_candidate_scope_invalid");
   for (const item of publicationCandidate) {
     if (item.self_excluded) continue;
     const bytes = await readFile(join(supportRoot, item.path));
@@ -289,6 +316,7 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     ["tools/circle_contract_webhook_gate.mjs", "verifier"],
     ["tools/circle_console_receipt.test.mjs", "test"],
     ["tools/arc_payment_receipt_server.mjs", "runtime"],
+    ["tools/arc_payment_receipt_server.test.mjs", "test"],
     ["tools/circle_console_server.test.mjs", "test"],
     ["tools/current_mvp_erp_readiness.mjs", "verifier"],
     ["tools/current_mvp_erp_readiness.test.mjs", "test"],
@@ -308,6 +336,13 @@ export async function verifyCurrentReleaseWorkbenchManifest({
     }
   }
   const expectedBase = JSON.parse((await readFile(join(root, "mvp-publication-staging-rc1-manifest.json"))).toString("utf8"));
+  const expectedBaseBytes = await readFile(join(root, "mvp-publication-staging-rc1-manifest.json"));
+  const expectedErpReadiness = verifyEmbeddedCurrentMvpErpProjection({
+    release: { release_id: manifest.release_id, commit_sha: H186_BASELINE_COMMIT, manifest_sha256: sha256(expectedBaseBytes) },
+    evidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE
+  });
+  const actualErpReadiness = manifest.current_release_surface_status?.erp?.erp_readiness;
+  if (actualErpReadiness?.valid !== expectedErpReadiness.valid || actualErpReadiness?.status !== expectedErpReadiness.status || actualErpReadiness?.readiness_status !== expectedErpReadiness.readiness_status || actualErpReadiness?.live_erp !== false || actualErpReadiness?.public_current_release_bound !== false || actualErpReadiness?.business_close !== "not_proven" || actualErpReadiness?.external_actions !== 0 || actualErpReadiness?.verification_fingerprint !== expectedErpReadiness.verification_fingerprint) issues.push("erp_readiness_binding_invalid");
   const expected = [...expectedBase.entries.map((item) => item.path), ...WORKBENCH_ENTRIES.map(([path]) => path)].sort();
   const actualEntries = Array.isArray(manifest.entries) ? manifest.entries.map((item) => item.path).sort() : [];
   if (JSON.stringify(actualEntries) !== JSON.stringify(expected)) issues.push("entry_scope_or_order_mismatch");

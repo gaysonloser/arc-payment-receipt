@@ -15,6 +15,8 @@ const EVENT_TOPIC = `0x${"cd".repeat(32)}`;
 const SUBSCRIPTION = "Subscription_evt_current_release";
 const RELEASE_COMMIT = "d".repeat(40);
 const NOW = Date.parse("2026-08-10T12:00:00.000Z");
+const WEBHOOK_HISTORY_URL = "https://console.circle.com/contracts/current/subscriptions/current/events";
+const EVENT_HISTORY_URL = "https://console.circle.com/contracts/current/event-history";
 
 test("current server defaults bind Console evidence to PolicySettlementV1 and the deployed release", () => {
   const server = createReceiptServer({
@@ -41,11 +43,22 @@ function policy() {
     eventTopic: EVENT_TOPIC,
     subscriptionId: SUBSCRIPTION,
     releaseCommit: RELEASE_COMMIT,
+    webhookHistoryUrl: WEBHOOK_HISTORY_URL,
+    eventHistoryUrl: EVENT_HISTORY_URL,
+    requireReadHistory: true,
     now: () => NOW
   });
 }
 
 function currentReadback() {
+  const currentHistoryBinding = {
+    contract_address: CONTRACT,
+    chain_id: 5042002,
+    blockchain: "ARC-TESTNET",
+    event_signature: EVENT_SIGNATURE,
+    subscription_id: SUBSCRIPTION,
+    release_commit: RELEASE_COMMIT
+  };
   return {
     chain_id: 5042002,
     contract_address: CONTRACT,
@@ -60,9 +73,64 @@ function currentReadback() {
       url: `https://console.circle.com/contracts/${CONTRACT}/subscriptions/${SUBSCRIPTION}`,
       object_id: `console:contract:${CONTRACT}:subscription:${SUBSCRIPTION}`
     },
-    release_commit: RELEASE_COMMIT
+    release_commit: RELEASE_COMMIT,
+    webhook_history: {
+      kind: "circle_console_webhook_history",
+      authenticated: true,
+      http_status: 200,
+      url: WEBHOOK_HISTORY_URL,
+      entries: [{ id: "delivery-1", authenticated: true, received_at: new Date(NOW - 30_000).toISOString(), ...currentHistoryBinding }]
+    },
+    event_history: {
+      kind: "circle_contract_event_history",
+      authenticated: true,
+      http_status: 200,
+      url: EVENT_HISTORY_URL,
+      entries: [{ id: "event-1", authenticated: true, firstConfirmDate: new Date(NOW - 45_000).toISOString(), ...currentHistoryBinding }]
+    }
   };
 }
+
+test("server production path rejects an injected legacy policy without both read-history sources", async (t) => {
+  const legacyPolicy = buildCircleConsoleReceiptPolicy({
+    contractAddress: CONTRACT,
+    eventSignature: EVENT_SIGNATURE,
+    eventTopic: EVENT_TOPIC,
+    subscriptionId: SUBSCRIPTION,
+    releaseCommit: RELEASE_COMMIT,
+    requireReadHistory: false,
+    now: () => NOW
+  });
+  const server = createReceiptServer({
+    circleConsoleReceiptPolicy: legacyPolicy,
+    loadCircleConsoleReadback: async () => ({ ...currentReadback(), webhook_history: undefined, event_history: undefined })
+  });
+  const serverBindError = await new Promise((resolve) => {
+    server.once("error", resolve);
+    server.listen(0, "127.0.0.1", () => resolve(null));
+  });
+  if (serverBindError) {
+    server.close();
+    if (serverBindError.code === "EPERM") {
+      t.skip(`local loopback bind unavailable: ${serverBindError.code}`);
+      return;
+    }
+    throw serverBindError;
+  }
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const readinessResponse = await fetch(`${origin}/api/v1/circle-console-receipt-readiness`);
+    const readiness = await readinessResponse.json();
+    assert.equal(readiness.status, "not_ready_fail_closed");
+    assert.ok(readiness.blockers.includes("webhook_history_source_missing"));
+    assert.ok(readiness.blockers.includes("event_history_source_missing"));
+    const receiptResponse = await fetch(`${origin}/api/v1/circle-console-receipt`);
+    assert.equal(receiptResponse.status, 503);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
 
 test("Circle Console readiness and receipt routes use only a trusted current server readback", async (t) => {
   const noLoader = buildCircleConsoleReceiptReadinessView(policy());

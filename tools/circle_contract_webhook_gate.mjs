@@ -148,8 +148,11 @@ export function createCircleWebhookProcessor(options = {}) {
 // sign-in-gated, or sourced from a local fixture can ever produce a receipt.
 
 export const CIRCLE_CONSOLE_RECEIPT_SCHEMA = "arc.circle-console-receipt.v1";
+export const CIRCLE_CONSOLE_TRUSTED_READBACK_SCHEMA = "arc.circle-console-trusted-readback.v1";
 export const CIRCLE_CONSOLE_SURFACE = "circle_console";
 export const CIRCLE_CONSOLE_SOURCE_KIND = "circle_console_readback";
+export const CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND = "circle_console_webhook_history";
+export const CIRCLE_CONSOLE_EVENT_HISTORY_KIND = "circle_contract_event_history";
 export const CIRCLE_CONSOLE_SUBSCRIPTION_ACTIVE = "active";
 
 const RELEASE_COMMIT = /^[0-9a-f]{40}$/i;
@@ -169,9 +172,200 @@ export function buildCircleConsoleReceiptPolicy(options = {}) {
     eventTopic: String(options.eventTopic ?? "").toLowerCase(),
     subscriptionId: String(options.subscriptionId ?? ""),
     releaseCommit: normalizeReleaseCommit(options.releaseCommit),
+    webhookHistoryUrl: String(options.webhookHistoryUrl ?? ""),
+    eventHistoryUrl: String(options.eventHistoryUrl ?? ""),
+    requireReadHistory: options.requireReadHistory === true,
     maxObservedAgeMs: Number(options.maxObservedAgeMs ?? DEFAULT_CONSOLE_RECEIPT_MAX_AGE_MS),
     futureSkewMs: Number(options.futureSkewMs ?? DEFAULT_CONSOLE_RECEIPT_FUTURE_SKEW_MS),
     now: typeof options.now === "function" ? options.now : () => Date.now()
+  };
+}
+
+function safeHistoryUrl(value) {
+  const text = String(value ?? "").trim();
+  if (!text || !text.startsWith("https://")) return null;
+  const credentialKey = /^(?:token|api[_-]?key|apikey|secret|authorization|bearer|credential|password|private[_-]?key|access[_-]?key)$/i;
+  const credentialValue = /(?:token|api[_-]?key|apikey|secret|authorization|bearer|credential|password|private[_-]?key|access[_-]?key)/i;
+  const decodeBounded = (input) => {
+    let current = String(input ?? "");
+    for (let round = 0; round < 4; round += 1) {
+      let decoded;
+      try { decoded = decodeURIComponent(current); } catch { return null; }
+      if (decoded === current) return current;
+      current = decoded;
+    }
+    return current;
+  };
+  const decodedText = decodeBounded(text);
+  if (!decodedText) return null;
+  try {
+    const url = new URL(decodedText);
+    if (url.username || url.password) return null;
+    const inspectParts = [url.search.slice(1), url.hash.slice(1)].filter(Boolean);
+    for (const part of inspectParts) {
+      const decodedPart = decodeBounded(part);
+      if (!decodedPart) return null;
+      for (const pair of decodedPart.split(/[&;]/).filter(Boolean)) {
+        const separator = pair.indexOf("=");
+        const key = decodeBounded(separator >= 0 ? pair.slice(0, separator) : pair) ?? "";
+        const rawValue = separator >= 0 ? pair.slice(separator + 1) : "";
+        const parameterValue = decodeBounded(rawValue) ?? "";
+        if (credentialKey.test(key) || credentialValue.test(parameterValue)) return null;
+      }
+      if (credentialValue.test(decodedPart) && !decodedPart.includes("=")) return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function historyBinding(policy, kind, url) {
+  return {
+    kind,
+    url: safeHistoryUrl(url),
+    http_status: 200,
+    authenticated: true,
+    entries_are_read_only: true
+  };
+}
+
+export function buildCircleConsoleTrustedReadbackContract(options = {}) {
+  const basePolicy = options.policy ?? buildCircleConsoleReceiptPolicy({
+    ...options,
+    requireReadHistory: options.requireReadHistory ?? true
+  });
+  const policy = {
+    ...basePolicy,
+    requireReadHistory: true,
+    webhookHistoryUrl: String(options.webhookHistoryUrl ?? basePolicy.webhookHistoryUrl ?? ""),
+    eventHistoryUrl: String(options.eventHistoryUrl ?? basePolicy.eventHistoryUrl ?? "")
+  };
+  const base = buildCircleConsoleReceiptReadiness(policy);
+  const blockers = [...base.blockers];
+  const webhookHistoryUrl = safeHistoryUrl(options.webhookHistoryUrl ?? policy.webhookHistoryUrl);
+  const eventHistoryUrl = safeHistoryUrl(options.eventHistoryUrl ?? policy.eventHistoryUrl);
+  const loaderConfigured = options.loaderConfigured === true || typeof options.loadReadback === "function";
+  if (policy.requireReadHistory === true && !webhookHistoryUrl) blockers.push("webhook_history_source_missing");
+  if (policy.requireReadHistory === true && !eventHistoryUrl) blockers.push("event_history_source_missing");
+  if (!loaderConfigured) blockers.push("trusted_readback_loader_not_configured");
+  const contract = {
+    schema: CIRCLE_CONSOLE_TRUSTED_READBACK_SCHEMA,
+    status: blockers.length === 0 ? "ready_for_trusted_circle_console_readback" : "not_ready_fail_closed",
+    blockers,
+    policy_binding: {
+      network: "ARC-TESTNET",
+      chain_id: Number(policy.chainId),
+      contract_address: policy.contractAddress || null,
+      event_signature: policy.eventSignature || null,
+      event_topic: policy.eventTopic || null,
+      subscription_id: policy.subscriptionId || null,
+      release_commit: policy.releaseCommit || null
+    },
+    read_history: {
+      webhook: historyBinding(policy, CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND, webhookHistoryUrl),
+      event: historyBinding(policy, CIRCLE_CONSOLE_EVENT_HISTORY_KIND, eventHistoryUrl)
+    },
+    loader: { configured: loaderConfigured, injected_only: true, calls_external_api: false },
+    boundaries: {
+      read_only: true,
+      accepts_caller_supplied_receipt: false,
+      creates_circle_subscription: false,
+      wallet_or_chain_write: false,
+      erp_write: false,
+      external_actions: 0,
+      local_fixture_satisfies_gate: false,
+      historical_readback_satisfies_gate: false
+    }
+  };
+  return { ...contract, policy };
+}
+
+function validateHistorySource(value, expectedKind, expectedUrl, prefix) {
+  const errors = [];
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [`${prefix}_missing`];
+  if (String(value.kind ?? "") !== expectedKind) errors.push(`${prefix}_kind_mismatch`);
+  if (value.authenticated !== true) errors.push(`${prefix}_authentication_required`);
+  if (Number(value.http_status ?? value.httpStatus ?? 0) !== 200) errors.push(`${prefix}_http_status_invalid`);
+  if (String(value.url ?? "") !== expectedUrl) errors.push(`${prefix}_url_mismatch`);
+  if (!Array.isArray(value.entries)) errors.push(`${prefix}_entries_invalid`);
+  else if (value.entries.length === 0) errors.push(`${prefix}_entries_required`);
+  if (value.fixture === true || value.historical === true || /fixture|historical|archive/i.test(String(value.kind ?? ""))) {
+    errors.push(`${prefix}_historical_or_fixture`);
+  }
+  return errors;
+}
+
+function historyEntryValue(entry, ...keys) {
+  for (const key of keys) {
+    if (entry?.[key] != null) return entry[key];
+  }
+  return null;
+}
+
+function validateHistoryEntries(value, policy, prefix) {
+  if (!Array.isArray(value?.entries) || value.entries.length === 0) return [];
+  const errors = [];
+  const now = policy.now();
+  value.entries.forEach((entry, index) => {
+    const label = `${prefix}_entry_${index}`;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push(`${label}_invalid`);
+      return;
+    }
+    const timestamp = historyEntryValue(entry, "observed_at", "observedAt", "received_at", "receivedAt", "firstConfirmDate", "timestamp");
+    const observedAt = Date.parse(String(timestamp ?? ""));
+    if (!Number.isFinite(observedAt)) errors.push(`${label}_timestamp_invalid`);
+    else {
+      if (observedAt > now + policy.futureSkewMs) errors.push(`${label}_in_future`);
+      if (now - observedAt > policy.maxObservedAgeMs) errors.push(`${label}_stale`);
+    }
+    const id = historyEntryValue(entry, "id", "entry_id", "entryId", "event_id", "eventId");
+    if (!hasNonEmptyString(String(id ?? ""))) errors.push(`${label}_id_required`);
+    if (entry.authenticated !== true) errors.push(`${label}_authentication_required`);
+    const contractAddress = normalizeAddress(historyEntryValue(entry, "contract_address", "contractAddress"));
+    if (contractAddress !== policy.contractAddress) errors.push(`${label}_contract_mismatch`);
+    const chainId = Number(historyEntryValue(entry, "chain_id", "chainId"));
+    if (chainId !== policy.chainId) errors.push(`${label}_chain_id_mismatch`);
+    const blockchain = String(historyEntryValue(entry, "blockchain", "network") ?? "");
+    if (blockchain !== "ARC-TESTNET") errors.push(`${label}_blockchain_mismatch`);
+    const eventSignature = String(historyEntryValue(entry, "event_signature", "eventSignature") ?? "");
+    if (eventSignature !== policy.eventSignature) errors.push(`${label}_event_signature_mismatch`);
+    const subscriptionId = String(historyEntryValue(entry, "subscription_id", "subscriptionId") ?? entry.subscription?.id ?? "");
+    if (subscriptionId !== policy.subscriptionId) errors.push(`${label}_subscription_mismatch`);
+    const releaseCommit = normalizeReleaseCommit(historyEntryValue(entry, "release_commit", "releaseCommit"));
+    if (releaseCommit !== policy.releaseCommit) errors.push(`${label}_release_commit_mismatch`);
+    if (entry.fixture === true || entry.historical === true || entry.archive === true || /fixture|historical|archive/i.test(JSON.stringify(entry))) {
+      errors.push(`${label}_historical_or_fixture`);
+    }
+  });
+  return errors;
+}
+
+export function validateCircleConsoleReadHistory(input, policy) {
+  if (policy?.requireReadHistory !== true) return [];
+  const webhookUrl = safeHistoryUrl(policy.webhookHistoryUrl);
+  const eventUrl = safeHistoryUrl(policy.eventHistoryUrl);
+  const errors = [];
+  errors.push(...validateHistorySource(input?.webhook_history, CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND, webhookUrl, "webhook_history"));
+  errors.push(...validateHistorySource(input?.event_history, CIRCLE_CONSOLE_EVENT_HISTORY_KIND, eventUrl, "event_history"));
+  errors.push(...validateHistoryEntries(input?.webhook_history, policy, "webhook_history"));
+  errors.push(...validateHistoryEntries(input?.event_history, policy, "event_history"));
+  return errors;
+}
+
+export function createCircleConsoleTrustedReadbackLoader({ contract, loadReadback } = {}) {
+  if (!contract || contract.status !== "ready_for_trusted_circle_console_readback" || typeof loadReadback !== "function") return null;
+  return async () => {
+    const readback = await loadReadback();
+    const errors = validateCircleConsoleReadHistory(readback, contract.policy);
+    if (errors.length) {
+      const error = new Error("trusted_readback_contract_invalid");
+      error.code = "trusted_readback_contract_invalid";
+      error.errors = errors;
+      throw error;
+    }
+    return readback;
   };
 }
 
@@ -265,12 +459,15 @@ export function buildCircleConsoleReceipt(input, policy = buildCircleConsoleRece
   else if (releaseCommit !== policy.releaseCommit) errors.push("release_commit_mismatch");
   if (!sourceUrl && !sourceObjectId) errors.push("missing_source_reference");
   if (sourceUrl && !sourceUrl.startsWith("https://")) errors.push("source_url_not_https");
+  if (sourceUrl && !safeHistoryUrl(sourceUrl)) errors.push("source_url_credentials_forbidden");
+  if (Number(source.http_status ?? source.httpStatus ?? 0) !== 200) errors.push("source_http_status_invalid");
   if (String(source.kind ?? "") !== CIRCLE_CONSOLE_SOURCE_KIND) errors.push("unexpected_source_kind");
   if (source.authenticated !== true) errors.push("unauthenticated_source");
   const denial = sourceDenialReason(source);
   if (denial) errors.push(denial);
   if (isLocalFixtureSource(source)) errors.push("local_fixture_source");
   if (isHistoricalReadback(input, source)) errors.push("historical_source");
+  errors.push(...validateCircleConsoleReadHistory(input, policy));
 
   const accepted = errors.length === 0;
   return {
@@ -316,6 +513,22 @@ function buildTypedCircleConsoleReceipt(input, policy, resolved) {
       object_id: resolved.sourceObjectId || null
     },
     release_commit: normalizeReleaseCommit(input.release_commit),
+    read_history: policy.requireReadHistory === true ? {
+      webhook: {
+        kind: CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND,
+        url: input.webhook_history.url,
+        http_status: 200,
+        authenticated: true,
+        entry_count: input.webhook_history.entries.length
+      },
+      event: {
+        kind: CIRCLE_CONSOLE_EVENT_HISTORY_KIND,
+        url: input.event_history.url,
+        http_status: 200,
+        authenticated: true,
+        entry_count: input.event_history.entries.length
+      }
+    } : null,
     fingerprint_sha256: fingerprint,
     boundaries: {
       surface_evidence_only: true,

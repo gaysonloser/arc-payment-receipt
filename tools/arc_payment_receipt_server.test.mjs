@@ -14,6 +14,10 @@ import {
   buildOpeningBalanceFixtureValidationView,
   buildFinalDemoPlanView,
   buildFinalSubmissionReadinessView,
+  buildCurrentReleaseSurfaceReadinessView,
+  validateEncodeAuthenticatedReadback,
+  validateFinalLateEmailSendReceipt,
+  validateArcTestnetCurrentReleaseReceipt,
   validateFinalAssetsEvidence,
   buildReviewerEvidencePack,
   buildPublicBoundaryConsistencyView,
@@ -44,6 +48,224 @@ test("public POST route inventory is explicit and bounded", () => {
     "/api/v1/opening-balance-fixture-validate"
   ]);
   assert.equal(new Set(PUBLIC_POST_ROUTES).size, 2);
+});
+
+const surfaceRelease = {
+  release_id: "verified-milestone-close-current-mvp-workbench-rc1",
+  commit_sha: "a".repeat(40),
+  manifest_sha256: "b".repeat(64)
+};
+const surfaceTime = { now: "2026-08-12T12:00:00.000Z", expectedRelease: surfaceRelease };
+const surfaceBase = {
+  release_id: surfaceRelease.release_id,
+  commit_sha: surfaceRelease.commit_sha,
+  manifest_sha256: surfaceRelease.manifest_sha256,
+  authenticated: true,
+  observed_at: "2026-08-12T11:00:00.000Z",
+  expires_at: "2026-08-12T13:00:00.000Z",
+  external_actions: 0,
+  readback_url: "https://example.invalid/readback",
+  http_status: 200
+};
+
+test("current-release surface validators remain unproven by default and bind exact release triples", () => {
+  const defaults = buildCurrentReleaseSurfaceReadinessView({ now: surfaceTime.now });
+  assert.equal(defaults.encode.status, "UNPROVEN");
+  assert.equal(defaults.final.status, "UNPROVEN");
+  assert.equal(defaults.arc_testnet.status, "UNPROVEN");
+  const encode = validateEncodeAuthenticatedReadback({
+    ...surfaceBase,
+    kind: "encode_authenticated_current_product_readback",
+    submission_id: "submission-001",
+    encode_project_id: "project",
+    checkpoint_id: "checkpoint",
+    readback_id: "readback-001",
+    platform_receipt_id: "platform-receipt-001",
+    checkpoint_status: "authenticated_current_product",
+    platform_status: "authenticated_current_product",
+    platform_observed_at: surfaceBase.observed_at,
+    saved_product_fields: { sha256: "1".repeat(64), count: 7 },
+    saved_links: { sha256: "2".repeat(64), count: 3 }
+  }, surfaceTime);
+  assert.equal(encode.status, "VERIFIED_READ_ONLY");
+  for (const field of ["commit_sha", "manifest_sha256"]) {
+    const wrong = {
+      ...surfaceBase,
+      kind: "encode_authenticated_current_product_readback",
+      submission_id: "submission-001", encode_project_id: "project", checkpoint_id: "checkpoint", readback_id: "readback-001", platform_receipt_id: "platform-receipt-001",
+      checkpoint_status: "authenticated_current_product", platform_status: "authenticated_current_product", platform_observed_at: surfaceBase.observed_at,
+      saved_product_fields: { sha256: "1".repeat(64), count: 7 }, saved_links: { sha256: "2".repeat(64), count: 3 },
+      [field]: field === "commit_sha" ? "c".repeat(40) : "d".repeat(64)
+    };
+    assert.equal(validateEncodeAuthenticatedReadback(wrong, surfaceTime).status, "UNPROVEN");
+  }
+  for (const readback_url of [
+    "https://example.invalid/readback?%2561pi%255Fkey=secret-value",
+    "https://example.invalid/readback#%2574oken=secret-value"
+  ]) {
+    const unsafeUrl = {
+      ...surfaceBase,
+      kind: "encode_authenticated_current_product_readback",
+      submission_id: "submission-001", encode_project_id: "project", checkpoint_id: "checkpoint", readback_id: "readback-001", platform_receipt_id: "platform-receipt-001",
+      checkpoint_status: "authenticated_current_product", platform_status: "authenticated_current_product", platform_observed_at: surfaceBase.observed_at,
+      saved_product_fields: { sha256: "1".repeat(64), count: 7 }, saved_links: { sha256: "2".repeat(64), count: 3 }, readback_url
+    };
+    assert.equal(validateEncodeAuthenticatedReadback(unsafeUrl, surfaceTime).status, "UNPROVEN");
+  }
+  const missingEncodeReceiptFields = {
+    ...surfaceBase,
+    kind: "encode_authenticated_current_product_readback",
+    encode_project_id: "project",
+    checkpoint_id: "checkpoint",
+    checkpoint_status: "authenticated_current_product",
+    platform_status: "authenticated_current_product",
+    platform_observed_at: surfaceBase.observed_at
+  };
+  assert.equal(validateEncodeAuthenticatedReadback(missingEncodeReceiptFields, surfaceTime).status, "UNPROVEN");
+});
+
+test("final late-email and Arc readbacks require privacy-safe typed fields and exact release", () => {
+  const final = validateFinalLateEmailSendReceipt({
+    ...surfaceBase,
+    external_actions: 1,
+    kind: "final_late_email_send_receipt",
+    observed_at: "2026-08-12T11:35:00.000Z",
+    recipient_ref: "owner-ref-001",
+    owner_confirmation: "GRANTED",
+    action_count: 1,
+    send_action_performed: true,
+    subject_sha256: "c".repeat(64),
+    body_sha256: "d".repeat(64),
+    assets_sha256: "e".repeat(64),
+    links_sha256: "f".repeat(64),
+    send_receipt_id: "send-001",
+    provider_message_id: "provider-001",
+    send_status: "sent",
+    sent_at: "2026-08-12T11:30:00.000Z",
+    delivery: { status: "accepted", receipt_id: "delivery-001", observed_at: "2026-08-12T11:35:00.000Z", authenticated: true, provider_message_id: "provider-001" }
+  }, surfaceTime);
+  assert.equal(final.status, "VERIFIED_READ_ONLY");
+  for (const field of ["commit_sha", "manifest_sha256"]) {
+    const wrong = {
+      ...surfaceBase,
+      external_actions: 1,
+      kind: "final_late_email_send_receipt",
+      recipient_ref: "owner-ref-001",
+      owner_confirmation: "GRANTED",
+      action_count: 1,
+      send_action_performed: true,
+      subject_sha256: "c".repeat(64), body_sha256: "d".repeat(64), assets_sha256: "e".repeat(64), links_sha256: "f".repeat(64),
+      send_receipt_id: "send-001", provider_message_id: "provider-001", send_status: "sent", sent_at: "2026-08-12T11:30:00.000Z",
+      delivery: { status: "accepted", receipt_id: "delivery-001", observed_at: "2026-08-12T11:35:00.000Z", authenticated: true, provider_message_id: "provider-001" },
+      [field]: field === "commit_sha" ? "c".repeat(40) : "d".repeat(64)
+    };
+    assert.equal(validateFinalLateEmailSendReceipt(wrong, surfaceTime).status, "UNPROVEN");
+  }
+  const recipientLeak = validateFinalLateEmailSendReceipt({
+    ...surfaceBase,
+    external_actions: 1,
+    kind: "final_late_email_send_receipt",
+    recipient_ref: "owner-ref-001",
+    recipient_email: "secret@example.invalid",
+    owner_confirmation: "GRANTED",
+    action_count: 1,
+    send_action_performed: true,
+    subject_sha256: "c".repeat(64), body_sha256: "d".repeat(64), assets_sha256: "e".repeat(64), links_sha256: "f".repeat(64),
+    send_receipt_id: "send-001", provider_message_id: "provider-001", send_status: "sent", sent_at: "2026-08-12T11:30:00.000Z",
+    delivery: { status: "accepted", receipt_id: "delivery-001", observed_at: "2026-08-12T11:35:00.000Z", authenticated: true, provider_message_id: "provider-001" }
+  }, surfaceTime);
+  assert.equal(recipientLeak.status, "UNPROVEN");
+  const futureFinal = {
+    ...surfaceBase,
+    external_actions: 1,
+    kind: "final_late_email_send_receipt",
+    recipient_ref: "owner-ref-001",
+    owner_confirmation: "GRANTED",
+    action_count: 1,
+    send_action_performed: true,
+    subject_sha256: "c".repeat(64), body_sha256: "d".repeat(64), assets_sha256: "e".repeat(64), links_sha256: "f".repeat(64),
+    send_receipt_id: "send-001", provider_message_id: "provider-001", send_status: "sent", sent_at: "2026-08-12T14:00:00.000Z",
+    delivery: { status: "accepted", receipt_id: "delivery-001", observed_at: "2026-08-12T14:01:00.000Z", authenticated: true, provider_message_id: "provider-001" }
+  };
+  assert.equal(validateFinalLateEmailSendReceipt(futureFinal, surfaceTime).status, "UNPROVEN");
+  const nestedIdentity = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", delivery: { ...futureFinal.delivery, observed_at: "2026-08-12T11:35:00.000Z", recipient_email: "nested@example.invalid" } };
+  assert.equal(validateFinalLateEmailSendReceipt(nestedIdentity, surfaceTime).status, "UNPROVEN");
+  const deliveryMissing = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", delivery: { status: "pending", receipt_id: "delivery-001", observed_at: "2026-08-12T11:35:00.000Z", authenticated: true } };
+  assert.equal(validateFinalLateEmailSendReceipt(deliveryMissing, surfaceTime).status, "UNPROVEN");
+  const observedBeforeSend = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", observed_at: "2026-08-12T11:20:00.000Z", delivery: { ...futureFinal.delivery, observed_at: "2026-08-12T11:35:00.000Z" } };
+  assert.equal(validateFinalLateEmailSendReceipt(observedBeforeSend, surfaceTime).status, "UNPROVEN");
+  const observedBeforeDelivery = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", observed_at: "2026-08-12T11:32:00.000Z", delivery: { ...futureFinal.delivery, observed_at: "2026-08-12T11:35:00.000Z" } };
+  assert.equal(validateFinalLateEmailSendReceipt(observedBeforeDelivery, surfaceTime).status, "UNPROVEN");
+  const providerMismatch = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", delivery: { ...futureFinal.delivery, observed_at: "2026-08-12T11:35:00.000Z", provider_message_id: "other-provider" } };
+  assert.equal(validateFinalLateEmailSendReceipt(providerMismatch, surfaceTime).status, "UNPROVEN");
+  const providerMessageOmitted = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", delivery: { status: "accepted", receipt_id: "delivery-001", observed_at: "2026-08-12T11:35:00.000Z", authenticated: true } };
+  assert.equal(validateFinalLateEmailSendReceipt(providerMessageOmitted, surfaceTime).status, "UNPROVEN");
+  for (const readback_url of [
+    "https://example.invalid/readback?%2561pi%255Fkey=secret-value",
+    "https://example.invalid/readback#%2574oken=secret-value"
+  ]) {
+    const unsafeUrl = { ...futureFinal, sent_at: "2026-08-12T11:30:00.000Z", readback_url, delivery: { ...futureFinal.delivery, observed_at: "2026-08-12T11:35:00.000Z" } };
+    assert.equal(validateFinalLateEmailSendReceipt(unsafeUrl, surfaceTime).status, "UNPROVEN");
+  }
+  const arc = {
+    ...surfaceBase,
+    kind: "arc_testnet_current_release_receipt",
+    network: "ARC-TESTNET", blockchain: "ARC-TESTNET", chain_id: 5042002,
+    contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047",
+    deployed_code_sha256: "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675", deployed_code_bytes: 6877,
+    deployment_receipt: { tx_hash: `0x${"1".repeat(64)}`, status: 1, block_number: 56126972, block_hash: `0x${"2".repeat(64)}`, contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047", finality_state: "finalized", deployed_code_sha256: "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675", deployed_code_bytes: 6877 },
+    create_policy_receipt: { tx_hash: `0x${"6".repeat(64)}`, status: 1, block_number: 56126973, block_hash: `0x${"8".repeat(64)}`, contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047", finality_state: "finalized" },
+    status: 1, block_number: 56126973, block_hash: `0x${"8".repeat(64)}`, finality_state: "finalized",
+    policy_created: {
+      status: "verified", event_signature: "PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)", contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047", tx_hash: `0x${"6".repeat(64)}`, block_number: 56126973, block_hash: `0x${"8".repeat(64)}`, log_index: 4,
+      policy_id: `0x${"7".repeat(64)}`,
+      args: { policy_id: `0x${"7".repeat(64)}`, payer: "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6", recipient: "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6", reviewer: "0x9903e1e8c871321ee2ed80cea8a5899f0992ba9e", cap6: "1000000", milestone_id: `0x${"9".repeat(64)}`, policy_version: `0x${"a".repeat(64)}`, policy_expiry: "1788364740", max_attestation_ttl: "604800" }
+    },
+    get_policy_readback: {
+      status: "verified", selector: "getPolicy(bytes32)", contract_address: "0xc7682649a1aa60d0f74825ad2b812ee062178047", policy_id: `0x${"7".repeat(64)}`, block_number: 56126973, block_hash: `0x${"8".repeat(64)}`, current_block_number: 56126973, readback_status: "current", readback_sha256: "5".repeat(64), args: { policy_id: `0x${"7".repeat(64)}` },
+      result: { policy_id: `0x${"7".repeat(64)}`, payer: "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6", recipient: "0x75f2c230f2bd6874306ea586f198a7d2f6cc7cc6", reviewer: "0x9903e1e8c871321ee2ed80cea8a5899f0992ba9e", cap6: "1000000", milestone_id: `0x${"9".repeat(64)}`, policy_version: `0x${"a".repeat(64)}`, policy_expiry: "1788364740", max_attestation_ttl: "604800" }
+    }
+  };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(arc, surfaceTime).status, "VERIFIED_READ_ONLY");
+  for (const field of ["commit_sha", "manifest_sha256"]) {
+    const wrong = { ...arc, [field]: field === "commit_sha" ? "c".repeat(40) : "d".repeat(64) };
+    assert.equal(validateArcTestnetCurrentReleaseReceipt(wrong, surfaceTime).status, "UNPROVEN");
+  }
+  const missingPolicy = { ...arc, policy_created: undefined, get_policy_readback: undefined };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(missingPolicy, surfaceTime).status, "UNPROVEN");
+  const replacedOperation = { ...arc, create_policy_receipt: { ...arc.deployment_receipt }, policy_created: { ...arc.policy_created, tx_hash: arc.deployment_receipt.tx_hash } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(replacedOperation, surfaceTime).status, "UNPROVEN");
+  const stalePolicyReadback = { ...arc, get_policy_readback: { ...arc.get_policy_readback, block_number: arc.block_number + 1 } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(stalePolicyReadback, surfaceTime).status, "UNPROVEN");
+  const arbitraryAddress = { ...arc, contract_address: "0x1111111111111111111111111111111111111111" };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(arbitraryAddress, surfaceTime).status, "UNPROVEN");
+  const wrongCode = { ...arc, deployed_code_sha256: "f".repeat(64) };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(wrongCode, surfaceTime).status, "UNPROVEN");
+  const oneByteCode = { ...arc, deployed_code_bytes: 1 };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(oneByteCode, surfaceTime).status, "UNPROVEN");
+  const mismatchedPolicyArgs = { ...arc, policy_created: { ...arc.policy_created, args: { ...arc.policy_created.args, payer: "0x1111111111111111111111111111111111111111" } } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(mismatchedPolicyArgs, surfaceTime).status, "UNPROVEN");
+  const createBeforeDeployment = { ...arc, deployment_receipt: { ...arc.deployment_receipt, block_number: arc.create_policy_receipt.block_number + 1 } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(createBeforeDeployment, surfaceTime).status, "UNPROVEN");
+  const policyCreatedBlockHashMismatch = { ...arc, policy_created: { ...arc.policy_created, block_hash: `0x${"9".repeat(64)}` } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(policyCreatedBlockHashMismatch, surfaceTime).status, "UNPROVEN");
+  const invalidUint = { ...arc, policy_created: { ...arc.policy_created, args: { ...arc.policy_created.args, cap6: "not-a-number" } } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(invalidUint, surfaceTime).status, "UNPROVEN");
+  const invalidAddress = { ...arc, get_policy_readback: { ...arc.get_policy_readback, result: { ...arc.get_policy_readback.result, reviewer: "0x1234" } } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(invalidAddress, surfaceTime).status, "UNPROVEN");
+  const staleCurrentBlock = { ...arc, get_policy_readback: { ...arc.get_policy_readback, current_block_number: arc.get_policy_readback.block_number - 1 } };
+  assert.equal(validateArcTestnetCurrentReleaseReceipt(staleCurrentBlock, surfaceTime).status, "UNPROVEN");
+  for (const readback_url of [
+    "https://example.invalid/readback?%2561pi%255Fkey=secret-value",
+    "https://example.invalid/readback#%2574oken=secret-value"
+  ]) {
+    const unsafeUrl = { ...arc, readback_url };
+    assert.equal(validateArcTestnetCurrentReleaseReceipt(unsafeUrl, surfaceTime).status, "UNPROVEN");
+  }
+  for (const field of ["commit_sha", "manifest_sha256"]) {
+    const wrong = { ...arc, [field]: field === "commit_sha" ? "c".repeat(40) : "d".repeat(64) };
+    assert.equal(validateArcTestnetCurrentReleaseReceipt(wrong, surfaceTime).status, "UNPROVEN");
+  }
 });
 
 const orderId = `0x${"12".repeat(32)}`;
@@ -658,6 +880,18 @@ test("keeps final-submission readiness explicit about incomplete materials", asy
   const unavailable = buildFinalSubmissionReadinessView({ status: "reviewer_pack_review_required", evidence: { delivery: {} } }, finalAssets);
   assert.equal(unavailable.checks.public_read_only_mvp_available, false);
   assert.equal(unavailable.remaining_requirements.includes("public_read_only_mvp_available"), true);
+});
+
+test("serves current-release surface readiness without external API calls", async () => {
+  const response = await fetch(`${origin}/api/v1/current-release-surface-readiness`);
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.release_id, "verified-milestone-close-current-mvp-workbench-rc1");
+  assert.equal(payload.external_actions, 0);
+  assert.equal(payload.boundaries.no_api_calls, true);
+  assert.equal(payload.encode.status, "UNPROVEN");
+  assert.equal(payload.final.status, "UNPROVEN");
+  assert.equal(payload.arc_testnet.status, "UNPROVEN");
 });
 
 test("final asset evidence is content-addressed and rejects drift or a forged final receipt", () => {

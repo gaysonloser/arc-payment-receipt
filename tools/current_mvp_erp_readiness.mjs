@@ -126,3 +126,79 @@ export function verifyCurrentMvpErpReadiness({ release, company, localFixture, r
   const result = { valid: clean.length === 0, status, highest_verified_layer: layer, business_close_verified: status === "BUSINESS_CLOSE_VERIFIED", local_fixture_is_live: false, external_actions: 0, missing, errors: clean };
   return { ...result, verification_fingerprint: erpEvidenceFingerprint({ release, company, status, layer, errors: clean }) };
 }
+
+/**
+ * Bind the privacy-safe ERP projection embedded in the public workbench to the
+ * read-only readiness contract.  The source facts are owner-live readbacks,
+ * but the public candidate remains an unbound, non-posting projection: this
+ * wrapper deliberately reports live_erp=false and public_current_release_bound
+ * false so a manifest cannot promote the projection to a public ERP gate.
+ */
+export function verifyEmbeddedCurrentMvpErpProjection({ release, evidence } = {}) {
+  const source = object(evidence);
+  const sourceErrors = [];
+  if (!source) sourceErrors.push("ERP_PROJECTION_REQUIRED");
+  if (source?.evidence_class !== "verified_erp_read_only") sourceErrors.push("ERP_PROJECTION_CLASS_INVALID");
+  if (source?.credentials_exposed !== false) sourceErrors.push("ERP_PROJECTION_CREDENTIAL_BOUNDARY_INVALID");
+  if (source?.local_fixture_only !== false) sourceErrors.push("ERP_PROJECTION_FIXTURE_BOUNDARY_INVALID");
+  if (source?.external_actions !== 0) sourceErrors.push("ERP_PROJECTION_EXTERNAL_ACTIONS_INVALID");
+  if (!source?.company || !source?.company_abbr) sourceErrors.push("ERP_PROJECTION_COMPANY_REQUIRED");
+  if (source?.business_close?.status !== "not_proven" || source?.accounting_period?.status !== "not_proven" || source?.period_closing_voucher?.status !== "not_proven") sourceErrors.push("ERP_PROJECTION_CLOSE_BOUNDARY_INVALID");
+  if (source?.payment_ledger?.status !== "not_proven") sourceErrors.push("ERP_PROJECTION_PLED_BOUNDARY_INVALID");
+  const readiness = source ? {
+    kind: "read_only_readiness",
+    company: source.company,
+    release_id: release?.release_id,
+    commit_sha: release?.commit_sha,
+    manifest_sha256: release?.manifest_sha256,
+    truth_class: TRUTH_CLASS.read_only_readiness,
+    local_fixture_only: false,
+    live_erp: true,
+    external_actions: 0,
+    observed_at: release?.observed_at ?? "2026-08-10T00:00:00.000Z",
+    mode: "read_only",
+    mutation_allowed: false,
+    company_readback: source.company,
+    doctypes: ["Payment Entry", "Bank Transaction", "GL Entry", "Payment Ledger Entry", "Accounting Period", "Period Closing Voucher"]
+  } : null;
+  const verified = sourceErrors.length ? { valid: false, status: "BLOCKED", errors: sourceErrors, business_close_verified: false, external_actions: 0 } : verifyCurrentMvpErpReadiness({ release, company: source.company, readiness });
+  const errors = unique([...(verified.errors ?? []), ...sourceErrors]);
+  const valid = errors.length === 0 && verified.valid === true && verified.status === "READ_ONLY_READY" && verified.business_close_verified === false;
+  const result = {
+    valid,
+    status: valid ? "VERIFIED_READ_ONLY_CANDIDATE" : "UNPROVEN",
+    readiness_status: verified.status,
+    owner_live_readback_binding: valid,
+    source_truth_live_erp: valid,
+    live_erp: false,
+    local_fixture_only: false,
+    current_worktree_candidate_bound: false,
+    public_current_release_bound: false,
+    business_close: "not_proven",
+    business_close_verified: false,
+    external_actions: 0,
+    missing: valid ? ["erp_mutation_receipt", "posting_readback", "business_close_readback"] : ["read_only_readiness"],
+    errors,
+    verification_fingerprint: erpEvidenceFingerprint({
+      release,
+      source: source ? {
+        evidence_class: source.evidence_class,
+        source_batch: source.source_batch,
+        source_artifact_sha256: source.source_artifact_sha256,
+        company: source.company,
+        company_abbr: source.company_abbr,
+        payment_ledger: source.payment_ledger,
+        accounting_period: source.accounting_period,
+        period_closing_voucher: source.period_closing_voucher,
+        business_close: source.business_close,
+        external_actions: source.external_actions
+      } : null,
+      status: valid ? "VERIFIED_READ_ONLY_CANDIDATE" : "UNPROVEN",
+      business_close: "not_proven",
+      public_current_release_bound: false,
+      live_erp: false,
+      errors
+    })
+  };
+  return result;
+}

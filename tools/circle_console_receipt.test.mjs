@@ -6,8 +6,13 @@ import {
   buildCircleConsoleReceipt,
   buildCircleConsoleReceiptPolicy,
   buildCircleConsoleReceiptReadiness,
+  buildCircleConsoleTrustedReadbackContract,
   CIRCLE_CONSOLE_RECEIPT_SCHEMA,
-  CIRCLE_CONSOLE_SURFACE
+  CIRCLE_CONSOLE_SURFACE,
+  CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND,
+  CIRCLE_CONSOLE_EVENT_HISTORY_KIND,
+  createCircleConsoleTrustedReadbackLoader,
+  validateCircleConsoleReadHistory
 } from "./circle_contract_webhook_gate.mjs";
 
 const CURRENT_RELEASE_COMMIT = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
@@ -17,6 +22,8 @@ const contractAddress = "0x094f69e6b760c48b6cf23f9af156c4511e8fa1e7";
 const eventSignature = "EvidenceAnchored(bytes32,bytes32,bytes32,bytes32,uint8)";
 const eventTopic = `0x${"cd".repeat(32)}`;
 const subscriptionId = "Subscription_evt_0xab12cd34";
+const webhookHistoryUrl = "https://console.circle.com/contracts/current/subscriptions/current/events";
+const eventHistoryUrl = "https://console.circle.com/contracts/current/event-history";
 
 function buildPolicy() {
   return buildCircleConsoleReceiptPolicy({
@@ -45,6 +52,54 @@ function validInput() {
       object_id: `console:contract:${contractAddress}:subscription:${subscriptionId}`
     },
     release_commit: CURRENT_RELEASE_COMMIT
+  };
+}
+
+function trustedPolicy() {
+  return buildCircleConsoleReceiptPolicy({
+    ...buildPolicy(),
+    webhookHistoryUrl,
+    eventHistoryUrl,
+    requireReadHistory: true
+  });
+}
+
+function trustedInput() {
+  const currentHistoryBinding = {
+    contract_address: contractAddress,
+    chain_id: 5042002,
+    blockchain: "ARC-TESTNET",
+    event_signature: eventSignature,
+    subscription_id: subscriptionId,
+    release_commit: CURRENT_RELEASE_COMMIT
+  };
+  return {
+    ...validInput(),
+    webhook_history: {
+      kind: CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND,
+      authenticated: true,
+      http_status: 200,
+      url: webhookHistoryUrl,
+      entries: [{
+        id: "delivery-1",
+        authenticated: true,
+        received_at: new Date(NOW_MS - 30_000).toISOString(),
+        ...currentHistoryBinding
+      }]
+    },
+    event_history: {
+      kind: CIRCLE_CONSOLE_EVENT_HISTORY_KIND,
+      authenticated: true,
+      http_status: 200,
+      url: eventHistoryUrl,
+      entries: [{
+        id: "event-1",
+        authenticated: true,
+        firstConfirmDate: new Date(NOW_MS - 45_000).toISOString(),
+        block_height: 56111686,
+        ...currentHistoryBinding
+      }]
+    }
   };
 }
 
@@ -249,4 +304,138 @@ test("requires a subscription that is active and exactly the policy subscription
   const unboundResult = buildCircleConsoleReceipt(unbound, buildPolicy());
   assert.equal(unboundResult.accepted, false);
   assert.ok(unboundResult.errors.includes("unexpected_subscription_id"));
+});
+
+test("trusted readback contract binds Arc Testnet, subscription, release, and both read histories", async () => {
+  const blocked = buildCircleConsoleTrustedReadbackContract({
+    policy: buildCircleConsoleReceiptPolicy({ ...buildPolicy(), requireReadHistory: true })
+  });
+  assert.equal(blocked.status, "not_ready_fail_closed");
+  assert.ok(blocked.blockers.includes("trusted_readback_loader_not_configured"));
+  assert.ok(blocked.blockers.includes("webhook_history_source_missing"));
+  assert.ok(blocked.blockers.includes("event_history_source_missing"));
+
+  const policy = trustedPolicy();
+  const contract = buildCircleConsoleTrustedReadbackContract({
+    policy,
+    webhookHistoryUrl,
+    eventHistoryUrl,
+    loadReadback: async () => trustedInput()
+  });
+  assert.equal(contract.status, "ready_for_trusted_circle_console_readback");
+  assert.equal(contract.policy_binding.network, "ARC-TESTNET");
+  assert.equal(contract.policy_binding.chain_id, 5042002);
+  assert.equal(contract.policy_binding.contract_address, contractAddress);
+  assert.equal(contract.policy_binding.subscription_id, subscriptionId);
+  assert.equal(contract.read_history.webhook.kind, CIRCLE_CONSOLE_WEBHOOK_HISTORY_KIND);
+  assert.equal(contract.read_history.event.kind, CIRCLE_CONSOLE_EVENT_HISTORY_KIND);
+  assert.equal(contract.boundaries.external_actions, 0);
+
+  const readback = trustedInput();
+  assert.deepEqual(validateCircleConsoleReadHistory(readback, contract.policy), []);
+  const loader = createCircleConsoleTrustedReadbackLoader({ contract, loadReadback: async () => structuredClone(readback) });
+  assert.equal(typeof loader, "function");
+  const loaded = await loader();
+  const receipt = buildCircleConsoleReceipt(loaded, contract.policy);
+  assert.equal(receipt.accepted, true);
+  assert.equal(receipt.receipt.read_history.webhook.entry_count, 1);
+  assert.equal(receipt.receipt.read_history.event.entry_count, 1);
+});
+
+test("trusted readback mutations fail closed at the loader boundary", async () => {
+  const policy = trustedPolicy();
+  const contract = buildCircleConsoleTrustedReadbackContract({
+    policy,
+    webhookHistoryUrl,
+    eventHistoryUrl,
+    loadReadback: async () => trustedInput()
+  });
+  const mutations = [
+    ["webhook_history_kind", (value) => { value.webhook_history.kind = "circle_console_readback"; }],
+    ["webhook_history_url", (value) => { value.webhook_history.url = "https://console.circle.com/other"; }],
+    ["webhook_history_auth", (value) => { value.webhook_history.authenticated = false; }],
+    ["event_history_status", (value) => { value.event_history.http_status = 403; }],
+    ["event_history_entries", (value) => { value.event_history.entries = "not-an-array"; }],
+    ["fixture_history", (value) => { value.event_history.fixture = true; }]
+  ];
+  for (const [id, mutate] of mutations) {
+    const input = trustedInput();
+    mutate(input);
+    const errors = validateCircleConsoleReadHistory(input, policy);
+    assert.ok(errors.length > 0, `${id} should fail closed`);
+    assert.equal(buildCircleConsoleReceipt(input, policy).accepted, false, `${id} receipt must remain rejected`);
+    const loader = createCircleConsoleTrustedReadbackLoader({ contract, loadReadback: async () => input });
+    await assert.rejects(loader(), (error) => error.code === "trusted_readback_contract_invalid");
+  }
+});
+
+test("trusted histories require current non-empty authenticated entries", () => {
+  const policy = trustedPolicy();
+  const empty = trustedInput();
+  empty.webhook_history.entries = [];
+  empty.event_history.entries = [];
+  const emptyResult = buildCircleConsoleReceipt(empty, policy);
+  assert.equal(emptyResult.accepted, false);
+  assert.ok(emptyResult.errors.includes("webhook_history_entries_required"));
+  assert.ok(emptyResult.errors.includes("event_history_entries_required"));
+
+  const stale = trustedInput();
+  stale.webhook_history.entries[0].received_at = new Date(NOW_MS - 25 * 60 * 60 * 1000).toISOString();
+  stale.webhook_history.entries[0].release_commit = "1".repeat(40);
+  const staleResult = buildCircleConsoleReceipt(stale, policy);
+  assert.equal(staleResult.accepted, false);
+  assert.ok(staleResult.errors.includes("webhook_history_entry_0_stale"));
+  assert.ok(staleResult.errors.includes("webhook_history_entry_0_release_commit_mismatch"));
+
+  const mismatch = trustedInput();
+  mismatch.event_history.entries[0].contract_address = "0x1111111111111111111111111111111111111111";
+  mismatch.event_history.entries[0].event_signature = "Other(bytes32)";
+  mismatch.event_history.entries[0].subscription_id = "Subscription_old";
+  const mismatchResult = buildCircleConsoleReceipt(mismatch, policy);
+  assert.equal(mismatchResult.accepted, false);
+  assert.ok(mismatchResult.errors.includes("event_history_entry_0_contract_mismatch"));
+  assert.ok(mismatchResult.errors.includes("event_history_entry_0_event_signature_mismatch"));
+  assert.ok(mismatchResult.errors.includes("event_history_entry_0_subscription_mismatch"));
+
+  const unauthenticated = trustedInput();
+  unauthenticated.webhook_history.entries[0].authenticated = false;
+  const unauthenticatedResult = buildCircleConsoleReceipt(unauthenticated, policy);
+  assert.equal(unauthenticatedResult.accepted, false);
+  assert.ok(unauthenticatedResult.errors.includes("webhook_history_entry_0_authentication_required"));
+
+  const base = trustedInput();
+  base.webhook_history.entries[0].chain_id = 8453;
+  base.webhook_history.entries[0].blockchain = "BASE";
+  const baseResult = buildCircleConsoleReceipt(base, policy);
+  assert.equal(baseResult.accepted, false);
+  assert.ok(baseResult.errors.includes("webhook_history_entry_0_chain_id_mismatch"));
+  assert.ok(baseResult.errors.includes("webhook_history_entry_0_blockchain_mismatch"));
+
+  const wrongChain = trustedInput();
+  wrongChain.event_history.entries[0].chain_id = 1;
+  const wrongChainResult = buildCircleConsoleReceipt(wrongChain, policy);
+  assert.equal(wrongChainResult.accepted, false);
+  assert.ok(wrongChainResult.errors.includes("event_history_entry_0_chain_id_mismatch"));
+});
+
+test("primary Console sources require HTTPS 200 and never echo credentials", () => {
+  for (const [label, sourceUrl] of [
+    ["userinfo", `https://user:pass@console.circle.com/contracts/${contractAddress}/subscriptions/${subscriptionId}`],
+    ["api_key", `https://console.circle.com/contracts/${contractAddress}/subscriptions/${subscriptionId}?api_key=secret-value`],
+    ["fragment_api_key", `https://console.circle.com/contracts/${contractAddress}/subscriptions/${subscriptionId}#api_key=secret-value`],
+    ["double_encoded_query_api_key", `https://console.circle.com/contracts/${contractAddress}/subscriptions/${subscriptionId}?%2561pi%255Fkey=secret-value`],
+    ["double_encoded_fragment_token", `https://console.circle.com/contracts/${contractAddress}/subscriptions/${subscriptionId}#%2574oken=secret-value`]
+  ]) {
+    const input = validInput();
+    input.source.url = sourceUrl;
+    const result = buildCircleConsoleReceipt(input, buildPolicy());
+    assert.equal(result.accepted, false, `${label} source must fail closed`);
+    assert.ok(result.errors.includes("source_url_credentials_forbidden"));
+    assert.equal(JSON.stringify(result).includes("secret-value"), false);
+  }
+  const unavailable = validInput();
+  unavailable.source.http_status = 500;
+  const unavailableResult = buildCircleConsoleReceipt(unavailable, buildPolicy());
+  assert.equal(unavailableResult.accepted, false);
+  assert.ok(unavailableResult.errors.includes("source_http_status_invalid"));
 });

@@ -4,11 +4,21 @@
 
 **Presentation name:** Arc Enterprise Settlement Control. Verified Milestone Close is the current release: a receipt-first Arc/USDC workbench for a treasury operator reviewing a supplier payable and its customer-receipt/refund counterpart. `PolicySettlementV1` supplies the programmable-money boundary; the workbench separately displays typed ERPNext Invoice, Payment Entry, Bank Transaction, GL, Payment Ledger, Accounting Period and close readbacks. Chain success never implies ERP posting or business close.
 
-**Current product source:** the published baseline is [GitHub `main@9795c44`](https://github.com/gaysonloser/arc-payment-receipt/commit/9795c442f4c80464c2d54639a638f02060265be1). The H183 quality candidate closes receipt TTL, candidate ambiguity, durable replay, lifecycle, refund, accounting-readback and provenance gaps; it becomes the current public release only after its non-force `main` push and Render deployment are independently read back.
+**Current product source:** the published baseline is [GitHub `main@4f1f4b9`](https://github.com/gaysonloser/arc-payment-receipt/commit/4f1f4b99cd12084cadb28e851d8a47e2913e9118). The H187 worktree candidate adds deterministic ERP/readback readiness validators, but remains local and unbound until a separate owner publication/deployment gate is completed.
 
-**Published demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) serves the last independently read-back Render deployment. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity. A GitHub push alone does not prove Render has deployed the H183 candidate; the live service commit and response must be read back separately.
+**Published demo:** [arc-payment-receipt.onrender.com/current-mvp/](https://arc-payment-receipt.onrender.com/current-mvp/) serves the last independently read-back baseline deployment. It runs as a free Render web service and may take 50 seconds or more to wake after inactivity. The uncommitted H187 candidate is not deployed; a GitHub push alone never proves Render alignment.
 
-**Current-release boundary:** source and deployment become aligned only when GitHub remote-main and Render readback identify the same H183 commit. Arc Testnet provides immutable deployment/readback facts; ERPNext remains the authoritative business/ledger/close system. Circle Console remains fail-closed without a current subscription/readback; Encode is closed and Final remains a separate owner-gated late-email path. The local fixture, read-only UI, historical receipts and public chain deployment do not claim a signer, wallet action, ERP posting or business close. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+**Current-release boundary:** source and deployment are currently bound only to the published baseline; the H187 worktree candidate has `current_worktree_candidate_bound=false` for GitHub, Render, Arc Testnet and public ERP. Arc Testnet immutable facts and owner-live ERP readbacks remain separate evidence classes and do not imply settlement execution, ERP posting or business close. Circle Console remains fail-closed without a current subscription/readback; Encode and Final remain independently owner-gated. See [Cloud Runtime And Delivery Surfaces](docs/CLOUD_RUNTIME.md).
+
+### Circle Console trusted readback boundary
+
+The public service exposes a credentials-free, read-only readiness contract for a future Circle Console readback. A production owner supplies configuration through the environment only: `CIRCLE_CONSOLE_SUBSCRIPTION_ID`, `CIRCLE_CONSOLE_CONTRACT_ADDRESS` (must be the Arc Testnet `PolicySettlementV1` contract `0xc7682649a1aa60d0f74825ad2b812ee062178047`), `CIRCLE_CONSOLE_EVENT_SIGNATURE` (`PolicyCreated(bytes32,address,address,address,uint256,bytes32,bytes32,uint64,uint64)`), optional `CIRCLE_CONSOLE_EVENT_TOPIC`, `CURRENT_RELEASE_COMMIT` or `RENDER_GIT_COMMIT`, `CIRCLE_CONSOLE_WEBHOOK_HISTORY_URL`, and `CIRCLE_CONSOLE_EVENT_HISTORY_URL`.
+
+The trusted loader is injected server-side and never calls Circle APIs or creates a subscription by itself. It requires the exact subscription, contract, event signature, release commit, HTTPS webhook-delivery history, and HTTPS contract event history; missing, stale, historical, fixture, unauthenticated, mismatched, or credential-bearing sources remain `not_ready_fail_closed`. The typed receipt preserves read-only, no-wallet, no-chain-write, no-ERP-write, `external_actions=0` boundaries. Circle's event-monitor and history semantics are documented at [SCP event monitoring](https://developers.circle.com/contracts/scp-event-monitoring); webhook authenticity uses Circle's signed notification boundary described in [webhook notifications](https://developers.circle.com/wallets/webhook-notifications). This readiness contract is not a subscription, deployment, ERP posting, business close, Encode receipt, or Final submission.
+
+### Current-release readback readiness (local, fail-closed)
+
+`GET /api/v1/current-release-surface-readiness` exposes deterministic validators for a future authenticated Encode current-product readback, a Final late-email send receipt, and an Arc Testnet current-release receipt. Each requires the exact release ID, 40-hex commit and 64-hex manifest SHA plus its own surface fields. The default public view is `UNPROVEN`: it makes no Encode/API/email/Arc call, never contains a recipient identity, and does not turn the H118 programme Arc readback or owner ERP readback into a current public binding. A Final send receipt, when an owner supplies one, records `action_count=1` while the verifier itself remains `verifier_external_actions=0`; this is evidence of an owner action, not an action performed by the service. Arc evidence must bind deployment code/finality and separate `PolicyCreated`/`getPolicy` readbacks; missing, stale, fixture, unauthenticated or mismatched evidence stays `UNPROVEN`.
 
 ## Historical/support component: Arc Lab Enterprise OS E1
 
@@ -59,6 +69,7 @@ E1 exposes only sanitized GET/HEAD routes:
 - `GET /api/v1/public-boundary-consistency`
 - `GET /api/v1/reviewer-evidence-pack`
 - `GET /api/v1/final-submission-readiness`
+- `GET /api/v1/current-release-surface-readiness`
 - `GET /api/v1/final-demo-plan`
 - `GET /api/v1/circle-webhook-readiness`
 
@@ -106,12 +117,11 @@ claims.
 
 ## Current release materials
 
-- Product content ancestor: [`a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7`](https://github.com/gaysonloser/arc-payment-receipt/commit/a63fbcee1b02fb7f6d73a95d928f4f9d5ec2a2c7)
-- Publication base: [`9795c442f4c80464c2d54639a638f02060265be1`](https://github.com/gaysonloser/arc-payment-receipt/commit/9795c442f4c80464c2d54639a638f02060265be1); current `main` is established only by post-push remote readback.
+- Published baseline: [`4f1f4b99cd12084cadb28e851d8a47e2913e9118`](https://github.com/gaysonloser/arc-payment-receipt/commit/4f1f4b99cd12084cadb28e851d8a47e2913e9118); the H187 local candidate is not yet committed or bound to remote main.
 - Three-minute demo video: [`arc-enterprise-settlement-control-programme-final-3min.mp4`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/arc-enterprise-settlement-control-programme-final-3min.mp4)
 - Reviewer deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pdf)
 - Editable deck: [`Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx`](https://github.com/gaysonloser/arc-payment-receipt/releases/download/programme-final-20260810/Arc_Enterprise_Settlement_Programme_Deck_Current_V3.pptx)
-- Published runtime: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/); H183 alignment requires a separate deployment and live response readback after the GitHub push.
+- Published runtime: [Render `/current-mvp/`](https://arc-payment-receipt.onrender.com/current-mvp/); H187 alignment requires a separate owner deployment and live response readback after any GitHub publication.
 
 The separate Arc Lab Review Deck page retained below is a historical/support reviewer artifact. It is not the final three-minute demo video and does not replace the current PDF/PPTX deck above.
 

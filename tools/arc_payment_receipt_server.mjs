@@ -9,9 +9,11 @@ import {
   buildCircleConsoleReceipt,
   buildCircleConsoleReceiptPolicy,
   buildCircleConsoleReceiptReadiness,
+  buildCircleConsoleTrustedReadbackContract,
   buildCircleWebhookPolicy,
   buildCircleWebhookReadiness,
-  createCircleWebhookProcessor
+  createCircleWebhookProcessor,
+  createCircleConsoleTrustedReadbackLoader
 } from "./circle_contract_webhook_gate.mjs";
 import {
   currentMvpContentType,
@@ -100,14 +102,15 @@ export function buildCircleWebhookPublicView() {
   };
 }
 
-export function buildCircleConsoleReceiptReadinessView(policy, { trustedReadbackLoaderAvailable = false } = {}) {
+export function buildCircleConsoleReceiptReadinessView(policy, { trustedReadbackLoaderAvailable = false, trustedReadbackContract = null } = {}) {
   const validatorReadiness = buildCircleConsoleReceiptReadiness(policy ?? buildCircleConsoleReceiptPolicy());
-  const blockers = [...validatorReadiness.blockers];
-  if (!trustedReadbackLoaderAvailable) blockers.push("trusted_readback_loader_not_configured");
+  const contract = trustedReadbackContract;
+  const blockers = contract ? [...contract.blockers] : [...validatorReadiness.blockers];
+  if (!contract && !trustedReadbackLoaderAvailable) blockers.push("trusted_readback_loader_not_configured");
   return {
     schema: "arc.circle-console-receipt-readiness.v1",
     surface: "circle_console",
-    status: blockers.length === 0 ? "ready_for_trusted_circle_console_readback" : "not_ready_fail_closed",
+    status: contract ? contract.status : (blockers.length === 0 ? "ready_for_trusted_circle_console_readback" : "not_ready_fail_closed"),
     blockers,
     policy_binding: {
       chain_id: Number(policy?.chainId ?? 5042002),
@@ -117,6 +120,13 @@ export function buildCircleConsoleReceiptReadinessView(policy, { trustedReadback
       subscription_id_present: Boolean(policy?.subscriptionId),
       release_commit: policy?.releaseCommit || null
     },
+    trusted_readback_contract: contract ? {
+      schema: contract.schema,
+      status: contract.status,
+      blockers: contract.blockers,
+      read_history: contract.read_history,
+      loader: contract.loader
+    } : null,
     boundaries: {
       read_only: true,
       accepts_caller_supplied_receipt: false,
@@ -742,6 +752,289 @@ export function buildFinalSubmissionReadinessView(reviewerEvidencePack, finalAss
       wallet_or_chain_action: false,
       erp_or_circle_action: false
     }
+  };
+}
+
+// Current-release owner-gate readbacks are validated locally only.  These
+// contracts never call Encode, an email provider or Arc RPC; absent,
+// historical, fixture-backed or expired evidence remains UNPROVEN.
+export const CURRENT_SURFACE_RELEASE_ID = "verified-milestone-close-current-mvp-workbench-rc1";
+export const CURRENT_SURFACE_ARC_CHAIN_ID = 5042002;
+export const CURRENT_SURFACE_ARC_NETWORK = "ARC-TESTNET";
+export const CURRENT_POLICY_SETTLEMENT_DEPLOYED_CODE_SHA256 = "0ec144ba398f4557ee61d6585bc0ff9b83728ae235e5ebfcfb9e473624d52675";
+export const CURRENT_POLICY_SETTLEMENT_DEPLOYED_CODE_BYTES = 6877;
+const SURFACE_COMMIT_SHA = /^[0-9a-f]{40}$/;
+const SURFACE_MANIFEST_SHA = /^[0-9a-f]{64}$/;
+const SURFACE_TX_HASH = /^0x[0-9a-f]{64}$/;
+const SURFACE_ADDRESS = /^0x[0-9a-f]{40}$/;
+const SURFACE_POLICY_ID = /^0x[0-9a-f]{64}$/;
+const SURFACE_ID = /^[A-Za-z0-9._:-]{1,160}$/;
+const surfaceObject = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : null;
+const surfaceSafeInteger = (value, { minimum = 0 } = {}) => Number.isSafeInteger(value) && value >= minimum;
+const surfaceNumber = (value) => {
+  if (typeof value === "number") return Number.isSafeInteger(value) ? value : null;
+  if (typeof value === "string" && /^(?:0x[0-9a-f]+|[0-9]+)$/i.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+};
+const surfaceStatusSuccess = (value) => value === 1 || value === "0x1" || value === "1";
+const surfaceEqualAddress = (left, right) => String(left ?? "").toLowerCase() === String(right ?? "").toLowerCase();
+const surfaceRequiredId = (value) => typeof value === "string" && SURFACE_ID.test(value);
+const surfaceDate = (value) => {
+  const parsed = Date.parse(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const SURFACE_CREDENTIAL_KEY = /^(?:api[_-]?key|apikey|token|secret|password|authorization|bearer|credential|private[_-]?key|access[_-]?key)$/i;
+const SURFACE_CREDENTIAL_VALUE = /(?:^|[^a-z0-9])(?:api[_-]?key|apikey|token|secret|password|authorization|bearer|credential|private[_-]?key|access[_-]?key)(?:$|[^a-z0-9])/i;
+const decodeSurfaceBounded = (value, maxRounds = 4) => {
+  let current = String(value ?? "");
+  for (let round = 0; round < maxRounds; round += 1) {
+    let decoded;
+    try { decoded = decodeURIComponent(current); } catch { return null; }
+    if (decoded === current) return current;
+    current = decoded;
+  }
+  return current;
+};
+const surfaceCredentialPartsForbidden = (part) => {
+  const decoded = decodeSurfaceBounded(part);
+  if (decoded === null) return true;
+  for (const pair of decoded.replace(/^[?#]/, "").split(/[&;]/).filter(Boolean)) {
+    const separator = pair.indexOf("=");
+    const key = decodeSurfaceBounded(separator >= 0 ? pair.slice(0, separator) : pair);
+    const value = decodeSurfaceBounded(separator >= 0 ? pair.slice(separator + 1) : "");
+    if (key === null || value === null || SURFACE_CREDENTIAL_KEY.test(key) || SURFACE_CREDENTIAL_VALUE.test(value)) return true;
+  }
+  return false;
+};
+const safeSurfaceReadbackUrl = (value) => {
+  if (typeof value !== "string" || value.length > 2048) return false;
+  const decodedValue = decodeSurfaceBounded(value);
+  if (decodedValue === null || decodedValue.length > 2048) return false;
+  let url;
+  try { url = new URL(decodedValue); } catch { return false; }
+  if (url.protocol !== "https:" || url.username || url.password) return false;
+  const canonical = url.toString();
+  if (surfaceCredentialPartsForbidden(url.search) || surfaceCredentialPartsForbidden(url.hash)) return false;
+  const canonicalParts = `${new URL(canonical).search}${new URL(canonical).hash}`;
+  return !surfaceCredentialPartsForbidden(canonicalParts);
+};
+
+function surfaceBaseErrors(input, now, kind, expectedRelease) {
+  const errors = [];
+  const value = surfaceObject(input);
+  if (!value) return { value: null, errors: ["READBACK_REQUIRED"] };
+  if (value.kind !== kind) errors.push("READBACK_KIND_INVALID");
+  if (!surfaceObject(expectedRelease) || expectedRelease.release_id !== CURRENT_SURFACE_RELEASE_ID || !SURFACE_COMMIT_SHA.test(String(expectedRelease.commit_sha ?? "")) || !SURFACE_MANIFEST_SHA.test(String(expectedRelease.manifest_sha256 ?? ""))) errors.push("EXPECTED_RELEASE_REQUIRED");
+  if (surfaceObject(expectedRelease) && (value.release_id !== expectedRelease.release_id || value.commit_sha !== expectedRelease.commit_sha || value.manifest_sha256 !== expectedRelease.manifest_sha256)) errors.push("RELEASE_BINDING_INVALID");
+  if (value.authenticated !== true) errors.push("AUTHENTICATION_REQUIRED");
+  if (value.historical === true || value.local_fixture_only === true || value.fixture === true || value.source === "fixture") errors.push("HISTORICAL_OR_FIXTURE_FORBIDDEN");
+  if (value.verifier_external_actions !== undefined && value.verifier_external_actions !== 0) errors.push("VERIFIER_EXTERNAL_ACTIONS_FORBIDDEN");
+  if (kind !== "final_late_email_send_receipt" && value.external_actions !== 0) errors.push("EXTERNAL_ACTIONS_FORBIDDEN");
+  const observed = surfaceDate(value.observed_at);
+  const expires = surfaceDate(value.expires_at);
+  const nowMs = surfaceDate(now) ?? Date.now();
+  if (observed === null) errors.push("OBSERVED_AT_REQUIRED");
+  if (expires === null) errors.push("EXPIRES_AT_REQUIRED");
+  if (observed !== null && observed > nowMs + 5 * 60 * 1000) errors.push("OBSERVED_AT_IN_FUTURE");
+  if (observed !== null && nowMs - observed > 24 * 60 * 60 * 1000) errors.push("READBACK_EXPIRED");
+  if (expires !== null && nowMs > expires) errors.push("READBACK_EXPIRED");
+  if (observed !== null && expires !== null && expires < observed) errors.push("EXPIRY_BEFORE_OBSERVATION");
+  return { value, errors };
+}
+
+function surfaceResult(kind, errors, fields = {}) {
+  const clean = [...new Set(errors)];
+  return { kind, valid: clean.length === 0, status: clean.length === 0 ? "VERIFIED_READ_ONLY" : "UNPROVEN", current_release_bound: clean.length === 0, verifier_external_actions: 0, external_actions: fields.evidence_action_count ?? 0, errors: clean, ...fields };
+}
+
+export function validateEncodeAuthenticatedReadback(input, { now = new Date().toISOString(), expectedRelease = null } = {}) {
+  const { value, errors } = surfaceBaseErrors(input, now, "encode_authenticated_current_product_readback", expectedRelease);
+  if (!value) return surfaceResult("encode_authenticated_current_product_readback", errors, { readback_url: null });
+  if (!["submission_id", "encode_project_id", "checkpoint_id", "readback_id", "platform_receipt_id"].every((key) => surfaceRequiredId(String(value[key] ?? "")))) errors.push("ENCODE_RECEIPT_ID_BINDING_REQUIRED");
+  if (!value.encode_project_id || !value.checkpoint_id) errors.push("ENCODE_CHECKPOINT_BINDING_REQUIRED");
+  if (value.checkpoint_status !== "authenticated_current_product") errors.push("ENCODE_CHECKPOINT_STATUS_INVALID");
+  if (value.platform_status !== "authenticated_current_product") errors.push("ENCODE_PLATFORM_STATUS_INVALID");
+  const observed = surfaceDate(value.observed_at);
+  const platformObserved = surfaceDate(value.platform_observed_at);
+  if (platformObserved === null || observed === null || platformObserved !== observed) errors.push("ENCODE_PLATFORM_OBSERVED_AT_MISMATCH");
+  const savedFields = surfaceObject(value.saved_product_fields);
+  const savedLinks = surfaceObject(value.saved_links);
+  const savedFieldsSha = savedFields?.sha256 ?? value.saved_product_fields_sha256;
+  const savedFieldsCount = savedFields?.count ?? value.saved_product_fields_count;
+  const savedLinksSha = savedLinks?.sha256 ?? value.saved_links_sha256;
+  const savedLinksCount = savedLinks?.count ?? value.saved_links_count;
+  if (!SURFACE_MANIFEST_SHA.test(String(savedFieldsSha ?? "")) || !surfaceSafeInteger(savedFieldsCount, { minimum: 1 })) errors.push("ENCODE_SAVED_PRODUCT_FIELDS_BINDING_REQUIRED");
+  if (!SURFACE_MANIFEST_SHA.test(String(savedLinksSha ?? "")) || !surfaceSafeInteger(savedLinksCount, { minimum: 1 })) errors.push("ENCODE_SAVED_LINKS_BINDING_REQUIRED");
+  if (!safeSurfaceReadbackUrl(value.readback_url)) errors.push("READBACK_URL_INVALID");
+  if (value.http_status !== 200) errors.push("READBACK_HTTP_STATUS_INVALID");
+  return surfaceResult(value.kind, errors, {
+    submission_id: value.submission_id ?? null,
+    encode_project_id: value.encode_project_id ?? null,
+    checkpoint_id: value.checkpoint_id ?? null,
+    readback_id: value.readback_id ?? null,
+    platform_receipt_id: value.platform_receipt_id ?? null,
+    platform_status: value.platform_status ?? null,
+    platform_observed_at: value.platform_observed_at ?? null,
+    saved_product_fields: { sha256: savedFieldsSha ?? null, count: savedFieldsCount ?? null },
+    saved_links: { sha256: savedLinksSha ?? null, count: savedLinksCount ?? null },
+    readback_url: value.readback_url ?? null
+  });
+}
+
+const FINAL_TOP_LEVEL_FIELDS = new Set([
+  "kind", "schema", "release_id", "commit_sha", "manifest_sha256", "authenticated", "observed_at", "expires_at",
+  "verifier_external_actions", "external_actions", "historical", "local_fixture_only", "fixture", "source", "readback_url", "http_status",
+  "recipient_ref", "owner_confirmation", "action_count", "send_action_performed", "subject_sha256", "body_sha256", "assets_sha256", "links_sha256",
+  "send_receipt_id", "provider_message_id", "send_status", "sent_at", "delivery", "delivery_status", "delivery_receipt_id",
+  "delivery_observed_at", "delivery_authenticated"
+]);
+const FINAL_DELIVERY_FIELDS = new Set(["status", "receipt_id", "observed_at", "authenticated", "provider_message_id"]);
+const FINAL_FORBIDDEN_KEY = /(?:recipient|e[-_]?mail|identity|phone|customer|personal|contact|username|user[_-]?id|wallet|account|secret|token|password|api[_-]?key|bearer|authorization)/i;
+const FINAL_EMAIL_VALUE = /[^\s@]+@[^\s@]+\.[^\s@]+/;
+function inspectFinalSafety(value, path = "", errors = []) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => inspectFinalSafety(item, `${path}[${index}]`, errors));
+    return errors;
+  }
+  if (!surfaceObject(value)) return errors;
+  for (const [key, child] of Object.entries(value)) {
+    const keyPath = path ? `${path}.${key}` : key;
+    if (key !== "recipient_ref" && FINAL_FORBIDDEN_KEY.test(key)) errors.push("FINAL_PRIVACY_FIELD_FORBIDDEN");
+    if (!path && !FINAL_TOP_LEVEL_FIELDS.has(key)) errors.push("FINAL_FIELD_NOT_ALLOWLISTED");
+    if (path === "delivery" && !FINAL_DELIVERY_FIELDS.has(key)) errors.push("FINAL_DELIVERY_FIELD_NOT_ALLOWLISTED");
+    if (key === "recipient_ref") {
+      if (!surfaceRequiredId(String(child ?? ""))) errors.push("FINAL_RECIPIENT_REF_REQUIRED");
+    } else if (typeof child === "string" && FINAL_EMAIL_VALUE.test(child)) {
+      errors.push("FINAL_PRIVACY_VALUE_FORBIDDEN");
+    }
+    inspectFinalSafety(child, keyPath, errors);
+  }
+  return errors;
+}
+
+export function validateFinalLateEmailSendReceipt(input, { now = new Date().toISOString(), expectedRelease = null } = {}) {
+  const { value, errors } = surfaceBaseErrors(input, now, "final_late_email_send_receipt", expectedRelease);
+  if (!value) return surfaceResult("final_late_email_send_receipt", errors, { readback_url: null });
+  inspectFinalSafety(value, "", errors);
+  if (!/^[A-Za-z0-9._:-]{1,128}$/.test(String(value.recipient_ref ?? ""))) errors.push("FINAL_RECIPIENT_REF_REQUIRED");
+  for (const field of ["subject_sha256", "body_sha256", "assets_sha256", "links_sha256"]) if (!SURFACE_MANIFEST_SHA.test(String(value[field] ?? ""))) errors.push(`FINAL_${field.toUpperCase()}_BINDING_REQUIRED`);
+  if (value.owner_confirmation !== "GRANTED") errors.push("FINAL_OWNER_CONFIRMATION_REQUIRED");
+  if (value.action_count !== 1 || value.send_action_performed !== true) errors.push("FINAL_SEND_ACTION_RECEIPT_REQUIRED");
+  if (value.external_actions !== 1) errors.push("FINAL_EVIDENCE_ACTION_COUNT_INVALID");
+  if (!value.send_receipt_id || !value.provider_message_id) errors.push("FINAL_SEND_RECEIPT_BINDING_REQUIRED");
+  if (value.send_status !== "sent") errors.push("FINAL_SEND_STATUS_INVALID");
+  const nowMs = surfaceDate(now) ?? Date.now();
+  const observed = surfaceDate(value.observed_at);
+  const expires = surfaceDate(value.expires_at);
+  const sentAt = surfaceDate(value.sent_at);
+  if (sentAt === null) errors.push("FINAL_SENT_AT_REQUIRED");
+  else {
+    if (sentAt > nowMs + 5 * 60 * 1000) errors.push("FINAL_SENT_AT_IN_FUTURE");
+    if (observed !== null && observed < sentAt) errors.push("FINAL_OBSERVED_BEFORE_SENT");
+    if (expires !== null && sentAt > expires) errors.push("FINAL_SENT_AT_AFTER_EXPIRY");
+  }
+  const delivery = surfaceObject(value.delivery);
+  const deliveryStatus = delivery?.status ?? value.delivery_status;
+  const deliveryReceiptId = delivery?.receipt_id ?? value.delivery_receipt_id;
+  const deliveryAuthenticated = delivery?.authenticated ?? value.delivery_authenticated;
+  const deliveryProviderMessageId = delivery?.provider_message_id;
+  const deliveryObservedAt = surfaceDate(delivery?.observed_at ?? value.delivery_observed_at);
+  if (deliveryStatus !== "accepted" || !surfaceRequiredId(String(deliveryReceiptId ?? "")) || deliveryAuthenticated !== true) errors.push("FINAL_DELIVERY_READBACK_REQUIRED");
+  if (!surfaceRequiredId(String(deliveryProviderMessageId ?? ""))) errors.push("FINAL_DELIVERY_PROVIDER_MESSAGE_REQUIRED");
+  else if (deliveryProviderMessageId !== value.provider_message_id) errors.push("FINAL_DELIVERY_PROVIDER_MESSAGE_MISMATCH");
+  if (deliveryObservedAt === null) errors.push("FINAL_DELIVERY_OBSERVED_AT_REQUIRED");
+  else {
+    if (sentAt !== null && deliveryObservedAt < sentAt) errors.push("FINAL_DELIVERY_BEFORE_SENT");
+    if (observed !== null && observed < deliveryObservedAt) errors.push("FINAL_OBSERVED_BEFORE_DELIVERY");
+    if (deliveryObservedAt > nowMs + 5 * 60 * 1000) errors.push("FINAL_DELIVERY_IN_FUTURE");
+    if (expires !== null && deliveryObservedAt > expires) errors.push("FINAL_DELIVERY_AFTER_EXPIRY");
+  }
+  if (!safeSurfaceReadbackUrl(value.readback_url)) errors.push("READBACK_URL_INVALID");
+  if (value.http_status !== 200) errors.push("READBACK_HTTP_STATUS_INVALID");
+  return surfaceResult(value.kind, errors, {
+    evidence_action_count: value.action_count ?? 0,
+    send_receipt_id: value.send_receipt_id ?? null,
+    provider_message_id: value.provider_message_id ?? null,
+    delivery_status: deliveryStatus ?? null,
+    delivery_receipt_id: deliveryReceiptId ?? null,
+    readback_url: value.readback_url ?? null
+  });
+}
+
+function validateSurfaceReceiptEnvelope(receipt, prefix, expectedContractAddress) {
+  const errors = [];
+  if (!surfaceObject(receipt)) return [`${prefix}_RECEIPT_REQUIRED`];
+  if (!SURFACE_TX_HASH.test(String(receipt.tx_hash ?? ""))) errors.push(`${prefix}_TX_HASH_REQUIRED`);
+  if (!surfaceStatusSuccess(receipt.status)) errors.push(`${prefix}_STATUS_INVALID`);
+  if (surfaceNumber(receipt.block_number) === null || surfaceNumber(receipt.block_number) <= 0) errors.push(`${prefix}_BLOCK_NUMBER_INVALID`);
+  if (!SURFACE_TX_HASH.test(String(receipt.block_hash ?? ""))) errors.push(`${prefix}_BLOCK_HASH_INVALID`);
+  if (!surfaceEqualAddress(receipt.contract_address, expectedContractAddress)) errors.push(`${prefix}_CONTRACT_ADDRESS_INVALID`);
+  if (!['observed', 'finalized'].includes(receipt.finality_state)) errors.push(`${prefix}_FINALITY_REQUIRED`);
+  return errors;
+}
+
+function policyFieldEqual(left, right, field) {
+  if (["payer", "recipient", "reviewer"].includes(field)) return surfaceEqualAddress(left, right);
+  return String(left ?? "") === String(right ?? "");
+}
+function policyFieldsValid(fields) {
+  if (!surfaceObject(fields)) return false;
+  const bytes32Fields = ["policy_id", "milestone_id", "policy_version"];
+  const addressFields = ["payer", "recipient", "reviewer"];
+  const uintFields = ["cap6", "policy_expiry", "max_attestation_ttl"];
+  return bytes32Fields.every((field) => SURFACE_POLICY_ID.test(String(fields[field] ?? "")))
+    && addressFields.every((field) => SURFACE_ADDRESS.test(String(fields[field] ?? "")))
+    && uintFields.every((field) => surfaceSafeInteger(surfaceNumber(fields[field])));
+}
+
+export function validateArcTestnetCurrentReleaseReceipt(input, { now = new Date().toISOString(), expectedRelease = null } = {}) {
+  const { value, errors } = surfaceBaseErrors(input, now, "arc_testnet_current_release_receipt", expectedRelease);
+  if (!value) return surfaceResult("arc_testnet_current_release_receipt", errors, { readback_url: null });
+  if (value.network !== CURRENT_SURFACE_ARC_NETWORK || value.blockchain !== CURRENT_SURFACE_ARC_NETWORK || value.chain_id !== CURRENT_SURFACE_ARC_CHAIN_ID) errors.push("ARC_NETWORK_BINDING_INVALID");
+  if (!surfaceEqualAddress(value.contract_address, CURRENT_POLICY_SETTLEMENT_CONTRACT)) errors.push("ARC_CURRENT_CONTRACT_ADDRESS_REQUIRED");
+  if (value.deployed_code_sha256 !== CURRENT_POLICY_SETTLEMENT_DEPLOYED_CODE_SHA256 || value.deployed_code_bytes !== CURRENT_POLICY_SETTLEMENT_DEPLOYED_CODE_BYTES) errors.push("ARC_DEPLOYED_CODE_BINDING_INVALID");
+  const deployment = surfaceObject(value.deployment_receipt);
+  const createPolicy = surfaceObject(value.create_policy_receipt);
+  errors.push(...validateSurfaceReceiptEnvelope(deployment, "ARC_DEPLOYMENT", CURRENT_POLICY_SETTLEMENT_CONTRACT));
+  errors.push(...validateSurfaceReceiptEnvelope(createPolicy, "ARC_CREATE_POLICY", CURRENT_POLICY_SETTLEMENT_CONTRACT));
+  if (deployment && createPolicy && deployment.tx_hash === createPolicy.tx_hash) errors.push("ARC_RECEIPT_OPERATIONS_MUST_BE_DISTINCT");
+  if (deployment && (deployment.deployed_code_sha256 !== CURRENT_POLICY_SETTLEMENT_DEPLOYED_CODE_SHA256 || deployment.deployed_code_bytes !== CURRENT_POLICY_SETTLEMENT_DEPLOYED_CODE_BYTES)) errors.push("ARC_DEPLOYMENT_CODE_BINDING_INVALID");
+  const policyCreated = surfaceObject(value.policy_created);
+  const getPolicy = surfaceObject(value.get_policy_readback);
+  const policyArgs = surfaceObject(policyCreated?.args);
+  const expectedPolicyFields = ["policy_id", "payer", "recipient", "reviewer", "cap6", "milestone_id", "policy_version", "policy_expiry", "max_attestation_ttl"];
+  if (deployment && createPolicy && surfaceNumber(deployment.block_number) > surfaceNumber(createPolicy.block_number)) errors.push("ARC_DEPLOYMENT_MUST_PRECEDE_CREATE_POLICY");
+  if (policyCreated?.status !== "verified" || policyCreated.event_signature !== CURRENT_POLICY_CREATED_EVENT || !surfaceEqualAddress(policyCreated.contract_address, CURRENT_POLICY_SETTLEMENT_CONTRACT) || !createPolicy || policyCreated.tx_hash !== createPolicy.tx_hash || surfaceNumber(policyCreated.block_number) !== surfaceNumber(createPolicy.block_number) || policyCreated.block_hash !== createPolicy.block_hash || !surfaceSafeInteger(surfaceNumber(policyCreated.log_index)) || !policyFieldsValid(policyArgs)) errors.push("ARC_POLICY_CREATED_READBACK_REQUIRED");
+  if (policyCreated?.policy_id != null && policyCreated.policy_id !== policyArgs?.policy_id) errors.push("ARC_POLICY_CREATED_POLICY_ID_MISMATCH");
+  const getPolicyArgs = surfaceObject(getPolicy?.args);
+  const getPolicyResult = surfaceObject(getPolicy?.result);
+  const getPolicyBlock = surfaceNumber(getPolicy?.block_number);
+  const getPolicyCurrentBlock = surfaceNumber(getPolicy?.current_block_number);
+  const createPolicyBlock = surfaceNumber(createPolicy?.block_number);
+  if (getPolicy?.status !== "verified" || getPolicy.selector !== "getPolicy(bytes32)" || !surfaceEqualAddress(getPolicy.contract_address, CURRENT_POLICY_SETTLEMENT_CONTRACT) || getPolicy.readback_status !== "current" || !SURFACE_MANIFEST_SHA.test(String(getPolicy.readback_sha256 ?? "")) || !getPolicyArgs || getPolicyArgs.policy_id !== policyArgs?.policy_id || !policyFieldsValid(getPolicyResult) || !getPolicyResult || !expectedPolicyFields.every((field) => policyFieldEqual(getPolicyResult[field], policyArgs?.[field], field)) || getPolicyBlock === null || createPolicyBlock === null || getPolicyBlock < createPolicyBlock || !SURFACE_TX_HASH.test(String(getPolicy.block_hash ?? "")) || getPolicyCurrentBlock === null || getPolicyCurrentBlock < getPolicyBlock || (getPolicyBlock === createPolicyBlock && getPolicy.block_hash !== createPolicy?.block_hash)) errors.push("ARC_GET_POLICY_READBACK_REQUIRED");
+  if (!safeSurfaceReadbackUrl(value.readback_url)) errors.push("READBACK_URL_INVALID");
+  if (value.http_status !== 200) errors.push("READBACK_HTTP_STATUS_INVALID");
+  return surfaceResult(value.kind, errors, {
+    deployment_tx_hash: deployment?.tx_hash ?? null,
+    create_policy_tx_hash: createPolicy?.tx_hash ?? null,
+    contract_address: value.contract_address ?? null,
+    deployed_code_sha256: value.deployed_code_sha256 ?? null,
+    deployed_code_bytes: value.deployed_code_bytes ?? null,
+    readback_url: value.readback_url ?? null
+  });
+}
+
+export function buildCurrentReleaseSurfaceReadinessView({ encode = null, final = null, arc_testnet = null, expectedRelease = null, now = new Date().toISOString() } = {}) {
+  return {
+    release_id: CURRENT_SURFACE_RELEASE_ID,
+    external_actions: 0,
+    encode: validateEncodeAuthenticatedReadback(encode, { now, expectedRelease }),
+    final: validateFinalLateEmailSendReceipt(final, { now, expectedRelease }),
+    arc_testnet: validateArcTestnetCurrentReleaseReceipt(arc_testnet, { now, expectedRelease }),
+    boundaries: { no_api_calls: true, no_credentials: true, absent_or_historical_unproven: true, final_submission_receipt_proven: false }
   };
 }
 
@@ -1767,19 +2060,39 @@ export function createReceiptServer(options = {}) {
   const loadFinalAssetsEvidence = options.loadFinalAssetsEvidence ?? (() => loadJson(options.finalAssetsEvidencePath ?? DEFAULT_FINAL_ASSETS_EVIDENCE_PATH));
   const loadLogo = options.loadLogo ?? (() => readFile(options.logoPath ?? DEFAULT_LOGO_PATH));
   const loadFavicon = options.loadFavicon ?? (() => readFile(options.faviconPath ?? DEFAULT_FAVICON_PATH));
-  const circleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy({
+  const configuredCircleConsoleReceiptPolicy = options.circleConsoleReceiptPolicy ?? buildCircleConsoleReceiptPolicy({
     chainId: 5042002,
     contractAddress: options.circleConsoleContractAddress ?? runtimeEnvironment.CIRCLE_CONSOLE_CONTRACT_ADDRESS ?? CURRENT_POLICY_SETTLEMENT_CONTRACT,
     eventSignature: options.circleConsoleEventSignature ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_SIGNATURE ?? CURRENT_POLICY_CREATED_EVENT,
     eventTopic: options.circleConsoleEventTopic ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_TOPIC ?? "",
     subscriptionId: options.circleConsoleSubscriptionId ?? runtimeEnvironment.CIRCLE_CONSOLE_SUBSCRIPTION_ID ?? "",
-    releaseCommit: options.currentReleaseCommit ?? runtimeEnvironment.RENDER_GIT_COMMIT ?? runtimeEnvironment.CURRENT_RELEASE_COMMIT ?? ""
+    releaseCommit: options.currentReleaseCommit ?? runtimeEnvironment.RENDER_GIT_COMMIT ?? runtimeEnvironment.CURRENT_RELEASE_COMMIT ?? "",
+    webhookHistoryUrl: options.circleConsoleWebhookHistoryUrl ?? runtimeEnvironment.CIRCLE_CONSOLE_WEBHOOK_HISTORY_URL ?? "",
+    eventHistoryUrl: options.circleConsoleEventHistoryUrl ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_HISTORY_URL ?? "",
+    requireReadHistory: true
   });
+  const circleConsoleReceiptPolicy = {
+    ...configuredCircleConsoleReceiptPolicy,
+    requireReadHistory: true,
+    webhookHistoryUrl: String(configuredCircleConsoleReceiptPolicy.webhookHistoryUrl || options.circleConsoleWebhookHistoryUrl || runtimeEnvironment.CIRCLE_CONSOLE_WEBHOOK_HISTORY_URL || ""),
+    eventHistoryUrl: String(configuredCircleConsoleReceiptPolicy.eventHistoryUrl || options.circleConsoleEventHistoryUrl || runtimeEnvironment.CIRCLE_CONSOLE_EVENT_HISTORY_URL || "")
+  };
   const loadCircleConsoleReadback = typeof options.loadCircleConsoleReadback === "function"
     ? options.loadCircleConsoleReadback
     : null;
+  const trustedReadbackContract = options.trustedReadbackContract ?? buildCircleConsoleTrustedReadbackContract({
+    policy: circleConsoleReceiptPolicy,
+    webhookHistoryUrl: options.circleConsoleWebhookHistoryUrl ?? runtimeEnvironment.CIRCLE_CONSOLE_WEBHOOK_HISTORY_URL ?? circleConsoleReceiptPolicy.webhookHistoryUrl,
+    eventHistoryUrl: options.circleConsoleEventHistoryUrl ?? runtimeEnvironment.CIRCLE_CONSOLE_EVENT_HISTORY_URL ?? circleConsoleReceiptPolicy.eventHistoryUrl,
+    loadReadback: loadCircleConsoleReadback
+  });
+  const trustedReadbackLoader = createCircleConsoleTrustedReadbackLoader({
+    contract: trustedReadbackContract,
+    loadReadback: loadCircleConsoleReadback
+  });
   const circleConsoleReceiptReadiness = () => buildCircleConsoleReceiptReadinessView(circleConsoleReceiptPolicy, {
-    trustedReadbackLoaderAvailable: loadCircleConsoleReadback !== null
+    trustedReadbackLoaderAvailable: loadCircleConsoleReadback !== null,
+    trustedReadbackContract
   });
   const circleWebhookProcessor = options.circleWebhookProcessor ?? createCircleWebhookProcessor({
     environment: runtimeEnvironment,
@@ -2210,6 +2523,11 @@ export function createReceiptServer(options = {}) {
         return;
       }
 
+      if (url.pathname === "/api/v1/current-release-surface-readiness") {
+        json(response, 200, buildCurrentReleaseSurfaceReadinessView(), request.method);
+        return;
+      }
+
       if (url.pathname === "/api/v1/final-demo-plan") {
         const [qualityHold, manufacturingProgress, wallet, appKit, agentIdentity, externalRouteIntake, deliverySurfaces, publicTrace, finalAssetsEvidence] = await Promise.all([
           loadManufacturing(), loadManufacturingProgressReport(), loadWalletRecovery(), loadAppKit(), loadAgentIdentity(), loadExternalRouteIntake(), loadDeliverySurfaces(), loadPublicTrace(), loadFinalAssetsEvidence()
@@ -2238,7 +2556,7 @@ export function createReceiptServer(options = {}) {
         }
         let readback;
         try {
-          readback = await loadCircleConsoleReadback();
+          readback = await trustedReadbackLoader();
         } catch {
           json(response, 503, {
             accepted: false,
