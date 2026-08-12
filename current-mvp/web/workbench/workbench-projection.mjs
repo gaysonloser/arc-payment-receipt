@@ -197,6 +197,38 @@ const stable = (value) => {
   if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
   return JSON.stringify(value);
 };
+
+const publicProductIdentity = (projection) => {
+  const releaseId = projection?.release_id || CURRENT_RELEASE_WORKBENCH_ID;
+  const scenario = projection?.scenario;
+  const canonicalEventKey = projection?.receipt?.canonical_event_key;
+  if (!scenario || !canonicalEventKey) return null;
+  return `${releaseId}:${scenario}:${canonicalEventKey}`;
+};
+
+/**
+ * Canonical, public-only projection digest used by the local idempotency seam.
+ * It includes typed/readback semantics and excludes runtime, packet, exchange
+ * and other governance selectors from the digest input.
+ */
+export const canonicalProjectionPayloadDigest = (projection, key = publicProductIdentity(projection)) => stable({
+  key,
+  release_id: projection?.release_id || CURRENT_RELEASE_WORKBENCH_ID,
+  scenario: projection?.scenario,
+  status: projection?.status,
+  origin: projection?.origin,
+  profile: projection?.profile,
+  fields: projection?.fields,
+  receipt: projection?.receipt,
+  typed_readbacks: projection?.typed_readbacks,
+  consequence_preview: projection?.consequence_preview,
+  erp_consequence_allowed: projection?.erp_consequence_allowed,
+  erp_consequence_counts: projection?.erp_consequence_counts,
+  business_close_state: projection?.business_close_state,
+  primary_action: projection?.primary_action,
+  dapp: projection?.dapp,
+  simulation: projection?.simulation
+});
 const SIMULATION_OBJECT_ID = "simulation";
 const SIMULATION_SCHEMA = "arc-erp.product-construction.v3.2.c15.simulation.v1";
 
@@ -673,24 +705,15 @@ export function validateCurrentReleaseProjection(projection, { scenario } = {}) 
 export function consumeCurrentReleaseProjection(projection, ledger = new Map()) {
   const p = object(projection);
   if (!p || p.status !== "MATCHED" || p.erp_consequence_allowed !== true) return { state: "OPEN", consequence_count: 0, error: "PROJECTION_NOT_CONSUMABLE" };
-  const canonicalEventKey = p.receipt?.canonical_event_key;
-  if (!canonicalEventKey) return { state: "OPEN", consequence_count: 0, error: "CANONICAL_EVENT_KEY_REQUIRED" };
-  const key = `${p.scenario}:${canonicalEventKey}`;
-  const fingerprint = stable({
-    key,
-    origin: p.origin,
-    receipt: p.receipt,
-    typed_readbacks: p.typed_readbacks,
-    consequence_preview: p.consequence_preview,
-    erp_consequence_counts: p.erp_consequence_counts,
-    business_close_state: p.business_close_state
-  });
+  const key = publicProductIdentity(p);
+  if (!key) return { state: "OPEN", consequence_count: 0, error: "CANONICAL_EVENT_KEY_REQUIRED" };
+  const digest = canonicalProjectionPayloadDigest(p, key);
   const prior = ledger.get(key);
   if (!prior) {
-    ledger.set(key, fingerprint);
+    ledger.set(key, digest);
     return { state: "new", consequence_count: 1, key };
   }
-  if (prior === fingerprint) return { state: "DUPLICATE_NOOP", consequence_count: 1, key };
+  if (prior === digest) return { state: "DUPLICATE_NOOP", consequence_count: 1, key };
   return { state: "CONFLICT_REJECT", consequence_count: 1, key, error: "IMMUTABLE_PAYLOAD_CONFLICT" };
 }
 

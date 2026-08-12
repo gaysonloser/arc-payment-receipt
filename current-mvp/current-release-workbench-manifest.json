@@ -3,11 +3,11 @@
   "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
   "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
   "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
-  "content_identity_sha256": "0ca8b0d16a42d36cd456473a22f6fab959117a81a8ef295ea3cd058781778681",
+  "content_identity_sha256": "158466d4e9239d36a3d97e1ae22150f40fbb2c3f4df3c71a538613b17af902af",
   "manifest_sha256_self_excluded": true,
   "release_binding": {
     "model": "content_addressed_external_receipt",
-    "content_identity_sha256": "0ca8b0d16a42d36cd456473a22f6fab959117a81a8ef295ea3cd058781778681",
+    "content_identity_sha256": "158466d4e9239d36a3d97e1ae22150f40fbb2c3f4df3c71a538613b17af902af",
     "self_authenticating_commit": false,
     "github_commit": null,
     "render_deployment_id": null,
@@ -169,14 +169,14 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 41426,
-      "sha256": "a2ee3cd5f71b0a01c27c5d8b8a77e18944091b14b779f7d2afe869202d25e871"
+      "bytes": 42114,
+      "sha256": "e7fdc59cf4edcc0c6b6fc4d15e30e26cc1b457508043a384a6432136b2865c63"
     },
     {
       "path": "tools/current_mvp_engineering_support.test.mjs",
       "role": "test",
-      "bytes": 6962,
-      "sha256": "90f3f4f9ce67f6ea9f3b35a4e1323743dca0d901489bc84c0af737c5a198ee47"
+      "bytes": 7748,
+      "sha256": "0dc4abc7865660f494a54630a4309bd24abd8e0256919231201eee1a96c6521b"
     },
     {
       "path": "tools/build_current_release_workbench_manifest.mjs",
@@ -491,8 +491,8 @@
     },
     {
       "path": "web/workbench/workbench-projection.mjs",
-      "bytes": 32504,
-      "sha256": "520aa918d6cdb90bfb44e8dc2457ad6d924dcd78cbe2e4ade6f5cf0bd122d12b",
+      "bytes": 33538,
+      "sha256": "512f83654fd698d6975f39f76f30e79cb443b108662bdfffa09e675a350bfa72",
       "mode": "100644",
       "source_reference": "release/arc-payment-receipt-public/current-mvp/web/workbench/workbench-projection.mjs",
       "source_is_candidate": true

@@ -12,6 +12,7 @@ import {
   CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE,
   buildAuthorityObservation,
   buildTypedReadbacks,
+  canonicalProjectionPayloadDigest,
   consumeCurrentReleaseProjection,
   projectCurrentReleaseWorkbench,
   validateCurrentReleaseProjection,
@@ -438,17 +439,26 @@ test("ERP proposal/readback is a separate typed boundary", () => {
   assert.match(callerFlag.errors.join(" "), /ERP_READBACK_CALLER_OUTCOME_FORBIDDEN/);
 });
 
-test("same projection retry is DUPLICATE_NOOP and changed payload is a conflict", () => {
-  const scenario = "employee_payable";
-  const observation = buildAuthorityObservation(scenario);
-  const projection = projectCurrentReleaseWorkbench({ scenario, ...observation });
-  const ledger = new Map();
-  assert.equal(consumeCurrentReleaseProjection(projection, ledger).state, "new");
-  assert.equal(consumeCurrentReleaseProjection(projection, ledger).state, "DUPLICATE_NOOP");
-  const changed = structuredClone(projection);
-  changed.typed_readbacks.invoice.party_id = "mutated-erp-party";
-  assert.equal(consumeCurrentReleaseProjection(changed, ledger).state, "CONFLICT_REJECT");
-  const missingKey = structuredClone(projection);
+test("all seven public projections use a stable public identity and canonical typed-readback digest", () => {
+  for (const scenario of CURRENT_RELEASE_WORKBENCH_SCENARIOS) {
+    const observation = buildAuthorityObservation(scenario);
+    const projection = projectCurrentReleaseWorkbench({ scenario, ...observation });
+    const ledger = new Map();
+    const first = consumeCurrentReleaseProjection(projection, ledger);
+    const expectedKey = `${projection.release_id}:${scenario}:${projection.receipt.canonical_event_key}`;
+    assert.equal(first.state, "new", scenario);
+    assert.equal(first.key, expectedKey, scenario);
+    const digest = canonicalProjectionPayloadDigest(projection, expectedKey);
+    assert.equal(ledger.get(expectedKey), digest, scenario);
+    assert.equal(consumeCurrentReleaseProjection(structuredClone(projection), ledger).state, "DUPLICATE_NOOP", scenario);
+
+    const changed = structuredClone(projection);
+    changed.typed_readbacks.invoice.party_id = `${changed.typed_readbacks.invoice.party_id}-mutated`;
+    assert.notEqual(canonicalProjectionPayloadDigest(changed, expectedKey), digest, scenario);
+    assert.equal(consumeCurrentReleaseProjection(changed, ledger).state, "CONFLICT_REJECT", scenario);
+  }
+
+  const missingKey = projectCurrentReleaseWorkbench({ scenario: "employee_payable", ...buildAuthorityObservation("employee_payable") });
   delete missingKey.receipt.canonical_event_key;
   assert.equal(consumeCurrentReleaseProjection(missingKey, new Map()).state, "OPEN");
   assert.equal(consumeCurrentReleaseProjection(missingKey, new Map()).error, "CANONICAL_EVENT_KEY_REQUIRED");

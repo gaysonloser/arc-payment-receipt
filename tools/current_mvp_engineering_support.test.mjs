@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -30,6 +30,16 @@ const PUBLIC_IMPORT_GRAPH = [
   "current-mvp/web/c15-contract.mjs",
   "current-mvp/web/settlement-case.mjs"
 ].map((path) => join(ROOT, path));
+
+async function listPublicFiles(root, current = root) {
+  const files = [];
+  for (const entry of await readdir(current, { withFileTypes: true })) {
+    const path = join(current, entry.name);
+    if (entry.isDirectory()) files.push(...await listPublicFiles(root, path));
+    else if (entry.isFile() && /\.(?:html|json|mjs)$/.test(entry.name)) files.push(path);
+  }
+  return files.sort();
+}
 
 test("A12 workflow route is a distinct primary workspace route, not an inspector-only route", () => {
   const state = createA12WorkbenchState({ scenario: "customer_invoice_receipt" });
@@ -93,6 +103,13 @@ test("public browser import graph does not expose internal governance selectors 
   assert.doesNotMatch(source, /["'](?:packet|exchange|handoff)[_-]?(?:id|sha256)?["']\s*:/i);
   assert.doesNotMatch(source, /data-a12-batch/);
   assert.doesNotMatch(source, /fixture-engine\.mjs\?rev=[^"\n]*(?:r[67]|runtime|packet|manifest|hash)/i);
+});
+
+test("current-mvp public source recursively excludes retired identity selectors", async () => {
+  const files = await listPublicFiles(join(ROOT, "current-mvp"));
+  const source = (await Promise.all(files.map((path) => readFile(path, "utf8")))).join("\n");
+  assert.equal(source.includes("identity_bundle"), false);
+  assert.equal(source.includes("projection_fingerprint"), false);
 });
 
 test("canonical hash restoration preserves the selected ERP workspace", () => {
