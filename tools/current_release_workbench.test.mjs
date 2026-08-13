@@ -37,7 +37,7 @@ import {
   a12WorkbenchRoute,
   parseA12WorkbenchRoute
 } from "../current-mvp/web/fixture-engine.mjs";
-import { a12BrowserMeasurementContract, a12MilestoneOutcomeFromKey, a12ReconciliationRows, a12RuntimeLayoutMetrics, a12UiFilteredQueue, a12UiMarkup, a12WorkspaceFocusTarget, a12WorkspacePrimaryMarkup } from "../current-mvp/web/navigation-workspace.mjs";
+import { a12BrowserMeasurementContract, a12MilestoneOutcomeFromKey, a12ReconciliationRows, a12RuntimeLayoutMetrics, a12UiFilteredQueue, a12UiMarkup, a12UiPublicReceiptValue, a12WorkspaceFocusTarget, a12WorkspacePrimaryMarkup } from "../current-mvp/web/navigation-workspace.mjs";
 import {
   CONTENT_MANIFEST_SCHEMA,
   CURRENT_MVP_ROOT,
@@ -454,6 +454,23 @@ test("mounted inspectors expose policy, provenance, failure and fee depth withou
   assert.deepEqual(a12BalanceSufficiency({ principalBalanceAmount6: "499", requiredPrincipalAmount6: "500", gasBalanceNative18: "300", maximumFeeNative18: "301" }), { principalBalanceSufficient: false, gasBalanceSufficient: false, balanceSufficient: false });
   state = { ...state, inspectorTab: "Arc" };
   let markup = a12UiMarkup(projectA12Workbench(state), state);
+  const structuredReceiptIds = [
+    "policy_event_expected_observed_status_source",
+    "erc20_transfer_expected_observed_status_source",
+    "arc_system_transfer_expected_observed_status_source",
+    "getter_expected_observed_status_source"
+  ];
+  const structuredReceiptFields = projectA12Workbench(state).inspector.receiptFields.filter((field) => structuredReceiptIds.includes(field.fieldId));
+  assert.equal(structuredReceiptFields.length, 4);
+  for (const field of structuredReceiptFields) {
+    const publicValue = a12UiPublicReceiptValue(field.value);
+    for (const label of ["Expected:", "Observed:", "Status:", "Source:"]) assert.match(publicValue, new RegExp(label));
+    assert.doesNotMatch(publicValue, /\[object Object\]/);
+    assert.doesNotMatch(publicValue, /(?:r[0-9]+|runtime|packet|manifest|sha256|governance)/i);
+    assert.match(markup, new RegExp(field.fieldId));
+  }
+  assert.doesNotMatch(markup, /\[object Object\]/);
+  assert.doesNotMatch(markup, /r[0-9]+-independent-/i);
   for (const fact of ["amount6 cap / validUntil", "attestation nonce / replay guard", "payer / recipient / reviewer", "emitter", "logIndex", "block/log order is authoritative", "Wrong network · chainId 5042001 ≠ 5042002", "Final status 0"]) assert.match(markup, new RegExp(fact));
   assert.match(markup, /Status 1 \+ readback mismatch/);
   state = { ...state, inspectorTab: "Ledger" };
@@ -465,6 +482,23 @@ test("mounted inspectors expose policy, provenance, failure and fee depth withou
   assert.match(staleView.canvas.recovery, /Refresh validUntil \/ TTL evidence/);
   assert.equal(staleView.canvas.networkFee.effective, null);
   assert.equal(Date.parse(staleView.canvas.policy.observedAt) > Date.parse(staleView.canvas.policy.validUntil), true);
+});
+
+test("every mounted inspector scenario stays free of raw object coercion", () => {
+  for (const scenario of A12_SEVEN_SCENARIO_IDS) {
+    for (const inspectorTab of A12_C15_TABS) {
+      const state = { ...createA12WorkbenchState({ scenario }), inspectorTab };
+      assert.doesNotMatch(a12UiMarkup(projectA12Workbench(state), state), /\[object Object\]/, `${scenario}/${inspectorTab}`);
+    }
+  }
+  assert.equal(a12UiPublicReceiptValue(1n), "1");
+  assert.equal(
+    a12UiPublicReceiptValue({ expected: { b: 2, a: 1 }, observed: null, status: "matched", source: "r11-independent-fixture" }),
+    "Expected: { A: 1 · B: 2 } · Observed: Not provided · Status: matched · Source: Typed local source"
+  );
+  let deeplyNestedArray = "leaf";
+  for (let depth = 0; depth < 15_000; depth += 1) deeplyNestedArray = [deeplyNestedArray];
+  assert.equal(a12UiPublicReceiptValue(deeplyNestedArray), "Structured value");
 });
 
 test("six ERP routes mount distinct primary jobs and exact focus targets", () => {
