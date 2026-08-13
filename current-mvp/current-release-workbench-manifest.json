@@ -3,11 +3,11 @@
   "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
   "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
   "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
-  "content_identity_sha256": "ef916e84dd43ec017a4b47c0806a79ef88c857e43055c0cf7ee91c3e86d459c3",
+  "content_identity_sha256": "af86fdc635bff29d6723e175b610e45bde138877625a83cc8181ab6c4c9fc9c0",
   "manifest_sha256_self_excluded": true,
   "release_binding": {
     "model": "content_addressed_external_receipt",
-    "content_identity_sha256": "ef916e84dd43ec017a4b47c0806a79ef88c857e43055c0cf7ee91c3e86d459c3",
+    "content_identity_sha256": "af86fdc635bff29d6723e175b610e45bde138877625a83cc8181ab6c4c9fc9c0",
     "self_authenticating_commit": false,
     "github_commit": null,
     "render_deployment_id": null,
@@ -169,8 +169,8 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 61510,
-      "sha256": "ab402e28e3a52453457ed6d8ce4212205c05070535b1d80bbf85310a6edf48b8"
+      "bytes": 63981,
+      "sha256": "adf464df6c67f3f2848237b0097bce7c969ec1d94ed8c5a694ff08070fc0a4e8"
     },
     {
       "path": "tools/current_mvp_engineering_support.test.mjs",
@@ -499,8 +499,8 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 175320,
-      "sha256": "8fa9305afd98b702729d8db375e86c4c4d7bc6b29f4913cdac945343094734e3",
+      "bytes": 180294,
+      "sha256": "f75816864c54c049152b9a9977050cea5d31b315a9eb7cf44a12b47de65e32fe",
       "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,

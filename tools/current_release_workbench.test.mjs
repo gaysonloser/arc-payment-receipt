@@ -306,6 +306,16 @@ test("UI correction keeps business focus visible while progressive disclosure an
   assert.match(navigation, /@media\(max-width:1600px\).*\.a12-object-summary\{grid-template-columns:repeat\(2/);
 });
 
+test("operational text floor wins over legacy compact declarations", async () => {
+  const navigation = await readFile(join(CURRENT_MVP_ROOT, "web/navigation-workspace.mjs"), "utf8");
+  const floorRule = ".a12-shell-status,.a12-state-pill,.a12-object-ref button,.a12-origin-entry-option small,.a12-live,.a12-bottom-action .a12-kicker,.a12-field-hint,.a12-disclosure>summary span,.a12-status-meta,.a12-receipt-field b,.a12-receipt-field span,.a12-object-row b,.a12-object-row span,.a12-object-row small,.a12-causal-stage strong,.a12-causal-stage span,.a12-causal-stage small{font-size:12px!important}";
+  const floorIndex = navigation.lastIndexOf(floorRule);
+  assert.notEqual(floorIndex, -1);
+  for (const compactDeclaration of [".a12-shell-status{min-height:30px;gap:5px;padding:4px 7px;white-space:nowrap;font-size:11px}", ".a12-state-pill{display:inline-flex!important", ".a12-object-ref button{min-height:30px", ".a12-origin-entry-option small{overflow:hidden", ".a12-live{position:fixed"]) {
+    assert.ok(floorIndex > navigation.lastIndexOf(compactDeclaration), `${compactDeclaration} must be overridden by the operational floor`);
+  }
+});
+
 test("R1 UI correction keeps active navigation persistent, summaries readable, and route restore notice-free", async () => {
   const navigation = await readFile(join(CURRENT_MVP_ROOT, "web/navigation-workspace.mjs"), "utf8");
   const fixture = await readFile(join(CURRENT_MVP_ROOT, "web/fixture-engine.mjs"), "utf8");
@@ -522,6 +532,13 @@ test("six ERP routes mount distinct primary jobs and exact focus targets", () =>
   assert.equal(rows.length, 5);
   assert.equal(rows[0].observed, "missing");
   assert.equal(rows[0].status, "blocking");
+  assert.equal(rows[0].recoveryAction, "Open Arc evidence");
+  assert.equal(rows[0].actionTab, "Arc");
+  assert.equal(rows[0].actionable, true);
+  assert.match(markup, /data-a12-reconciliation-action/);
+  assert.match(markup, /data-a12-reconciliation-consequence/);
+  assert.match(markup, /Receipt is not matched; ERP proposal stays held/);
+  assert.match(markup, /data-a12-workspace="general-ledger" disabled aria-disabled="true">Review non-posting journal proposal/);
   state = createA12WorkbenchState({ scenario: "supplier_payable" });
   state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "mismatch" });
   state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
@@ -530,6 +547,7 @@ test("six ERP routes mount distinct primary jobs and exact focus targets", () =>
   assert.equal(rows[0].locked, "500");
   assert.equal(rows[0].observed, "499");
   assert.equal(rows[0].status, "blocking");
+  assert.equal(rows[0].recoveryAction, "Inspect erc20_transfer.amount6");
   state = createA12WorkbenchState({ scenario: "supplier_payable" });
   state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "stale" });
   state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
@@ -538,6 +556,18 @@ test("six ERP routes mount distinct primary jobs and exact focus targets", () =>
   assert.match(rows[0].locked, /within TTL/);
   assert.match(rows[0].observed, /stale · confirmations 1/);
   assert.equal(rows[0].status, "blocking");
+  assert.equal(rows[0].recoveryAction, "Refresh receipt TTL");
+  state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "matched" });
+  state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
+  markup = a12WorkspacePrimaryMarkup(projectA12Workbench(state), state, []);
+  assert.match(markup, /data-matcher-state="matched"/);
+  assert.match(markup, /Receipt matched; journal proposal may be reviewed/);
+  assert.doesNotMatch(markup, /data-a12-workspace="general-ledger" disabled/);
+  assert.match(markup, /Payment Entry/);
+  assert.match(markup, /Bank Transaction/);
+  assert.match(markup, /GL \/ PLED/);
+  assert.match(markup, /Outstanding \/ close/);
   state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "general-ledger" });
   markup = a12WorkspacePrimaryMarkup(projectA12Workbench(state), state, []);
   assert.match(markup, /id="ledger-table"/);
