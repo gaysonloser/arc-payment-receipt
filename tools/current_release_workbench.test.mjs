@@ -353,7 +353,12 @@ test("Milestone desk is an accounting document center with a single five-step de
   assert.match(navigation, /grid-template-columns:minmax\(0,1\.55fr\) minmax\(320px,\.78fr\)/);
   assert.match(navigation, /\.a12-object-summary\{display:none\}/);
   assert.match(navigation, /\.a12-object-line\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
-  assert.match(navigation, /\.a12-workspace-guide img\{width:48px;height:48px\}/);
+  assert.match(navigation, /\.a12-workspace-guide\{display:none\}/);
+  assert.match(navigation, /@media\(min-width:721px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-shell\{display:grid;grid-template-columns:minmax\(160px,1fr\) repeat\(3,max-content\)/);
+  assert.match(navigation, /@media\(max-width:720px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-shell\{display:grid;grid-template-columns:1fr/);
+  assert.match(navigation, /\.a12-shell-status:nth-child\(n\+5\)\{display:none\}/);
+  assert.match(navigation, /\.a12-case-header h1\{font-family:Georgia,[^}]*font-size:26px/);
+  assert.match(navigation, /\.a12-object-ref\{min-height:44px/);
   assert.match(navigation, /\.a12-canvas\{padding:16px 22px 92px\}/);
   assert.match(navigation, /\.a12-bottom-action\{position:fixed;[^}]*min-height:72px/);
   assert.match(navigation, /Final visual closeout:[\s\S]*?\.a12-canvas\{padding-bottom:92px\}[\s\S]*?\.a12-bottom-action\{min-height:72px/);
