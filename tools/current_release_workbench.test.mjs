@@ -36,7 +36,7 @@ import {
   a12WorkbenchRoute,
   parseA12WorkbenchRoute
 } from "../current-mvp/web/fixture-engine.mjs";
-import { a12BrowserMeasurementContract, a12RuntimeLayoutMetrics, a12UiFilteredQueue, a12UiMarkup, a12WorkspacePrimaryMarkup } from "../current-mvp/web/navigation-workspace.mjs";
+import { a12BrowserMeasurementContract, a12MilestoneOutcomeFromKey, a12ReconciliationRows, a12RuntimeLayoutMetrics, a12UiFilteredQueue, a12UiMarkup, a12WorkspaceFocusTarget, a12WorkspacePrimaryMarkup } from "../current-mvp/web/navigation-workspace.mjs";
 import {
   CONTENT_MANIFEST_SCHEMA,
   CURRENT_MVP_ROOT,
@@ -339,6 +339,11 @@ test("Milestone desk is an accounting document center with a single five-step de
   for (const label of ["Counterparty", "Open item", "Principal", "Status", "Gayson guide", "next owner", "recovery"]) assert.match(markup, new RegExp(label));
   assert.equal((markup.match(/data-a12-milestone-outcome=/g) ?? []).length, 3);
   assert.match(markup, /<button type="button" class="a12-decision-row/);
+  assert.match(markup, /data-testid="milestone-decision-states" role="radiogroup" aria-labelledby="milestone-decision-heading"/);
+  assert.match(markup, /id="milestone-decision-heading"/);
+  assert.equal((markup.match(/role="radio"/g) ?? []).length, 3);
+  assert.equal((markup.match(/tabindex="0"/g) ?? []).length, 1);
+  assert.equal((markup.match(/tabindex="-1"/g) ?? []).length, 2);
   assert.doesNotMatch(markup, /a12-command/);
   assert.doesNotMatch(fullMarkup, /class="a12-command"/);
   assert.equal((fullMarkup.match(/data-a12-primary/g) ?? []).length, 1);
@@ -346,6 +351,16 @@ test("Milestone desk is an accounting document center with a single five-step de
   assert.match(navigation, /const commandMarkup = isMilestoneDesk \? ""/);
   assert.match(navigation, /const supportingMarkup = isMilestoneDesk \? fieldsMarkup/);
   assert.match(navigation, /grid-template-columns:minmax\(0,1\.55fr\) minmax\(320px,\.78fr\)/);
+  assert.match(navigation, /\.a12-object-summary\{display:none\}/);
+  assert.match(navigation, /\.a12-object-line\{display:grid;grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+  assert.match(navigation, /\.a12-workspace-guide img\{width:48px;height:48px\}/);
+  assert.match(navigation, /\.a12-canvas\{padding:16px 22px 92px\}/);
+  assert.match(navigation, /\.a12-bottom-action\{position:fixed;[^}]*min-height:72px/);
+  assert.match(navigation, /Final visual closeout:[\s\S]*?\.a12-canvas\{padding-bottom:92px\}[\s\S]*?\.a12-bottom-action\{min-height:72px/);
+  assert.match(navigation, /@media\(max-width:1050px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-canvas\{padding-bottom:104px\}[^}]+\.a12-bottom-action\{min-height:76px/);
+  assert.match(navigation, /@media\(max-width:720px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-canvas\{padding-bottom:24px\}[^}]+\.a12-bottom-action\{position:static;min-height:88px/);
+  assert.match(navigation, /\["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"\]/);
+  assert.match(navigation, /SELECT_MILESTONE_OUTCOME/);
   assert.match(index, /navigation-workspace\.mjs\?rev=v3-2-a12-r4-milestone-document-center/);
   assert.equal(a12RuntimeLayoutMetrics(1440, 1024, 1).overflowX, "none");
   assert.equal(a12RuntimeLayoutMetrics(1024, 768, 2).inspectorMode, "focus_trapped_drawer");
@@ -394,6 +409,68 @@ test("mounted milestone journey advances through evidence, approvals and journal
     assert.match(exceptionMarkup, /Payable stays OPEN/);
     assert.equal(a12MilestoneFlow(exceptionState).step, "recovery");
   }
+});
+
+test("milestone radio keyboard navigation changes the real reducer state and roving tab stop", () => {
+  const outcomes = ["matched", "stale", "mismatch"];
+  assert.equal(a12MilestoneOutcomeFromKey(outcomes, "matched", "ArrowRight"), "stale");
+  assert.equal(a12MilestoneOutcomeFromKey(outcomes, "stale", "ArrowDown"), "mismatch");
+  assert.equal(a12MilestoneOutcomeFromKey(outcomes, "matched", "ArrowLeft"), "mismatch");
+  assert.equal(a12MilestoneOutcomeFromKey(outcomes, "mismatch", "Home"), "matched");
+  assert.equal(a12MilestoneOutcomeFromKey(outcomes, "matched", "End"), "mismatch");
+  let state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  const selected = a12MilestoneOutcomeFromKey(outcomes, "matched", "ArrowRight");
+  state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: selected });
+  const markup = a12WorkspacePrimaryMarkup(projectA12Workbench(state), state, []);
+  assert.equal(state.matcherState, "stale");
+  assert.match(markup, /data-a12-milestone-outcome="stale"[^>]*tabindex="0"[^>]*aria-checked="true"/);
+  assert.match(markup, /data-a12-milestone-outcome="matched"[^>]*tabindex="-1"[^>]*aria-checked="false"/);
+});
+
+test("six ERP routes mount distinct primary jobs and exact focus targets", () => {
+  const expected = {
+    "milestone-desk": "[data-testid=\"milestone-business-document\"]",
+    payables: "#payables-worklist",
+    receivables: "#receivables-worklist",
+    reconciliation: "#reconciliation-workbench-root",
+    "general-ledger": "#ledger-table",
+    "audit-trail": "#audit-log"
+  };
+  for (const [workspace, focusTarget] of Object.entries(expected)) assert.equal(a12WorkspaceFocusTarget(workspace), focusTarget);
+  let state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
+  let markup = a12WorkspacePrimaryMarkup(projectA12Workbench(state), state, []);
+  assert.match(markup, /id="reconciliation-workbench-root"/);
+  assert.match(markup, /Locked document versus typed receipt comparison/);
+  assert.equal((markup.match(/data-first-failure=/g) ?? []).length, 5);
+  assert.match(markup, /First exact blocker/);
+  let rows = a12ReconciliationRows(projectA12Workbench(state), state);
+  assert.equal(rows.length, 5);
+  assert.equal(rows[0].observed, "missing");
+  assert.equal(rows[0].status, "blocking");
+  state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "mismatch" });
+  state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
+  rows = a12ReconciliationRows(projectA12Workbench(state), state);
+  assert.equal(rows[0].field, "erc20_transfer.amount6");
+  assert.equal(rows[0].locked, "500");
+  assert.equal(rows[0].observed, "499");
+  assert.equal(rows[0].status, "blocking");
+  state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "stale" });
+  state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
+  rows = a12ReconciliationRows(projectA12Workbench(state), state);
+  assert.equal(rows[0].field, "receipt_freshness");
+  assert.match(rows[0].locked, /within TTL/);
+  assert.match(rows[0].observed, /stale · confirmations 1/);
+  assert.equal(rows[0].status, "blocking");
+  state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "general-ledger" });
+  markup = a12WorkspacePrimaryMarkup(projectA12Workbench(state), state, []);
+  assert.match(markup, /id="ledger-table"/);
+  assert.match(markup, /Balanced non-posting journal preview/);
+  assert.match(markup, /Supplier payable settlement/);
+  assert.match(markup, /Bank \/ treasury clearing/);
+  assert.match(markup, /Non-posting boundary/);
 });
 
 test("workflow navigation changes the main decision surface, not only an inspector tab", () => {
