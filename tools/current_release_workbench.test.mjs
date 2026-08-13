@@ -525,6 +525,7 @@ test("six ERP routes mount distinct primary jobs and exact focus targets", () =>
   state = reduceA12Workbench(state, { type: "SET_WORKSPACE", workspace: "reconciliation" });
   let markup = a12WorkspacePrimaryMarkup(projectA12Workbench(state), state, []);
   assert.match(markup, /id="reconciliation-workbench-root"/);
+  assert.match(markup, /class="a12-reconciliation-scroll" role="region" aria-label="Scrollable locked document and receipt comparison" tabindex="0"/);
   assert.match(markup, /Locked document versus typed receipt comparison/);
   assert.equal((markup.match(/data-first-failure=/g) ?? []).length, 5);
   assert.match(markup, /First exact blocker/);
