@@ -578,6 +578,12 @@ test("six ERP routes mount distinct primary jobs and exact focus targets", () =>
   assert.match(markup, /Non-posting boundary/);
 });
 
+test("drawer breakpoints never reserve a hidden third inspector column", async () => {
+  const navigation = await readFile(join(CURRENT_MVP_ROOT, "web/navigation-workspace.mjs"), "utf8");
+  const drawerGrid = "@media(min-width:721px) and (max-width:1050px){.a12-workbench{grid-template-columns:248px minmax(0,1fr)}}";
+  assert.ok(navigation.lastIndexOf(drawerGrid) > navigation.lastIndexOf("@media(max-width:1310px) and (min-width:721px){.a12-workbench{grid-template-columns:260px minmax(0,1fr) 300px}}"));
+});
+
 test("workflow navigation changes the main decision surface, not only an inspector tab", () => {
   let state = createA12WorkbenchState({ scenario: "supplier_payable" });
   const before = projectA12Workbench(state);
