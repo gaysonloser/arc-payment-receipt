@@ -344,6 +344,12 @@ test("Milestone desk is an accounting document center with a single five-step de
   const stepIds = [...markup.matchAll(/data-a12-milestone-step="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(stepIds, ["document", "reviewer", "arc-receipt", "erp-reconciliation", "gl-close"]);
   assert.match(markup, /data-testid="milestone-business-document"/);
+  assert.match(markup, /data-a12-prev-document/);
+  assert.match(markup, /data-a12-next-document/);
+  assert.match(markup, /History \/ evidence/);
+  assert.match(markup, /OPEN · Matcher: pending · last checked/);
+  assert.match(markup, new RegExp(`First blocker:</b> ${view.canvas.firstFailure.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  assert.match(markup, new RegExp(`Recovery:</b> ${view.canvas.recovery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
   assert.match(markup, /Accounting document center/);
   assert.match(markup, /aria-label="Document to reviewer to Arc receipt to ERP reconciliation to GL close timeline"/);
   assert.match(markup, /USDC · Arc settlement summary/);
@@ -380,6 +386,18 @@ test("Milestone desk is an accounting document center with a single five-step de
   assert.match(index, /navigation-workspace\.mjs\?rev=v3-2-a12-r4-milestone-document-center/);
   assert.equal(a12RuntimeLayoutMetrics(1440, 1024, 1).overflowX, "none");
   assert.equal(a12RuntimeLayoutMetrics(1024, 768, 2).inspectorMode, "focus_trapped_drawer");
+});
+
+test("document header moves the real queue and resets dependent state", () => {
+  let state = createA12WorkbenchState({ scenario: "supplier_payable" });
+  state = reduceA12Workbench(state, { type: "SELECT_MILESTONE_OUTCOME", outcome: "matched" });
+  const priorScenario = state.selectedScenario;
+  assert.equal(state.matcherState, "matched");
+  state = reduceA12Workbench(state, { type: "QUEUE_MOVE", direction: "down" });
+  assert.notEqual(state.selectedScenario, priorScenario);
+  assert.equal(state.matcherState, "pending");
+  assert.equal(state.milestoneErpProposal, false);
+  assert.match(state.lastNotice, /reset all dependent state/);
 });
 
 test("mounted milestone journey advances through evidence, approvals and journal while exceptions stay open", () => {
