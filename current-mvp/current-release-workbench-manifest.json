@@ -169,8 +169,8 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 65747,
-      "sha256": "af461200ad7e30e0a73ea3bd9ba502fbb231e31d2960608e54c64f1c187cd793"
+      "bytes": 66788,
+      "sha256": "229f669f91cfdc0b33afa7f09713364903829455f8dce0c6da6919b7df767fbc"
     },
     {
       "path": "tools/current_mvp_engineering_support.test.mjs",
@@ -241,8 +241,8 @@
     {
       "path": "tools/arc_payment_receipt_server.test.mjs",
       "role": "test",
-      "bytes": 91713,
-      "sha256": "24ea4fe234b18af60ce4756b6f8a34406c0004ad9f1138389a94ebd2b0abb50c"
+      "bytes": 92190,
+      "sha256": "954edd7048c9054b1823b7e51884e73a926b05d0813d45498bb37e878e86b542"
     },
     {
       "path": "tools/circle_console_server.test.mjs",

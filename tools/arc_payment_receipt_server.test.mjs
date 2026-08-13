@@ -38,6 +38,8 @@ import {
 } from "./arc_payment_receipt_server.mjs";
 
 let loopbackUnavailable = false;
+const SERVER_TEST_NOW_ISO = "2026-07-20T13:02:28.246Z";
+const SERVER_TEST_NOW_MS = Date.parse(SERVER_TEST_NOW_ISO);
 const test = (name, fn) => nodeTest(name, async (t) => {
   if (loopbackUnavailable && fn.toString().includes("origin")) {
     return t.skip("local loopback bind unavailable: EPERM/EACCES");
@@ -605,6 +607,7 @@ let server;
 let origin;
 
 before(async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: SERVER_TEST_NOW_MS });
   server = createReceiptServer({
     currentReleaseCommit: "a".repeat(40),
     loadReport: async () => report,
@@ -624,7 +627,11 @@ before(async (t) => {
       surfaces: { github: "engineering source", render: "running proof", circle_console: "contract and event proof", encode: "reviewer proof" },
       rules: { one_lifecycle_one_outcome: true, github_render_same_release: true }
     }),
-    now: () => Date.parse("2026-07-20T13:02:28.246Z"),
+    loadCurrentArcTestnetReadback: async () => {
+      const evidence = JSON.parse(await readFile(new URL("../outputs/Arc_Current_Release_PolicySettlementV1_Readback.json", import.meta.url), "utf8"));
+      return { ...evidence, observed_at: SERVER_TEST_NOW_ISO, expires_at: "2026-07-21T13:02:28.246Z" };
+    },
+    now: () => SERVER_TEST_NOW_MS,
     loadViewer: async () => "<!doctype html><title>viewer</title>",
     loadLogo: async () => Buffer.from("logo"),
     loadFavicon: async () => Buffer.from("favicon")
