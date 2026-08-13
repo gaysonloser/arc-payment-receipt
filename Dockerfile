@@ -4,9 +4,8 @@ WORKDIR /app
 COPY . .
 
 ENV HOST=0.0.0.0
-ENV PORT=8774
-EXPOSE 8774
+ENV PORT=10000
+EXPOSE 10000
 
 USER node
 CMD ["node", "tools/arc_payment_receipt_server.mjs"]
-
