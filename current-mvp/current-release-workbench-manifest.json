@@ -3,11 +3,11 @@
   "release_id": "verified-milestone-close-current-mvp-workbench-rc1",
   "base_release_id": "verified-milestone-close-mvp-publication-staging-rc1",
   "base_manifest_sha256": "7206ad886aaca6ffc8367653530216e3c29ae74d268239c5465a9891fe41ce3d",
-  "content_identity_sha256": "f3fcbdb6ebf57baad665b73c6f8af9a031339a1e2f962c4c269273af803bf130",
+  "content_identity_sha256": "9547b08d42f75af99d88fc8d27f05ef60272bc7ff4f33417097ed137ef728393",
   "manifest_sha256_self_excluded": true,
   "release_binding": {
     "model": "content_addressed_external_receipt",
-    "content_identity_sha256": "f3fcbdb6ebf57baad665b73c6f8af9a031339a1e2f962c4c269273af803bf130",
+    "content_identity_sha256": "9547b08d42f75af99d88fc8d27f05ef60272bc7ff4f33417097ed137ef728393",
     "self_authenticating_commit": false,
     "github_commit": null,
     "render_deployment_id": null,
@@ -169,8 +169,8 @@
     {
       "path": "tools/current_release_workbench.test.mjs",
       "role": "test",
-      "bytes": 56176,
-      "sha256": "c53f5a487f26b3ce1c125ab576617456412cc0da6172dd2b8362d1141c8efd86"
+      "bytes": 59569,
+      "sha256": "9c95f36f4f988f3666371d294f743f2ac431428ec80423d76b6bea7e5a9bc70a"
     },
     {
       "path": "tools/current_mvp_engineering_support.test.mjs",
@@ -481,8 +481,8 @@
     },
     {
       "path": "web/fixture-engine.mjs",
-      "bytes": 171415,
-      "sha256": "fe21885f4da445acce4b4cc42873d5ecc9ed82fd3d5259367cb6a954c0110779",
+      "bytes": 173665,
+      "sha256": "27bdc2e56ba74f3fed9524c77c994cab5f087b2e15f90c91a80b74b7d52fb213",
       "mode": "100644",
       "historical_sha256": "2df86261426be727e3ee481696266e936fb4c86520288249d623941296d69dd8",
       "historical_bytes": 37367,
@@ -499,8 +499,8 @@
     },
     {
       "path": "web/navigation-workspace.mjs",
-      "bytes": 171036,
-      "sha256": "5735c48f70f6627d839a0bf4509a94c16cdc358876cec9c340af7653c1544e4a",
+      "bytes": 173762,
+      "sha256": "ce4a9a015cb1507a84fc991d16c49751e57cf1d9620696fa280c4a57ef121302",
       "mode": "100644",
       "historical_sha256": "dd151b6f8e7563992abfafb1bdd2a54a5398ea60e92007282e174124f34a483d",
       "historical_bytes": 61407,

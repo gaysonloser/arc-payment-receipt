@@ -28,6 +28,7 @@ import {
   A12_CAUSAL_STAGES,
   A12_ORIGIN_ENTRY_CATALOG,
   A12_SEVEN_SCENARIO_IDS,
+  a12BalanceSufficiency,
   a12MilestoneFlow,
   createA12TypedEvidence,
   createA12WorkbenchState,
@@ -362,7 +363,7 @@ test("Milestone desk is an accounting document center with a single five-step de
   assert.match(navigation, /\.a12-canvas\{padding:16px 22px 92px\}/);
   assert.match(navigation, /\.a12-bottom-action\{position:fixed;[^}]*min-height:72px/);
   assert.match(navigation, /Final visual closeout:[\s\S]*?\.a12-canvas\{padding-bottom:92px\}[\s\S]*?\.a12-bottom-action\{min-height:72px/);
-  assert.match(navigation, /@media\(max-width:1050px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-canvas\{padding-bottom:104px\}[^}]+\.a12-bottom-action\{min-height:76px/);
+  assert.match(navigation, /@media\(max-width:1050px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-canvas\{padding-bottom:24px\}[^}]+\.a12-milestone-layout\{grid-template-columns:1fr\}[^}]+\.a12-bottom-action\{position:static;min-height:76px/);
   assert.match(navigation, /@media\(max-width:720px\)\{\.a12-app\[data-current-workspace="milestone-desk"\] \.a12-canvas\{padding-bottom:24px\}[^}]+\.a12-bottom-action\{position:static;min-height:88px/);
   assert.match(navigation, /\["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"\]/);
   assert.match(navigation, /SELECT_MILESTONE_OUTCOME/);
@@ -430,6 +431,40 @@ test("milestone radio keyboard navigation changes the real reducer state and rov
   assert.equal(state.matcherState, "stale");
   assert.match(markup, /data-a12-milestone-outcome="stale"[^>]*tabindex="0"[^>]*aria-checked="true"/);
   assert.match(markup, /data-a12-milestone-outcome="matched"[^>]*tabindex="-1"[^>]*aria-checked="false"/);
+});
+
+test("mounted inspectors expose policy, provenance, failure and fee depth without widening claims", () => {
+  let state = reduceA12Workbench(createA12WorkbenchState({ scenario: "supplier_payable" }), { type: "SELECT_MILESTONE_OUTCOME", outcome: "matched" });
+  let view = projectA12Workbench(state);
+  assert.equal(view.canvas.policy.allowance, "1250000000");
+  assert.equal(view.canvas.policy.payer, "payer-registry-fixture");
+  assert.equal(view.canvas.policy.recipient, "recipient-registry-fixture");
+  assert.equal(view.canvas.policy.reviewer, "reviewer-jamie-fixture");
+  assert.equal(view.canvas.policy.ttlMinutes, 15);
+  assert.equal(Date.parse(view.canvas.policy.observedAt) <= Date.parse(view.canvas.policy.validUntil), true);
+  assert.deepEqual(view.inspector.logs.map((record) => record.logIndex), [0, 1, 2]);
+  assert.deepEqual(view.inspector.logs.map((record) => record.emitter), ["fixture:USDC", "fixture:ArcSystemTransfer", "fixture:PolicySettlementV1"]);
+  assert.equal(BigInt(view.canvas.networkFee.maximum) >= BigInt(view.canvas.networkFee.effective), true);
+  assert.equal(view.canvas.networkFee.principalUnit, "amount6");
+  assert.equal(view.canvas.networkFee.unit, "native18");
+  assert.equal(view.canvas.networkFee.principalIncludedInFee, false);
+  assert.equal(BigInt(view.canvas.networkFee.principalBalanceAmount6) >= BigInt(view.canvas.amount6), true);
+  assert.equal(BigInt(view.canvas.networkFee.gasBalanceNative18) >= BigInt(view.canvas.networkFee.maximum), true);
+  assert.equal(view.canvas.networkFee.balanceSufficient, view.canvas.networkFee.principalBalanceSufficient && view.canvas.networkFee.gasBalanceSufficient);
+  assert.deepEqual(a12BalanceSufficiency({ principalBalanceAmount6: "499", requiredPrincipalAmount6: "500", gasBalanceNative18: "300", maximumFeeNative18: "301" }), { principalBalanceSufficient: false, gasBalanceSufficient: false, balanceSufficient: false });
+  state = { ...state, inspectorTab: "Arc" };
+  let markup = a12UiMarkup(projectA12Workbench(state), state);
+  for (const fact of ["amount6 cap / validUntil", "attestation nonce / replay guard", "payer / recipient / reviewer", "emitter", "logIndex", "block/log order is authoritative", "Wrong network · chainId 5042001 ≠ 5042002", "Final status 0"]) assert.match(markup, new RegExp(fact));
+  assert.match(markup, /Status 1 \+ readback mismatch/);
+  state = { ...state, inspectorTab: "Ledger" };
+  markup = a12UiMarkup(projectA12Workbench(state), state);
+  for (const fact of ["Estimated network fee", "0.00024 native18 USDC", "Maximum network fee", "0.00030 native18 USDC", "Effective fee", "0.00022 native18 USDC", "principal amount6 balance", "native18 gas balance", "units remain separate"]) assert.match(markup, new RegExp(fact));
+  const stale = reduceA12Workbench(createA12WorkbenchState({ scenario: "supplier_payable" }), { type: "SELECT_MILESTONE_OUTCOME", outcome: "stale" });
+  const staleView = projectA12Workbench(stale);
+  assert.equal(staleView.canvas.firstFailure, "receipt_freshness.validUntil_or_ttl");
+  assert.match(staleView.canvas.recovery, /Refresh validUntil \/ TTL evidence/);
+  assert.equal(staleView.canvas.networkFee.effective, null);
+  assert.equal(Date.parse(staleView.canvas.policy.observedAt) > Date.parse(staleView.canvas.policy.validUntil), true);
 });
 
 test("six ERP routes mount distinct primary jobs and exact focus targets", () => {

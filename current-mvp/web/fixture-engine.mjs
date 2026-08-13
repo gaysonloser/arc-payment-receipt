@@ -699,6 +699,11 @@ const a12Normalize = (value) => {
   return value;
 };
 export const a12CanonicalJson = (value) => JSON.stringify(a12Normalize(value));
+export const a12BalanceSufficiency = ({ principalBalanceAmount6, requiredPrincipalAmount6, gasBalanceNative18, maximumFeeNative18 }) => {
+  const principalBalanceSufficient = BigInt(principalBalanceAmount6) >= BigInt(requiredPrincipalAmount6);
+  const gasBalanceSufficient = BigInt(gasBalanceNative18) >= BigInt(maximumFeeNative18);
+  return { principalBalanceSufficient, gasBalanceSufficient, balanceSufficient: principalBalanceSufficient && gasBalanceSufficient };
+};
 
 function a12StateLabel(matcherState) {
   return matcherState === "pending" ? "Not evaluated" : matcherState === "matched" ? "Matched" : matcherState === "stale" ? "Stale" : matcherState === "mismatch" ? "Mismatch" : matcherState === "reorg" ? "Reorg unresolved" : "Duplicate rejected";
@@ -780,13 +785,16 @@ function a12ReceiptProjection(profile, matcherState, caseId = null, origin = nul
 function a12ReceiptRecords(profile, matcherState) {
   if (matcherState === "pending") return [];
   const authority = a12CanonicalReceiptAuthority({ profile, outcome: matcherState, scenario: profile.id, authorityId: a12AuthorityForScenario(profile.id)?.authority_id });
+  const emitterByType = { policy_event: "fixture:PolicySettlementV1", erc20_transfer: "fixture:USDC", arc_system_transfer: "fixture:ArcSystemTransfer" };
   return authority.records.map((record) => ({
     ...record,
     recordId: `c15-${record.type}-${record.sequence}`,
-    emitter: record.source,
+    emitter: emitterByType[record.type] ?? "fixture:unknown-emitter",
     logIndex: record.order,
-    role: record.type
-  }));
+    role: record.type,
+    from: record.from ?? record.expected?.from ?? record.expected?.payer ?? "fixture:system",
+    to: record.to ?? record.expected?.to ?? record.expected?.recipient ?? "fixture:system"
+  })).sort((left, right) => Number(left.logIndex) - Number(right.logIndex));
 }
 function a12DappObjects(profile, matcherState, receiptProjection, boundary) {
   return A12_DAPP_OBJECT_IDS.map((id) => {
@@ -2170,7 +2178,7 @@ export function projectA12Workbench(state) {
     : effectiveMatcherState === "mismatch"
       ? `${firstMismatchedRecord?.type ?? "typed_receipt"}.${Object.keys(firstMismatchedRecord?.expected ?? {}).find((key) => !a12TypedObjectsEqual(firstMismatchedRecord.expected?.[key], firstMismatchedRecord.observed?.[key])) ?? "identity"}`
       : effectiveMatcherState === "stale"
-        ? "receipt_finality.confirmations"
+        ? "receipt_freshness.validUntil_or_ttl"
         : profile.direction === "outgoing" ? "settlement_policy" : profile.direction === "unresolved" ? "evidence_gaps" : "receipt_finality_state";
   const workspace = A12_ERP_WORKSPACE_PRESENTATION[state.selectedWorkspace] ?? A12_ERP_WORKSPACE_PRESENTATION["milestone-desk"];
   const originEntry = a12CanonicalOriginEntryForScenario(profile.id);
@@ -2190,6 +2198,19 @@ export function projectA12Workbench(state) {
     network: "Arc Testnet",
     localFixtureOnly: true
   };
+  const principalBalanceAmount6 = BigInt(displayCase.amount6);
+  const gasBalanceNative18 = 400000000000000n;
+  const maximumFeeNative18 = 300000000000000n;
+  const feeBalance = a12BalanceSufficiency({ principalBalanceAmount6, requiredPrincipalAmount6: displayCase.amount6, gasBalanceNative18, maximumFeeNative18 });
+  const networkFee = {
+    unit: "native18", estimate: "240000000000000", maximum: "300000000000000",
+    effective: effectiveMatcherState === "matched" ? "220000000000000" : null,
+    estimateDisplay: "0.00024 native18 USDC", maximumDisplay: "0.00030 native18 USDC",
+    effectiveDisplay: effectiveMatcherState === "matched" ? "0.00022 native18 USDC" : "not available without accepted final fixture",
+    principalBalanceAmount6: principalBalanceAmount6.toString(), gasBalanceNative18: gasBalanceNative18.toString(),
+    ...feeBalance,
+    principalUnit: "amount6", principalIncludedInFee: false
+  };
   return {
     batchId: A12_BATCH_ID,
     evidenceLevel: A12_EVIDENCE_LEVEL,
@@ -2200,7 +2221,7 @@ export function projectA12Workbench(state) {
     unresolved: { id: "unresolved_incoming_outgoing", label: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.label, reason: A12_PROFILE_DEFINITIONS.unresolved_incoming_outgoing.openItem, selectable: true },
     workspace: { id: state.selectedWorkspace ?? "milestone-desk", ...workspace },
     originEntry,
-    canvas: { headline: milestonePresentation ? "Website Handover · Milestone Close" : `${workspace.primaryJob} · ${action.stage_headline}`, stage: presentationStage, route: state.workspaceRoute ?? "queue", scenario: milestoneCasePresentation ? milestoneCasePresentation.milestone : profile.label, matcherState: effectiveMatcherState, scenarioState: a12StateLabel(effectiveMatcherState), scenarioTone: a12StateTone(effectiveMatcherState), caseId: displayCase.caseId, contract: displayCase.contract, milestone: displayCase.milestone, documentNumber: displayCase.payable, payable: displayCase.payable, sourceDocument: displayCase.sourceDocument, counterparty: displayCase.contractor, principal: displayCase.amount, amount6: displayCase.amount6, currency: displayCase.currency, network: displayCase.network, localFixtureOnly: displayCase.localFixtureOnly, source: "Local accounting fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, originLabel: originEntry?.label ?? "Unknown origin", originEntry, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: action.recovery, milestoneFlow, milestoneEvidenceReviewed: state.milestoneEvidenceReviewed === true, milestoneReviewerAttested: state.milestoneReviewerAttested === true, milestonePayerApproved: state.milestonePayerApproved === true, milestoneErpProposal: state.milestoneErpProposal === true, milestoneJournalPreview: state.milestoneJournalPreview === true, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: milestoneFlow ? milestoneFlow.enabled : guard.enabled, label: milestoneFlow ? milestoneFlow.label : action.label, disabledReason: milestoneFlow?.enabled ? null : milestoneFlow?.reason ?? (guard.enabled ? null : guard.reason), next_owner: milestoneFlow?.nextOwner ?? action.next_owner }, consequences, policy: { policyId, version: "Settlement policy readback", allowance: displayCase.amount6, expiry: "Local fixture only", nonce: policyNonce } },
+    canvas: { headline: milestonePresentation ? "Website Handover · Milestone Close" : `${workspace.primaryJob} · ${action.stage_headline}`, stage: presentationStage, route: state.workspaceRoute ?? "queue", scenario: milestoneCasePresentation ? milestoneCasePresentation.milestone : profile.label, matcherState: effectiveMatcherState, scenarioState: a12StateLabel(effectiveMatcherState), scenarioTone: a12StateTone(effectiveMatcherState), caseId: displayCase.caseId, contract: displayCase.contract, milestone: displayCase.milestone, documentNumber: displayCase.payable, payable: displayCase.payable, sourceDocument: displayCase.sourceDocument, counterparty: displayCase.contractor, principal: displayCase.amount, amount6: displayCase.amount6, currency: displayCase.currency, network: displayCase.network, localFixtureOnly: displayCase.localFixtureOnly, source: "Local accounting fixture", origin: workbenchProjection.origin ?? authority?.origin ?? null, originLabel: originEntry?.label ?? "Unknown origin", originEntry, authorityOrigin: workbenchProjection.authority_origin ?? authority?.origin ?? null, domainStatus: workbenchProjection.status, fields: fieldValues, firstFailure, recovery: effectiveMatcherState === "stale" ? "Refresh validUntil / TTL evidence, retain the payable OPEN, then re-evaluate the typed receipt." : action.recovery, milestoneFlow, milestoneEvidenceReviewed: state.milestoneEvidenceReviewed === true, milestoneReviewerAttested: state.milestoneReviewerAttested === true, milestonePayerApproved: state.milestonePayerApproved === true, milestoneErpProposal: state.milestoneErpProposal === true, milestoneJournalPreview: state.milestoneJournalPreview === true, command: { ...action, consequence: action.consequence, stopCondition: action.stop_condition, nextOwner: action.next_owner, enabled: milestoneFlow ? milestoneFlow.enabled : guard.enabled, label: milestoneFlow ? milestoneFlow.label : action.label, disabledReason: milestoneFlow?.enabled ? null : milestoneFlow?.reason ?? (guard.enabled ? null : guard.reason), next_owner: milestoneFlow?.nextOwner ?? action.next_owner }, consequences, policy: { policyId, version: "VMC-1.0 · local fixture", allowance: displayCase.amount6, validUntil: effectiveMatcherState === "stale" ? "2026-08-05T11:59:00+08:00" : "2026-08-05T12:15:00+08:00", observedAt: receiptProjection.observation_timestamp ?? null, ttlMinutes: 15, nonce: policyNonce, payer: A12_VALUE.payerWallet, recipient: A12_VALUE.recipientWallet, reviewer: "reviewer-jamie-fixture" }, networkFee },
     inspector: { tabs: A12_C15_TABS, activeTab: state.inspectorTab, objects: objectRows, receiptFields, logs: fixture.receiptRecords, typedReadbacks: workbenchProjection.typed_readbacks, arcVerifiedEvidence: CURRENT_ARC_VERIFIED_PROGRAMME_EVIDENCE, erpVerifiedEvidence: CURRENT_ERP_VERIFIED_READ_ONLY_EVIDENCE, getter: { expected: `case:${fixture.caseId} · transfer:${transferId}`, observed: effectiveMatcherState === "pending" ? "missing" : `case:${fixture.caseId} · transfer:${transferId}`, status: effectiveMatcherState === "matched" ? "matched" : "missing", source: A12_C15_PROVENANCE_SOURCE.arc }, consequences, audit: (state.history ?? []).map((event) => ({ time: `local revision ${event.seq}`, actor: "local operator", object: event.type, revision: event.seq, action: event.type, result: a12AuditPublicValue(event.payload), correlationId: `a12:${fixture.caseId}:${event.seq}` })) },
     causalRail: A12_CAUSAL_STAGES.map((stage, index) => ({ ...stage, status: stage.id === state.selectedStage ? "current" : effectiveCompletedStages.includes(stage.id) ? "verified" : "prerequisite", timestamp: effectiveCompletedStages.includes(stage.id) ? "local guarded action" : null, nextOwner: index === 4 ? "wallet owner or watcher" : index >= 5 ? "ERP/finance owner gate" : "operator" })),
     replay: state.sealedReplay,
